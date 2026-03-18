@@ -25,6 +25,10 @@ services:
     container_name: projectiii_backend
     ports:
       - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run start:dev
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/projectiii?schema=public
       - REDIS_HOST=redis
@@ -43,6 +47,10 @@ services:
     container_name: projectiii_frontend
     ports:
       - "3001:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3000/api
     depends_on:
