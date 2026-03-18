@@ -11,9 +11,10 @@ import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, ShopsModule, CategoriesModule, ProductsModule, CartModule, OrdersModule, NotificationsModule, TrackingModule],
+  imports: [PrismaModule, UsersModule, AuthModule, ShopsModule, CategoriesModule, ProductsModule, CartModule, OrdersModule, NotificationsModule, TrackingModule, ChatModule],
   controllers: [AppController],
   providers: [AppService],
 })
