@@ -22,6 +22,8 @@
   --color-card: var(--card);
   --color-card-border: var(--card-border);
   --color-input-bg: var(--input-bg);
+  --color-primary: #8B5CF6;
+  --color-primary-foreground: #FFFFFF;
 }
 
 body {
