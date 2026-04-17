@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Trash2,
   Plus,
@@ -92,6 +93,51 @@ export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>(INITIAL_ITEMS);
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
+  const [useApi, setUseApi] = useState(false);
+
+  // Try to load cart from API
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const { cartService } = await import('@/services/cart.service');
+        const cart = await cartService.getCart();
+        if (cart?.groups?.length) {
+          const EMOJI_MAP = ['🎧', '🖱️', '🕯️', '👜', '⌚', '🎵'];
+          const BG_MAP = [
+            { from: '#1a1a1a', to: '#2d2d2d' }, { from: '#0d1b2a', to: '#1b2838' },
+            { from: '#f5f0e0', to: '#e8dcb8' },
+          ];
+          let idx = 0;
+          const mapped: CartItem[] = [];
+          const shopMap: CartShop[] = [];
+          cart.groups.forEach((group: any, gi: number) => {
+            if (!shopMap.find(s => s.id === gi + 1)) {
+              shopMap.push({ id: gi + 1, name: group.shop?.name || 'Shop', badge: 'Verified' });
+            }
+            group.items.forEach((item: any) => {
+              mapped.push({
+                id: idx + 1,
+                name: item.product?.name || `Product ${idx + 1}`,
+                variant: item.product?.description || '',
+                price: item.product?.price || 0,
+                qty: item.quantity,
+                emoji: EMOJI_MAP[idx % EMOJI_MAP.length],
+                bgFrom: BG_MAP[idx % BG_MAP.length].from,
+                bgTo: BG_MAP[idx % BG_MAP.length].to,
+                shopId: gi + 1,
+              });
+              idx++;
+            });
+          });
+          setItems(mapped);
+          setUseApi(true);
+        }
+      } catch {
+        // Fallback to mock data silently
+      }
+    };
+    loadCart();
+  }, []);
 
   const updateQty = (id: number, delta: number) =>
     setItems((prev) =>

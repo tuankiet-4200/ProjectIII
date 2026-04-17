@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Package,
   Search,
@@ -326,32 +326,75 @@ function StockBar({ stock, max }: { stock: number; max: number }) {
 export default function VendorProducts() {
   const [activeTab, setActiveTab] = useState<ProductTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(MOCK_PRODUCTS[2]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+
+  // Try to load products from API
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const { shopsService } = await import('@/services/shops.service');
+        const { productsService } = await import('@/services/products.service');
+        const shop = await shopsService.getMyShop();
+        if (shop?.id) {
+          const result = await productsService.getAll({ shop_id: shop.id, limit: 50 });
+          if (result?.data?.length) {
+            const EMOJI_MAP = ['⌚', '👟', '🎧', '👜', '🌿', '📱', '🕶️', '🚴', '🔊', '🕯️'];
+            const BG_MAP = ['from-violet-600/30 to-violet-800/30', 'from-rose-600/30 to-rose-800/30', 'from-blue-600/30 to-blue-800/30', 'from-amber-600/30 to-amber-800/30', 'from-emerald-600/30 to-emerald-800/30', 'from-cyan-600/30 to-cyan-800/30'];
+            const CAT_MAP = ['Tech', 'Fashion', 'Audio', 'Accessories', 'Home', 'Sports'];
+            const mapped: Product[] = result.data.map((p: any, i: number) => ({
+              id: p.id || `PROD-${String(i + 1).padStart(3, '0')}`,
+              name: p.name,
+              sku: `SKU-${String(i + 1).padStart(3, '0')}`,
+              category: p.category?.name || CAT_MAP[i % CAT_MAP.length],
+              categoryColor: p.category?.name || CAT_MAP[i % CAT_MAP.length],
+              price: p.price,
+              stock: p.stock_quantity,
+              maxStock: Math.max(p.stock_quantity, 100),
+              status: p.stock_quantity === 0 ? 'archived' as const : p.stock_quantity < 20 ? 'draft' as const : 'active' as const,
+              image: EMOJI_MAP[i % EMOJI_MAP.length],
+              imageBg: BG_MAP[i % BG_MAP.length],
+              description: p.description || '',
+              metaTitle: p.name,
+              metaDescription: p.description || '',
+              variations: [],
+              mediaImages: [EMOJI_MAP[i % EMOJI_MAP.length]],
+            }));
+            setProducts(mapped);
+            if (mapped.length > 0) setSelectedProduct(mapped[0]);
+          }
+        }
+      } catch {
+        // Fallback to mock data
+        setSelectedProduct(MOCK_PRODUCTS[2]);
+      }
+    };
+    loadProducts();
+  }, []);
 
   // Filter products
   const filteredProducts = useMemo(() => {
-    let products = MOCK_PRODUCTS;
+    let filtered = products;
 
     if (activeTab === "drafts") {
-      products = products.filter((p) => p.status === "draft");
+      filtered = filtered.filter((p) => p.status === "draft");
     } else if (activeTab === "alerts") {
-      products = products.filter((p) => p.stock <= p.maxStock * 0.2);
+      filtered = filtered.filter((p) => p.stock <= p.maxStock * 0.2);
     }
-    // "categories" and "all" show everything (categories would normally have sub-filters)
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      products = products.filter(
+      filtered = filtered.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
           p.category.toLowerCase().includes(q)
       );
     }
-    return products;
-  }, [activeTab, searchQuery]);
+    return filtered;
+  }, [activeTab, searchQuery, products]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const paginatedProducts = filteredProducts.slice(
@@ -365,10 +408,10 @@ export default function VendorProducts() {
   };
 
   // Inventory stats
-  const totalProducts = MOCK_PRODUCTS.length;
-  const activeCount = MOCK_PRODUCTS.filter((p) => p.status === "active").length;
-  const lowStockCount = MOCK_PRODUCTS.filter((p) => p.stock > 0 && p.stock <= p.maxStock * 0.2).length;
-  const outOfStockCount = MOCK_PRODUCTS.filter((p) => p.stock === 0).length;
+  const totalProductsCount = products.length;
+  const activeCount = products.filter((p) => p.status === "active").length;
+  const lowStockCount = products.filter((p) => p.stock > 0 && p.stock <= p.maxStock * 0.2).length;
+  const outOfStockCount = products.filter((p) => p.stock === 0).length;
 
   return (
     <>
@@ -451,7 +494,7 @@ export default function VendorProducts() {
                 {/* Quick stats row */}
                 <div className="grid grid-cols-4 gap-3 mb-0">
                   {[
-                    { label: "Total", value: totalProducts, color: "text-white", bg: "bg-white/5" },
+                    { label: "Total", value: totalProductsCount, color: "text-white", bg: "bg-white/5" },
                     { label: "Active", value: activeCount, color: "text-emerald-400", bg: "bg-emerald-500/5" },
                     { label: "Low Stock", value: lowStockCount, color: "text-amber-400", bg: "bg-amber-500/5" },
                     { label: "Out of Stock", value: outOfStockCount, color: "text-red-400", bg: "bg-red-500/5" },

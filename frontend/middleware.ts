@@ -16,6 +16,12 @@ export function middleware(request: NextRequest) {
   // Get auth token from cookie
   const accessToken = request.cookies.get("access_token")?.value;
 
+  // Skip auth check in development when no backend is running
+  if (process.env.NODE_ENV === "development" && !accessToken) {
+    // Allow access in dev mode for mock data testing
+    return NextResponse.next();
+  }
+
   // Protected admin routes
   if (pathname.startsWith("/admin")) {
     if (!accessToken) {

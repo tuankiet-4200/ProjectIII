@@ -6,8 +6,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomUUID } from 'crypto';
+import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../redis/redis.service';
 import { RegisterDto, LoginDto } from './dto';
+
+interface GoogleUserProfile {
+  id: string;
+  email?: string;
+  full_name?: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -15,6 +24,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private redisService: RedisService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -86,18 +96,51 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        role: user.role,
-      },
+      user: this.toPublicUser(user),
+      ...tokens,
+    };
+  }
+
+  async googleLogin(profile: GoogleUserProfile) {
+    if (!profile.email) {
+      throw new UnauthorizedException('Google account email is required');
+    }
+
+    let user = await this.prisma.user.findUnique({
+      where: { email: profile.email },
+    });
+
+    if (!user) {
+      const password_hash = await bcrypt.hash(randomUUID(), 10);
+      const phone = await this.generateGooglePhone(profile.id);
+
+      user = await this.prisma.user.create({
+        data: {
+          email: profile.email,
+          password_hash,
+          full_name: profile.full_name || profile.email.split('@')[0],
+          phone,
+          role: 'CUSTOMER',
+        },
+      });
+    }
+
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
+
+    return {
+      user: this.toPublicUser(user),
       ...tokens,
     };
   }
 
   async refreshToken(refreshToken: string) {
+    const isRevoked = await this.redisService.get(
+      this.getRefreshTokenBlacklistKey(refreshToken),
+    );
+    if (isRevoked) {
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
+
     try {
       const payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
@@ -118,6 +161,30 @@ export class AuthService {
       );
 
       return tokens;
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async logout(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const expiresAt = Number(payload.exp || 0);
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      const ttl = Math.max(expiresAt - nowInSeconds, 0);
+
+      if (ttl > 0) {
+        await this.redisService.set(
+          this.getRefreshTokenBlacklistKey(refreshToken),
+          '1',
+          ttl,
+        );
+      }
+
+      return { message: 'Logged out successfully' };
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -151,5 +218,33 @@ export class AuthService {
     ]);
 
     return { access_token, refresh_token };
+  }
+
+  private getRefreshTokenBlacklistKey(refreshToken: string) {
+    const tokenHash = createHash('sha256').update(refreshToken).digest('hex');
+    return `auth:blacklist:refresh:${tokenHash}`;
+  }
+
+  private toPublicUser(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      phone: user.phone,
+      role: user.role,
+    };
+  }
+
+  private async generateGooglePhone(googleId: string) {
+    const basePhone = `google-${googleId}`;
+    let phone = basePhone;
+    let suffix = 0;
+
+    while (await this.prisma.user.findUnique({ where: { phone } })) {
+      suffix += 1;
+      phone = `${basePhone}-${suffix}`;
+    }
+
+    return phone;
   }
 }

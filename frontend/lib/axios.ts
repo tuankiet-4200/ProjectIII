@@ -32,7 +32,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      console.warn('Session expired or unauthorized');
+      // Clear expired auth state
+      localStorage.removeItem('auth-storage');
+      document.cookie = 'access_token=; path=/; max-age=0';
+      // Only redirect if on a protected route
+      const path = window.location.pathname;
+      if (path.startsWith('/admin') || path.startsWith('/vendor') || path.startsWith('/checkout')) {
+        window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+      }
     }
     return Promise.reject(error);
   }

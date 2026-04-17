@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Heart,
@@ -458,7 +458,44 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const TOTAL_PAGES = 52;
+
+  // Try to load products from API with fallback to mock data
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const { productsService } = await import('@/services/products.service');
+        const result = await productsService.getAll({ page: 1, limit: 20 });
+        if (result?.data?.length) {
+          const EMOJI_MAP = ['🎧', '🎵', '🔊', '🎤', '📻', '🔆', '🎶', '⚡', '💿', '👜'];
+          const BG_MAP = [
+            { from: '#1a1a2e', to: '#16213e' }, { from: '#2d1b0e', to: '#4a2c0a' },
+            { from: '#f8f8f5', to: '#e8e8e0' }, { from: '#1a1a1a', to: '#2d2d2d' },
+            { from: '#f5f0e8', to: '#e8dcc8' }, { from: '#1c1209', to: '#2d1a08' },
+            { from: '#0d1b2a', to: '#1b2838' }, { from: '#120824', to: '#1e0f3c' },
+            { from: '#1a0e06', to: '#2d1a0a' }, { from: '#1a1a2e', to: '#16213e' },
+          ];
+          const mapped: Product[] = result.data.map((p: any, i: number) => ({
+            id: i + 100,
+            name: p.name,
+            brand: p.shop?.name || 'LuxeMarket',
+            location: 'Global',
+            price: p.price,
+            rating: 4.5 + Math.random() * 0.5,
+            sold: p.sales_count || Math.floor(Math.random() * 500),
+            bgFrom: BG_MAP[i % BG_MAP.length].from,
+            bgTo: BG_MAP[i % BG_MAP.length].to,
+            emoji: EMOJI_MAP[i % EMOJI_MAP.length],
+          }));
+          setApiProducts(mapped);
+        }
+      } catch {
+        // Fallback to mock data silently
+      }
+    };
+    loadProducts();
+  }, []);
 
   const toggleWish = (id: number) => {
     setWished((prev) => {
@@ -468,7 +505,10 @@ export default function ProductsPage() {
     });
   };
 
-  const filteredProducts = ALL_PRODUCTS.filter(
+  // Use API products if available, otherwise fallback to mock
+  const sourceProducts = apiProducts.length > 0 ? apiProducts : ALL_PRODUCTS;
+
+  const filteredProducts = sourceProducts.filter(
     (p) =>
       p.price <= priceRange &&
       (minRating === 0 || p.rating >= minRating) &&

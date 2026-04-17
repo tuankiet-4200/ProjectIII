@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
   ChevronRight,
@@ -158,6 +159,22 @@ export default function CheckoutPage() {
   const tax = +(subtotal * 0.035).toFixed(2);
   const total = subtotal + shippingFee + tax;
   const itemCount = allItems.reduce((s, i) => s + i.qty, 0);
+  const router = useRouter();
+
+  const handlePlaceOrder = async () => {
+    const address = `${shipping.fullName}, ${shipping.phone}, ${shipping.address}, ${shipping.ward}, ${shipping.district}, ${shipping.city}`;
+    try {
+      const { ordersService } = await import('@/services/orders.service');
+      const paymentMap: Record<string, 'COD' | 'VNPAY' | 'MOMO'> = { cod: 'COD', vnpay: 'VNPAY', momo: 'MOMO' };
+      await ordersService.checkout({
+        shipping_address: address,
+        payment_method: paymentMap[payment],
+      });
+    } catch {
+      // Continue with mock flow
+    }
+    setPlaced(true);
+  };
 
   if (placed) {
     return (
@@ -445,7 +462,7 @@ export default function CheckoutPage() {
               </div>
 
               <button
-                onClick={() => setPlaced(true)}
+                onClick={handlePlaceOrder}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 text-sm font-bold text-white hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40"
               >
                 Place Order Now

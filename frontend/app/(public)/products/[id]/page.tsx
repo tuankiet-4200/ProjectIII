@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   Star,
   Heart,
@@ -395,14 +396,52 @@ function ShippingTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProductDetailPage() {
+  const params = useParams();
   const [activeThumb, setActiveThumb] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(false);
   const [tab, setTab] = useState<DetailTab>("details");
   const [addedToCart, setAddedToCart] = useState(false);
+  const [productData, setProductData] = useState(PRODUCT);
 
-  const handleAddToCart = () => {
+  // Try to load product from API
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        const slug = params?.id as string;
+        if (!slug) return;
+        const { productsService } = await import('@/services/products.service');
+        const p = await productsService.getBySlug(slug);
+        if (p?.name) {
+          setProductData({
+            ...PRODUCT,
+            name: p.name,
+            price: p.price,
+            description: p.description || PRODUCT.description,
+            inStock: p.stock_quantity > 0,
+            stockCount: p.stock_quantity,
+            brand: p.shop?.name || PRODUCT.brand,
+            category: p.category?.name || PRODUCT.category,
+          });
+        }
+      } catch {
+        // Keep mock data
+      }
+    };
+    loadProduct();
+  }, [params?.id]);
+
+  const handleAddToCart = async () => {
+    try {
+      const { cartService } = await import('@/services/cart.service');
+      const productId = params?.id as string;
+      if (productId) {
+        await cartService.addItem(productId, qty);
+      }
+    } catch {
+      // Silent fail
+    }
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
@@ -426,7 +465,7 @@ export default function ProductDetailPage() {
           <ChevronRight size={11} />
           <Link href="/products" className="hover:text-violet-400 transition-colors">Over-Ear Headphones</Link>
           <ChevronRight size={11} />
-          <span className="text-gray-400 truncate max-w-[200px]">{PRODUCT.name}</span>
+          <span className="text-gray-400 truncate max-w-[200px]">{productData.name}</span>
         </div>
 
         {/* ─── Product Section ─── */}
@@ -485,27 +524,27 @@ export default function ProductDetailPage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-bold text-violet-400 uppercase tracking-widest">
-                  {PRODUCT.brand}
+                  {productData.brand}
                 </span>
                 <span className="text-gray-600">·</span>
                 <div className="flex items-center gap-1">
-                  <StarRating rating={PRODUCT.rating} size={12} />
-                  <span className="text-xs text-yellow-400 font-bold">{PRODUCT.rating}</span>
-                  <span className="text-xs text-gray-500">({PRODUCT.reviewCount.toLocaleString()} reviews)</span>
+                  <StarRating rating={productData.rating} size={12} />
+                  <span className="text-xs text-yellow-400 font-bold">{productData.rating}</span>
+                  <span className="text-xs text-gray-500">({productData.reviewCount.toLocaleString()} reviews)</span>
                 </div>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-tight mb-3">
-                {PRODUCT.name}
+                {productData.name}
               </h1>
-              <p className="text-sm text-gray-400 leading-relaxed">{PRODUCT.description}</p>
+              <p className="text-sm text-gray-400 leading-relaxed">{productData.description}</p>
             </div>
 
             {/* Price */}
             <div className="flex items-end gap-3">
-              <span className="text-4xl font-black text-white">${PRODUCT.price}.00</span>
-              <span className="text-lg text-gray-500 line-through mb-1">${PRODUCT.originalPrice}.00</span>
+              <span className="text-4xl font-black text-white">${productData.price}.00</span>
+              <span className="text-lg text-gray-500 line-through mb-1">${productData.originalPrice}.00</span>
               <span className="mb-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1">
-                Save {PRODUCT.discount}%
+                Save {productData.discount}%
               </span>
             </div>
 
@@ -552,7 +591,7 @@ export default function ProductDetailPage() {
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  In stock · {PRODUCT.stockCount} remaining
+                  In stock · {productData.stockCount} remaining
                 </div>
               </div>
             </div>

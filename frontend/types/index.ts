@@ -1,0 +1,213 @@
+// ─── Enums (matching Prisma) ─────────────────────────────────────────────────
+
+export type UserRole = 'CUSTOMER' | 'ADMIN' | 'SHIPPER';
+export type ShopStatus = 'ACTIVE' | 'BANNED';
+export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
+export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO';
+export type ShopOrderStatus = 'PENDING' | 'PREPARING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  role: UserRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserAddress {
+  id: string;
+  user_id: string;
+  address_line: string;
+  ward: string;
+  district: string;
+  city: string;
+  is_default: boolean;
+}
+
+// ─── Shop ────────────────────────────────────────────────────────────────────
+
+export interface Shop {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  rating: number;
+  status: ShopStatus;
+  created_at: string;
+  updated_at: string;
+  owner?: User;
+  products?: Product[];
+  _count?: { products: number };
+}
+
+// ─── Category ────────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  parent_id: number | null;
+  parent?: Category;
+  children?: Category[];
+  _count?: { products: number };
+}
+
+// ─── Product ─────────────────────────────────────────────────────────────────
+
+export interface Product {
+  id: string;
+  shop_id: string;
+  category_id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  sales_count: number;
+  created_at: string;
+  updated_at: string;
+  shop?: Shop;
+  category?: Category;
+}
+
+// ─── Order ───────────────────────────────────────────────────────────────────
+
+export interface OrderItem {
+  id: string;
+  shop_order_id: string;
+  product_id: string;
+  quantity: number;
+  price_at_purchase: number;
+  product?: Product;
+}
+
+export interface ShopOrder {
+  id: string;
+  parent_order_id: string;
+  shop_id: string;
+  shipping_fee: number;
+  status: ShopOrderStatus;
+  created_at: string;
+  updated_at: string;
+  shop?: Shop;
+  order_items?: OrderItem[];
+}
+
+export interface ParentOrder {
+  id: string;
+  user_id: string;
+  total_payment: number;
+  payment_status: PaymentStatus;
+  payment_method: PaymentMethod;
+  shipping_address: string;
+  created_at: string;
+  updated_at: string;
+  shop_orders?: ShopOrder[];
+}
+
+// ─── Cart ────────────────────────────────────────────────────────────────────
+
+export interface CartItem {
+  product_id: string;
+  quantity: number;
+  product?: Product;
+}
+
+export interface CartGroup {
+  shop: Shop;
+  items: CartItem[];
+}
+
+export interface Cart {
+  groups: CartGroup[];
+  total_items: number;
+  total_amount: number;
+}
+
+// ─── API Response Wrappers ───────────────────────────────────────────────────
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  user: User;
+}
+
+// ─── DTOs (for create/update requests) ───────────────────────────────────────
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  full_name: string;
+  phone: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface CreateShopData {
+  name: string;
+  description?: string;
+}
+
+export interface CreateProductData {
+  category_id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  price: number;
+  stock_quantity: number;
+}
+
+export interface UpdateProductData {
+  category_id?: number;
+  name?: string;
+  slug?: string;
+  description?: string;
+  price?: number;
+  stock_quantity?: number;
+}
+
+export interface ProductQuery {
+  search?: string;
+  category_id?: number;
+  shop_id?: string;
+  page?: number;
+  limit?: number;
+  sort_by?: string;
+}
+
+export interface CreateCategoryData {
+  name: string;
+  slug: string;
+  parent_id?: number;
+}
+
+export interface CheckoutData {
+  shipping_address: string;
+  payment_method: PaymentMethod;
+}
+
+export interface CreateAddressData {
+  address_line: string;
+  ward: string;
+  district: string;
+  city: string;
+  is_default?: boolean;
+}

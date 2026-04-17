@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ShoppingBag,
   Search,
@@ -287,26 +287,69 @@ const ITEMS_PER_PAGE = 8;
 export default function VendorOrders() {
   const [activeTab, setActiveTab] = useState<StatusTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(MOCK_ORDERS[1]);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+
+  // Try to load orders from API
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const { shopsService } = await import('@/services/shops.service');
+        const { ordersService } = await import('@/services/orders.service');
+        const shop = await shopsService.getMyShop();
+        if (shop?.id) {
+          const result = await ordersService.getShopOrders(shop.id, 1, 50);
+          if (result?.data?.length) {
+            const AVATAR_BGS = ['from-violet-500 to-violet-700', 'from-emerald-500 to-emerald-700', 'from-blue-500 to-blue-700', 'from-rose-500 to-rose-700', 'from-amber-500 to-amber-700'];
+            const mapped: Order[] = result.data.map((o: any, i: number) => ({
+              id: `#ORD-${String(i + 9000).padStart(4, '0')}`,
+              customer: o.parent_order?.user?.full_name || `Customer ${i + 1}`,
+              email: o.parent_order?.user?.email || '',
+              phone: o.parent_order?.user?.phone || '',
+              avatar: (o.parent_order?.user?.full_name || 'U').slice(0, 2).toUpperCase(),
+              avatarBg: AVATAR_BGS[i % AVATAR_BGS.length],
+              items: (o.order_items || []).map((item: any) => ({
+                name: item.product?.name || 'Product',
+                qty: item.quantity,
+                price: item.price_at_purchase,
+              })),
+              totalItems: o.order_items?.length || 0,
+              totalAmount: o.order_items?.reduce((sum: number, item: any) => sum + item.price_at_purchase * item.quantity, 0) || 0,
+              status: (o.status || 'pending').toLowerCase() as any,
+              date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              address: o.parent_order?.shipping_address || '',
+              paymentMethod: o.parent_order?.payment_method || 'COD',
+            }));
+            setOrders(mapped);
+            if (mapped.length > 0) setSelectedOrder(mapped[0]);
+          }
+        }
+      } catch {
+        // Fallback to mock data
+        setSelectedOrder(MOCK_ORDERS[1]);
+      }
+    };
+    loadOrders();
+  }, []);
 
   // Filter orders
   const filteredOrders = useMemo(() => {
-    let orders = MOCK_ORDERS;
+    let filtered = orders;
     if (activeTab !== "all") {
-      orders = orders.filter((o) => o.status === activeTab);
+      filtered = filtered.filter((o) => o.status === activeTab);
     }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      orders = orders.filter(
+      filtered = filtered.filter(
         (o) =>
           o.customer.toLowerCase().includes(q) ||
           o.id.toLowerCase().includes(q) ||
           o.email.toLowerCase().includes(q)
       );
     }
-    return orders;
-  }, [activeTab, searchQuery]);
+    return filtered;
+  }, [activeTab, searchQuery, orders]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE));
   const paginatedOrders = filteredOrders.slice(

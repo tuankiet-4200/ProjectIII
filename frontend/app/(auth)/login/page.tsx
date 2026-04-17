@@ -20,6 +20,11 @@ export default function LoginPage() {
     password: '',
   });
 
+  const getInputClassName = (hasValue: boolean) =>
+    `w-full rounded-xl border pl-12 py-4 text-slate-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all font-light shadow-sm ${
+      hasValue ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+    }`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -31,13 +36,37 @@ export default function LoginPage() {
         response.access_token,
         response.refresh_token
       );
+      // Set cookie for middleware auth check
+      document.cookie = `access_token=${response.access_token}; path=/; max-age=${60 * 60 * 24 * 7}`;
       toast.success('Login success!');
-      router.push('/');
+      // Redirect based on role
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirect = searchParams.get('redirect');
+      if (redirect) {
+        router.push(redirect);
+      } else if (response.user.role === 'ADMIN') {
+        router.push('/admin/analytics');
+      } else {
+        router.push('/');
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirect = searchParams.get('redirect');
+
+    if (redirect) {
+      localStorage.setItem('oauth_redirect', redirect);
+    } else {
+      localStorage.removeItem('oauth_redirect');
+    }
+
+    window.location.href = authService.getGoogleAuthUrl();
   };
 
   return (
@@ -60,7 +89,7 @@ export default function LoginPage() {
               placeholder="name@luxury.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full bg-input-bg border border-card-border rounded-xl pl-12 pr-4 py-4 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all font-light shadow-sm dark:shadow-none"
+              className={`${getInputClassName(!!formData.email)} pr-4`}
             />
           </div>
         </div>
@@ -82,7 +111,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full bg-input-bg border border-card-border rounded-xl pl-12 pr-12 py-4 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all font-light shadow-sm dark:shadow-none"
+              className={`${getInputClassName(!!formData.password)} pr-12`}
             />
             <button
               type="button"
@@ -98,7 +127,7 @@ export default function LoginPage() {
           <input 
             type="checkbox" 
             id="remember"
-            className="w-4 h-4 rounded border-card-border bg-input-bg text-purple-600 focus:ring-purple-500 focus:ring-offset-card" 
+            className="w-4 h-4 rounded border-gray-300 bg-white text-purple-600 focus:ring-purple-500 focus:ring-offset-card" 
           />
           <label htmlFor="remember" className="text-xs text-gray-500 dark:text-gray-400 font-medium cursor-pointer">Remember this device</label>
         </div>
@@ -106,7 +135,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-70"
+          className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-70"
         >
           {loading ? 'Signing In...' : 'Sign In'}
         </button>
@@ -123,6 +152,7 @@ export default function LoginPage() {
         <div className="grid grid-cols-1 gap-4">
           <button
             type="button"
+            onClick={handleGoogleLogin}
             className="flex items-center justify-center gap-3 bg-white/5 dark:bg-[#1C1326] border border-card-border hover:bg-black/5 dark:hover:bg-[#251A33] text-foreground py-3.5 rounded-xl transition-all shadow-sm dark:shadow-none"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
