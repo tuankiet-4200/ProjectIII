@@ -10,9 +10,9 @@ export function Footer() {
           <div className="lg:col-span-2">
             <Link href="/" className="mb-6 flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <span className="text-lg font-bold text-white">L</span>
+                <span className="text-sm font-bold text-white">P3</span>
               </div>
-              <span className="text-xl font-bold tracking-tight text-white">LUXEMARKET</span>
+              <span className="text-xl font-bold tracking-tight text-white">ProjectIII</span>
             </Link>
             <p className="max-w-xs text-sm text-gray-400 leading-relaxed">
               The world's leading premium marketplace for high-end tech, minimalist fashion, and luxury lifestyle goods.
@@ -35,7 +35,7 @@ export function Footer() {
               <li><Link href="#" className="hover:text-primary transition-colors">All Products</Link></li>
               <li><Link href="#" className="hover:text-primary transition-colors">New Drops</Link></li>
               <li><Link href="#" className="hover:text-primary transition-colors">Featured Shops</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Sell on LuxeMarket</Link></li>
+              <li><Link href="#" className="hover:text-primary transition-colors">Sell on ProjectIII</Link></li>
             </ul>
           </div>
 
@@ -68,7 +68,7 @@ export function Footer() {
         </div>
 
         <div className="mt-16 flex flex-col items-center justify-between border-t border-white/10 pt-8 sm:flex-row">
-          <p className="text-xs text-gray-500">© 2026 LUXEMARKET. ALL RIGHTS RESERVED.</p>
+          <p className="text-xs text-gray-500">© 2026 ProjectIII. ALL RIGHTS RESERVED.</p>
           <div className="mt-4 flex gap-6 text-xs text-gray-500 sm:mt-0">
             <Link href="#" className="hover:text-white transition-colors">TERMS OF SERVICE</Link>
             <Link href="#" className="hover:text-white transition-colors">PRIVACY POLICY</Link>

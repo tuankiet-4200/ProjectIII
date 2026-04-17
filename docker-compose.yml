@@ -37,6 +37,10 @@ services:
       - JWT_REFRESH_SECRET=super_secret_refresh_key_projectiii
       - JWT_ACCESS_EXPIRATION=15m
       - JWT_REFRESH_EXPIRATION=7d
+      - GOOGLE_CLIENT_ID=443299735874-6lrjdfhfu30n7svv8aukss52dohggfim.apps.googleusercontent.com
+      - GOOGLE_CLIENT_SECRET=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
+      - GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+      - FRONTEND_URL=http://localhost:3001
     depends_on:
       - postgres
       - redis

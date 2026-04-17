@@ -39,12 +39,18 @@ import {
 
 type EditTab = "general" | "seo" | "display" | "history";
 
+type IconComponent = React.FC<{
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}>;
+
 type Category = {
   id: string;
   name: string;
   slug: string;
   icon: string;
-  iconComponent: React.FC<{ size?: number; className?: string }>;
+  iconComponent: IconComponent;
   color: string;
   productCount: number;
   description: string;
@@ -57,7 +63,7 @@ type Category = {
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-const ICON_OPTIONS: { name: string; icon: React.FC<{ size?: number; className?: string }> }[] = [
+const ICON_OPTIONS: { name: string; icon: IconComponent }[] = [
   { name: "Monitor", icon: Monitor }, { name: "Headphones", icon: Headphones }, { name: "Speaker", icon: Speaker },
   { name: "Smartphone", icon: Smartphone }, { name: "Camera", icon: Camera }, { name: "Gamepad", icon: Gamepad2 },
   { name: "Watch", icon: Watch }, { name: "Home", icon: Home }, { name: "Shirt", icon: Shirt },

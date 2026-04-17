@@ -20,6 +20,16 @@ export default function RegisterPage() {
     confirmPassword: '',
   });
 
+  const getInputClassName = (hasValue: boolean) =>
+    `w-full rounded-xl border pl-12 pr-4 py-3.5 text-slate-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light shadow-sm ${
+      hasValue ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+    }`;
+
+  const getPasswordInputClassName = (hasValue: boolean) =>
+    `w-full rounded-xl border pl-11 pr-4 py-3.5 text-slate-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light text-sm shadow-sm ${
+      hasValue ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+    }`;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
@@ -43,6 +53,11 @@ export default function RegisterPage() {
     }
   };
 
+  const handleGoogleRegister = () => {
+    localStorage.removeItem('oauth_redirect');
+    window.location.href = authService.getGoogleAuthUrl(true);
+  };
+
   return (
     <AuthLayout>
       <div className="text-center mb-8">
@@ -53,6 +68,7 @@ export default function RegisterPage() {
       <div className="grid grid-cols-1 gap-4 mb-8">
         <button
           type="button"
+          onClick={handleGoogleRegister}
           className="flex items-center justify-center gap-3 bg-white/5 dark:bg-[#1C1326] border border-card-border hover:bg-black/5 dark:hover:bg-[#251A33] text-foreground py-3.5 rounded-xl transition-all shadow-sm dark:shadow-none"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -87,7 +103,7 @@ export default function RegisterPage() {
               placeholder="John Doe"
               value={formData.full_name}
               onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              className="w-full bg-input-bg border border-card-border rounded-xl pl-12 pr-4 py-3.5 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light shadow-sm dark:shadow-none"
+              className={getInputClassName(!!formData.full_name)}
             />
           </div>
         </div>
@@ -104,7 +120,7 @@ export default function RegisterPage() {
               placeholder="+84 123 456 789"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full bg-input-bg border border-card-border rounded-xl pl-12 pr-4 py-3.5 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light shadow-sm dark:shadow-none"
+              className={getInputClassName(!!formData.phone)}
             />
           </div>
         </div>
@@ -121,7 +137,7 @@ export default function RegisterPage() {
               placeholder="john@luxemarket.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full bg-input-bg border border-card-border rounded-xl pl-12 pr-4 py-3.5 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light shadow-sm dark:shadow-none"
+              className={getInputClassName(!!formData.email)}
             />
           </div>
         </div>
@@ -139,7 +155,7 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full bg-input-bg border border-card-border rounded-xl pl-11 pr-4 py-3.5 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light text-sm shadow-sm dark:shadow-none"
+                className={getPasswordInputClassName(!!formData.password)}
               />
             </div>
           </div>
@@ -155,7 +171,7 @@ export default function RegisterPage() {
                 placeholder="••••••••"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full bg-input-bg border border-card-border rounded-xl pl-11 pr-4 py-3.5 text-foreground placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all font-light text-sm shadow-sm dark:shadow-none"
+                className={getPasswordInputClassName(!!formData.confirmPassword)}
               />
             </div>
           </div>
@@ -166,7 +182,7 @@ export default function RegisterPage() {
             type="checkbox" 
             id="terms"
             required
-            className="w-4 h-4 rounded border-card-border bg-input-bg text-purple-600 focus:ring-purple-500" 
+            className="w-4 h-4 rounded border-gray-300 bg-white text-purple-600 focus:ring-purple-500" 
           />
           <label htmlFor="terms" className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium tracking-tight">
             I agree to the <Link href="#" className="underline hover:text-purple-600">Terms of Service</Link> and <Link href="#" className="underline hover:text-purple-600">Privacy Policy</Link>.
@@ -176,7 +192,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#8B5CF6] hover:bg-[#7C3AED] text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-70 mt-4"
+          className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-70 mt-4"
         >
           {loading ? 'Processing...' : 'Create My Account'}
         </button>

@@ -28,7 +28,7 @@ export default function AuthLayout({
               <path d="M2 12L12 17L22 12" />
             </svg>
           </div>
-          <span className="text-xl font-bold tracking-tight">LUXEMARKET</span>
+          <span className="text-xl font-bold tracking-tight">ProjectIII</span>
         </Link>
         
         <div className="flex items-center gap-4">
@@ -56,7 +56,7 @@ export default function AuthLayout({
         
         {/* Footer info under the card */}
         <div className="mt-8 text-center text-xs text-gray-500 space-y-4">
-          <p>© 2024 LuxeMarket Premium Marketplace. All rights reserved.</p>
+          <p>© 2024 ProjectIII Marketplace. All rights reserved.</p>
           {!isLogin && (
              <div className="flex justify-center gap-6 text-gray-400">
                <Link href="#" className="hover:text-white transition-colors">Support</Link>
