@@ -4,10 +4,10 @@ import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, Heart, ShoppingCart,
 
 export default function Home() {
   return (
-    <div className="flex flex-col bg-[#0B0A10] text-white min-h-screen">
+    <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
       {/* Hero Section */}
       <section className="container mx-auto max-w-7xl px-4 lg:px-8 pt-8 pb-16">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#171A21] to-[#0A101D] border border-white/5 p-8 md:p-16 lg:p-20 shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-card border border-card-border p-8 md:p-16 lg:p-20 shadow-2xl transition-colors duration-300">
           {/* Abstract Glow representing the neon light */}
           <div className="absolute right-10 top-1/2 -translate-y-1/2 w-[400px] h-[200px] rounded-full bg-cyan-500/10 blur-[100px] pointer-events-none hidden md:block"></div>
           <div className="absolute right-20 top-20 border-2 border-cyan-500/30 rounded-lg px-8 py-4 opacity-40 shadow-[0_0_30px_rgba(6,182,212,0.3)] hidden lg:block">
@@ -18,17 +18,17 @@ export default function Home() {
             <div className="inline-flex items-center rounded-full bg-primary/20 px-3 py-1 text-xs font-semibold text-primary mb-6 ring-1 ring-primary/30">
               SEASONAL DROP
             </div>
-            <h1 className="text-5xl tracking-tight font-extrabold text-white sm:text-6xl md:text-7xl mb-6 leading-[1.1]">
+            <h1 className="text-5xl tracking-tight font-extrabold text-foreground sm:text-6xl md:text-7xl mb-6 leading-[1.1]">
               Redefine Your <br /> Tech Aesthetic.
             </h1>
-            <p className="max-w-xl text-lg text-gray-400 mb-10 leading-relaxed">
+            <p className="max-w-xl text-lg text-slate-500 dark:text-gray-400 mb-10 leading-relaxed">
               Curated selection of high-performance electronics and artisanal fashion pieces for the digital elite.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button className="rounded-lg bg-primary px-8 py-3.5 text-sm font-semibold text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-105 active:scale-95">
                 Explore Collection
               </button>
-              <button className="rounded-lg bg-white/5 border border-white/10 px-8 py-3.5 text-sm font-semibold text-white hover:bg-white/10 transition-all">
+              <button className="rounded-lg bg-white/5 border border-card-border px-8 py-3.5 text-sm font-semibold text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-all">
                 View Lookbook
               </button>
             </div>
@@ -40,8 +40,8 @@ export default function Home() {
       <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-12">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-1">Trending Categories</h2>
-            <p className="text-sm text-gray-400">Most sought after this week</p>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Trending Categories</h2>
+            <p className="text-sm text-slate-500 dark:text-gray-400">Most sought after this week</p>
           </div>
           <Link href="#" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
             View All &gt;
@@ -57,9 +57,9 @@ export default function Home() {
             { icon: Glasses, name: "Optics" },
             { icon: Coffee, name: "Lifestyle" },
           ].map((cat) => (
-            <div key={cat.name} className="flex flex-col items-center justify-center p-6 rounded-xl bg-[#14121C] border border-white/5 hover:border-primary/50 hover:bg-[#1A1825] transition-all cursor-pointer group">
+            <div key={cat.name} className="flex flex-col items-center justify-center p-6 rounded-xl bg-card border border-card-border hover:border-primary/50 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group">
               <cat.icon size={28} className="text-primary mb-4 group-hover:scale-110 transition-transform" />
-              <span className="text-xs font-medium text-gray-300 group-hover:text-white">{cat.name}</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-gray-300 group-hover:text-foreground">{cat.name}</span>
             </div>
           ))}
         </div>
@@ -69,19 +69,19 @@ export default function Home() {
       <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-12">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-1">Featured Drops</h2>
-            <p className="text-sm text-gray-400">Hand-picked premium selections</p>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Featured Drops</h2>
+            <p className="text-sm text-slate-500 dark:text-gray-400">Hand-picked premium selections</p>
           </div>
-          <div className="flex items-center gap-2 bg-[#14121C] p-1 rounded-lg border border-white/5">
+          <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-card-border">
             <button className="px-4 py-1.5 text-xs font-medium rounded-md bg-primary text-white">All Products</button>
-            <button className="px-4 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white">Tech</button>
-            <button className="px-4 py-1.5 text-xs font-medium rounded-md text-gray-400 hover:text-white">Style</button>
+            <button className="px-4 py-1.5 text-xs font-medium rounded-md text-slate-500 dark:text-gray-400 hover:text-foreground">Tech</button>
+            <button className="px-4 py-1.5 text-xs font-medium rounded-md text-slate-500 dark:text-gray-400 hover:text-foreground">Style</button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1 */}
-          <div className="group rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden hover:border-white/10 transition-all flex flex-col">
+          <div className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-black/10 dark:hover:border-white/10 transition-all flex flex-col">
             <div className="relative aspect-square p-6 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
               <button className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-black/60 transition-colors z-10">
                 <Heart size={16} />
@@ -97,13 +97,13 @@ export default function Home() {
             <div className="p-5 flex flex-col flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Horizon Audio Co.</span>
-                <span className="text-xs text-yellow-500 font-medium">★ 4.9 <span className="text-gray-500">(342)</span></span>
+                <span className="text-xs text-yellow-500 font-medium">★ 4.9 <span className="text-slate-500 dark:text-gray-500">(342)</span></span>
               </div>
-              <h3 className="font-semibold text-white mb-4 line-clamp-1">Onyx Horizon ANC Headphones</h3>
+              <h3 className="font-semibold text-foreground mb-4 line-clamp-1">Onyx Horizon ANC Headphones</h3>
               <div className="mt-auto flex items-center justify-between">
                 <div>
-                  <div className="text-xl font-bold text-white">$349.99</div>
-                  <div className="text-[10px] text-gray-500">Free express worldwide</div>
+                  <div className="text-xl font-bold text-foreground">$349.99</div>
+                  <div className="text-[10px] text-slate-500 dark:text-gray-500">Free express worldwide</div>
                 </div>
                 <button className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-transform active:scale-95 shadow-lg shadow-primary/20">
                   <ShoppingCart size={18} />
@@ -113,7 +113,7 @@ export default function Home() {
           </div>
 
           {/* Card 2 */}
-          <div className="group rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden hover:border-white/10 transition-all flex flex-col">
+          <div className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-black/10 dark:hover:border-white/10 transition-all flex flex-col">
             <div className="relative aspect-square p-6 bg-gradient-to-tl from-gray-200 to-gray-400 flex items-center justify-center">
               <button className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-gray-800 hover:text-black hover:bg-black/30 transition-colors z-10">
                 <Heart size={16} />
@@ -125,13 +125,13 @@ export default function Home() {
             <div className="p-5 flex flex-col flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] uppercase font-bold text-primary tracking-wider">LuxeTech</span>
-                <span className="text-xs text-yellow-500 font-medium">★ 4.8 <span className="text-gray-500">(89)</span></span>
+                <span className="text-xs text-yellow-500 font-medium">★ 4.8 <span className="text-slate-500 dark:text-gray-500">(89)</span></span>
               </div>
-              <h3 className="font-semibold text-white mb-4 line-clamp-1">Zenith Smart Watch V3</h3>
+              <h3 className="font-semibold text-foreground mb-4 line-clamp-1">Zenith Smart Watch V3</h3>
               <div className="mt-auto flex items-center justify-between">
                 <div>
-                  <div className="text-xl font-bold text-white">$219.50</div>
-                  <div className="text-[10px] text-gray-500">Estimated tax applied</div>
+                  <div className="text-xl font-bold text-foreground">$219.50</div>
+                  <div className="text-[10px] text-slate-500 dark:text-gray-500">Estimated tax applied</div>
                 </div>
                 <button className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-transform active:scale-95 shadow-lg shadow-primary/20">
                   <ShoppingCart size={18} />
@@ -141,7 +141,7 @@ export default function Home() {
           </div>
 
           {/* Card 3 */}
-          <div className="group rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden hover:border-white/10 transition-all flex flex-col">
+          <div className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-black/10 dark:hover:border-white/10 transition-all flex flex-col">
             <div className="relative aspect-square p-6 bg-gradient-to-tr from-[#2d3748] to-[#4a5568] flex items-center justify-center">
               <button className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-black/60 transition-colors z-10">
                 <Heart size={16} />
@@ -153,13 +153,13 @@ export default function Home() {
             <div className="p-5 flex flex-col flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Urban Edge</span>
-                <span className="text-xs text-yellow-500 font-medium">★ 4.7 <span className="text-gray-500">(120)</span></span>
+                <span className="text-xs text-yellow-500 font-medium">★ 4.7 <span className="text-slate-500 dark:text-gray-500">(120)</span></span>
               </div>
-              <h3 className="font-semibold text-white mb-4 line-clamp-1">Neo-Shell Tech Jacket</h3>
+              <h3 className="font-semibold text-foreground mb-4 line-clamp-1">Neo-Shell Tech Jacket</h3>
               <div className="mt-auto flex items-center justify-between">
                 <div>
-                  <div className="text-xl font-bold text-white">$185.00</div>
-                  <div className="text-[10px] text-gray-500">Only 2 sizes left</div>
+                  <div className="text-xl font-bold text-foreground">$185.00</div>
+                  <div className="text-[10px] text-slate-500 dark:text-gray-500">Only 2 sizes left</div>
                 </div>
                 <button className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-transform active:scale-95 shadow-lg shadow-primary/20">
                   <ShoppingCart size={18} />
@@ -169,7 +169,7 @@ export default function Home() {
           </div>
 
           {/* Card 4 */}
-          <div className="group rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden hover:border-white/10 transition-all flex flex-col">
+          <div className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-black/10 dark:hover:border-white/10 transition-all flex flex-col">
             <div className="relative aspect-square p-6 bg-gradient-to-b from-[#b1e0db] to-[#6da5a1] flex items-center justify-center">
               <button className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-black/60 transition-colors z-10">
                 <Heart size={16} />
@@ -182,13 +182,13 @@ export default function Home() {
             <div className="p-5 flex flex-col flex-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Oakcraft</span>
-                <span className="text-xs text-yellow-500 font-medium">★ 5.0 <span className="text-gray-500">(42)</span></span>
+                <span className="text-xs text-yellow-500 font-medium">★ 5.0 <span className="text-slate-500 dark:text-gray-500">(42)</span></span>
               </div>
-              <h3 className="font-semibold text-white mb-4 line-clamp-1">Vintage Oak Desktop Speakers</h3>
+              <h3 className="font-semibold text-foreground mb-4 line-clamp-1">Vintage Oak Desktop Speakers</h3>
               <div className="mt-auto flex items-center justify-between">
                 <div>
-                  <div className="text-xl font-bold text-white">$450.00</div>
-                  <div className="text-[10px] text-gray-500">Free shipping</div>
+                  <div className="text-xl font-bold text-foreground">$450.00</div>
+                  <div className="text-[10px] text-slate-500 dark:text-gray-500">Free shipping</div>
                 </div>
                 <button className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-transform active:scale-95 shadow-lg shadow-primary/20">
                   <ShoppingCart size={18} />
@@ -201,19 +201,19 @@ export default function Home() {
 
       {/* VIP Banner Section */}
       <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-16 mb-12">
-        <div className="relative overflow-hidden rounded-3xl bg-[#14121C] border border-white/5 flex flex-col lg:flex-row items-center p-8 lg:p-16 gap-12">
+        <div className="relative overflow-hidden rounded-3xl bg-card border border-card-border flex flex-col lg:flex-row items-center p-8 lg:p-16 gap-12 transition-colors duration-300">
           {/* Background Gradient Effect */}
           <div className="absolute left-0 top-0 w-1/3 h-full bg-gradient-to-r from-primary/10 to-transparent pointer-events-none"></div>
 
           <div className="relative z-10 flex-1 w-full text-center lg:text-left">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-foreground mb-6 leading-tight">
               Become a <br className="hidden lg:block"/> LuxeMarket VIP <br className="hidden lg:block"/> Member.
             </h2>
-            <p className="max-w-md mx-auto lg:mx-0 text-gray-400 mb-8 leading-relaxed">
+            <p className="max-w-md mx-auto lg:mx-0 text-slate-500 dark:text-gray-400 mb-8 leading-relaxed">
               Unlock early access to drops, free worldwide express shipping, and a personal AI shopping concierge.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center lg:justify-start mb-8 text-sm font-medium text-gray-300">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center lg:justify-start mb-8 text-sm font-medium text-slate-600 dark:text-gray-300">
               <div className="flex items-center justify-center lg:justify-start gap-2">
                 <CheckCircle2 size={18} className="text-primary" />
                 <span>Free Express Shipping</span>
