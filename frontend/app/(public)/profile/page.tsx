@@ -773,10 +773,20 @@ export default function UserProfilePage() {
     setMounted(true);
     if (!isAuthenticated) {
       router.push("/login"); // enforce auth constraint
+    } else {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab) setSection(tab as Section);
     }
   }, [isAuthenticated, router]);
 
-  if (!mounted || !user) return null;
+  if (!mounted || !user) {
+    return (
+      <div className="min-h-screen bg-background transition-colors duration-300 flex flex-col items-center justify-center pb-20">
+        <div className="w-10 h-10 border-4 border-violet-500/20 border-t-violet-600 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const NAV: {
     id: Section;
