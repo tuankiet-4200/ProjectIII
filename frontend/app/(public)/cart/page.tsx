@@ -21,7 +21,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface CartItem {
-  id: number;
+  id: string;
   name: string;
   variant: string;
   price: number;
@@ -47,7 +47,7 @@ const SHOPS: CartShop[] = [
 
 const INITIAL_ITEMS: CartItem[] = [
   {
-    id: 1,
+    id: "prod-1",
     name: "Pro-Sound Wireless Headphones",
     variant: "Space Grey, Over-ear",
     price: 199,
@@ -58,7 +58,7 @@ const INITIAL_ITEMS: CartItem[] = [
     shopId: 1,
   },
   {
-    id: 2,
+    id: "prod-2",
     name: "SwiftClick Gaming Mouse",
     variant: "RGB, 16000 DPI",
     price: 100,
@@ -69,7 +69,7 @@ const INITIAL_ITEMS: CartItem[] = [
     shopId: 1,
   },
   {
-    id: 3,
+    id: "prod-3",
     name: "Organic Soy Candle",
     variant: "Lavender & Bergamot",
     price: 45,
@@ -116,7 +116,7 @@ export default function CartPage() {
             }
             group.items.forEach((item: any) => {
               mapped.push({
-                id: idx + 1,
+                id: item.product_id || `prod-${idx}`,
                 name: item.product?.name || `Product ${idx + 1}`,
                 variant: item.product?.description || '',
                 price: item.product?.price || 0,
@@ -139,14 +139,33 @@ export default function CartPage() {
     loadCart();
   }, []);
 
-  const updateQty = (id: number, delta: number) =>
-    setItems((prev) =>
-      prev
-        .map((item) => (item.id === id ? { ...item, qty: item.qty + delta } : item))
-        .filter((item) => item.qty > 0)
-    );
+  const updateQty = async (id: string, delta: number) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const newQty = item.qty + delta;
+    if (newQty <= 0) {
+      return removeItem(id);
+    }
+    
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, qty: newQty } : i));
+    
+    if (useApi) {
+      try {
+        const { cartService } = await import('@/services/cart.service');
+        await cartService.updateItem(id, newQty);
+      } catch (e) {}
+    }
+  };
 
-  const removeItem = (id: number) => setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = async (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    if (useApi) {
+      try {
+        const { cartService } = await import('@/services/cart.service');
+        await cartService.removeItem(id);
+      } catch (e) {}
+    }
+  };
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
@@ -160,7 +179,7 @@ export default function CartPage() {
   })).filter((s) => s.items.length > 0);
 
   return (
-    <div className="min-h-screen bg-[#0B0A10] text-white">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-10">
 
         {/* Breadcrumb */}
@@ -171,7 +190,7 @@ export default function CartPage() {
         </div>
 
         <div className="flex items-center gap-3 mb-8">
-          <h1 className="text-2xl font-extrabold text-white">Shopping Cart</h1>
+          <h1 className="text-2xl font-extrabold text-foreground">Shopping Cart</h1>
           <span className="rounded-full bg-violet-600 px-2.5 py-0.5 text-xs font-bold text-white">
             {items.reduce((s, i) => s + i.qty, 0)}
           </span>
@@ -181,7 +200,7 @@ export default function CartPage() {
           /* Empty state */
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <ShoppingBag size={56} className="text-gray-700 mb-5" />
-            <h2 className="text-xl font-bold text-white mb-2">Your cart is empty</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">Your cart is empty</h2>
             <p className="text-sm text-gray-500 mb-6">Add some premium products to get started.</p>
             <Link
               href="/products"
@@ -197,12 +216,12 @@ export default function CartPage() {
               {itemsByShop.map((shop) => (
                 <div
                   key={shop.id}
-                  className="rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden"
+                  className="rounded-2xl bg-card transition-colors duration-300 border border-card-border overflow-hidden"
                 >
                   {/* Shop header */}
-                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-3 px-5 py-3.5 border-b border-card-border bg-foreground/[0.02] transition-colors duration-300">
                     <Store size={14} className="text-violet-400" />
-                    <span className="text-sm font-bold text-white">{shop.name}</span>
+                    <span className="text-sm font-bold text-foreground">{shop.name}</span>
                     {shop.badge && (
                       <span className="text-[10px] font-bold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
                         {shop.badge}
@@ -210,14 +229,14 @@ export default function CartPage() {
                     )}
                     <span className="ml-auto text-xs text-gray-500">
                       Subtotal:{" "}
-                      <span className="text-white font-medium">
+                      <span className="text-foreground font-medium">
                         ${shop.items.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2)}
                       </span>
                     </span>
                   </div>
 
                   {/* Items */}
-                  <div className="divide-y divide-white/5">
+                  <div className="divide-y divide-card-border transition-colors duration-300">
                     {shop.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-5">
                         {/* Thumbnail */}
@@ -232,7 +251,7 @@ export default function CartPage() {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-semibold text-white truncate">{item.name}</h3>
+                          <h3 className="text-sm font-semibold text-foreground truncate">{item.name}</h3>
                           <p className="text-xs text-gray-500 mt-0.5">{item.variant}</p>
                           <p className="text-sm font-extrabold text-violet-400 mt-1">
                             ${item.price.toFixed(2)}
@@ -241,24 +260,24 @@ export default function CartPage() {
 
                         {/* Qty & actions */}
                         <div className="flex items-center gap-3 shrink-0">
-                          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5">
+                          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-foreground/5">
                             <button
                               onClick={() => updateQty(item.id, -1)}
-                              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded-l-xl transition-colors"
+                              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-foreground hover:bg-foreground/5 rounded-l-xl transition-colors"
                             >
                               <Minus size={13} />
                             </button>
-                            <span className="w-8 text-center text-sm font-bold text-white select-none">
+                            <span className="w-8 text-center text-sm font-bold text-foreground select-none">
                               {item.qty}
                             </span>
                             <button
                               onClick={() => updateQty(item.id, 1)}
-                              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 rounded-r-xl transition-colors"
+                              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-foreground hover:bg-foreground/5 rounded-r-xl transition-colors"
                             >
                               <Plus size={13} />
                             </button>
                           </div>
-                          <div className="text-sm font-bold text-white w-16 text-right">
+                          <div className="text-sm font-bold text-foreground w-16 text-right">
                             ${(item.price * item.qty).toFixed(2)}
                           </div>
                           <button
@@ -282,7 +301,7 @@ export default function CartPage() {
                 {PERKS.map((perk) => (
                   <div
                     key={perk.text}
-                    className="flex items-center gap-3 rounded-xl bg-[#14121C] border border-white/5 px-4 py-3"
+                    className="flex items-center gap-3 rounded-xl bg-card transition-colors duration-300 border border-card-border px-4 py-3"
                   >
                     <perk.icon size={16} className="text-violet-400 shrink-0" />
                     <span className="text-xs text-gray-400">{perk.text}</span>
@@ -293,13 +312,13 @@ export default function CartPage() {
 
             {/* ─── Order Summary ─── */}
             <div className="lg:w-80 shrink-0 space-y-4">
-              <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5 space-y-4">
-                <h2 className="text-base font-bold text-white">Order Summary</h2>
+              <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-5 space-y-4">
+                <h2 className="text-base font-bold text-foreground">Order Summary</h2>
 
                 <div className="space-y-2.5 text-sm">
                   <div className="flex justify-between text-gray-400">
                     <span>Subtotal ({items.reduce((s, i) => s + i.qty, 0)} items)</span>
-                    <span className="text-white font-medium">${subtotal.toFixed(2)}</span>
+                    <span className="text-foreground font-medium">${subtotal.toFixed(2)}</span>
                   </div>
                   {couponApplied && (
                     <div className="flex justify-between text-emerald-400">
@@ -309,16 +328,16 @@ export default function CartPage() {
                   )}
                   <div className="flex justify-between text-gray-400">
                     <span>Shipping</span>
-                    <span className={shipping === 0 ? "text-emerald-400 font-semibold" : "text-white font-medium"}>
+                    <span className={shipping === 0 ? "text-emerald-400 font-semibold" : "text-foreground font-medium"}>
                       {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-400">
                     <span>Tax (3.5%)</span>
-                    <span className="text-white font-medium">${tax.toFixed(2)}</span>
+                    <span className="text-foreground font-medium">${tax.toFixed(2)}</span>
                   </div>
-                  <div className="border-t border-white/5 pt-3 flex justify-between">
-                    <span className="font-bold text-white text-base">Total Payment</span>
+                  <div className="border-t border-card-border pt-3 flex justify-between">
+                    <span className="font-bold text-foreground text-base">Total Payment</span>
                     <span className="font-extrabold text-violet-400 text-lg">${total.toFixed(2)}</span>
                   </div>
                 </div>
@@ -326,14 +345,14 @@ export default function CartPage() {
                 {/* Coupon */}
                 <div className="pt-1">
                   <div className="flex gap-2">
-                    <div className="flex-1 flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 focus-within:border-violet-500/60 px-3 py-2 transition-colors">
+                    <div className="flex-1 flex items-center gap-2 rounded-xl bg-foreground/5 border border-white/10 focus-within:border-violet-500/60 px-3 py-2 transition-colors">
                       <Tag size={13} className="text-gray-500 shrink-0" />
                       <input
                         type="text"
                         placeholder="Enter coupon code"
                         value={coupon}
                         onChange={(e) => setCoupon(e.target.value)}
-                        className="flex-1 bg-transparent text-xs text-white placeholder:text-gray-600 outline-none"
+                        className="flex-1 bg-transparent text-xs text-foreground placeholder:text-gray-500 outline-none"
                       />
                     </div>
                     <button
@@ -360,7 +379,7 @@ export default function CartPage() {
 
                 <Link
                   href="/products"
-                  className="flex items-center justify-center gap-2 w-full rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 transition-colors"
+                  className="flex items-center justify-center gap-2 w-full rounded-xl border border-white/10 bg-foreground/5 py-3 text-sm font-medium text-gray-300 hover:bg-white/10 transition-colors"
                 >
                   Continue Shopping
                 </Link>
