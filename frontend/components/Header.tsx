@@ -54,19 +54,19 @@ export function Header() {
         <div className="flex items-center gap-4 sm:gap-6">
           <ThemeToggle />
           
-          <button className="relative text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors">
+          <Link href="/cart" className="relative text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors">
             <ShoppingCart size={22} />
             <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[10px] font-bold text-white shadow-sm">
               3
             </span>
-          </button>
-          <button className="text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors hidden sm:block">
+          </Link>
+          <Link href="/wishlist" className="text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors hidden sm:block">
             <Heart size={22} />
-          </button>
+          </Link>
 
           {showAuthenticatedUI ? (
             <>
-              <div className="flex items-center gap-3 rounded-full border border-card-border bg-card py-1 pl-1 pr-3 shadow-sm">
+              <Link href="/profile" className="flex items-center gap-3 rounded-full border border-card-border bg-card py-1 pl-1 pr-3 shadow-sm hover:border-primary/50 transition-colors">
                 <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-purple-600 text-xs font-bold text-white">
                   {(user.full_name || user.email).slice(0, 2).toUpperCase()}
                 </div>
@@ -74,7 +74,7 @@ export function Header() {
                   <span className="font-semibold text-foreground">{user.full_name}</span>
                   <span className="text-slate-500 dark:text-gray-400">{user.role}</span>
                 </div>
-              </div>
+              </Link>
               <Link
                 href="/logout"
                 className="rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-500/20 dark:text-red-400"

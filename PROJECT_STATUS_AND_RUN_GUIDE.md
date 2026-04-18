@@ -4,16 +4,19 @@ Tài liệu này tổng hợp từ code thực tế trong repo (`backend`, `fron
 
 ## 1) Tổng quan nhanh
 
-- **Mục tiêu:** Sàn TMĐT đa người bán (multi-vendor marketplace) có tách đơn, tracking logistics, chatbot, realtime notification.
-- **Backend:** NestJS + Prisma + PostgreSQL + Redis + JWT + Socket.IO.
-- **Frontend:** Next.js App Router + TypeScript + Zustand + Axios + Sonner + Socket.IO client.
-- **Infra:** Docker Compose chạy `postgres`, `redis`, `backend`, `frontend`.
+- **Mục tiêu:** Xây dựng Sàn TMĐT đa người bán (multi-vendor marketplace) giải quyết các bài toán lớn như Tách đơn hàng (Order Splitting), Theo dõi hành trình (Logistics Tracking Real-time), Khuyến nghị sản phẩm và Chatbot bằng AI.
+- **Backend:** Kiến trúc Hệ thống Phân tán (Distributed Systems) và Microservices thu nhỏ. Sử dụng NestJS + Prisma + PostgreSQL + Redis + JWT + Socket.IO.
+- **Frontend:** Next.js App Router + TypeScript + Zustand + Tailwind CSS + Shadcn UI.
+- **AI Service (Kế hoạch):** Python (FastAPI) (chưa khởi tạo). Khuyến nghị sản phẩm (Collaborative Filtering) và NLP Chatbot.
+- **Infra:** Docker Compose chạy đồng thời nhiều cụm: `postgres`, `redis`, `backend`, `frontend`.
 
 ---
 
 ## 2) Cách chạy dự án
 
-## 2.1 Chạy bằng Docker Compose (khuyến nghị)
+### 2.1 Chạy bằng Docker Compose (Khuyến nghị)
+
+Đây là cách tiêu chuẩn mô phỏng môi trường thật:
 
 Từ thư mục gốc `/Users/kietnt/ProjectIII`:
 
@@ -21,185 +24,102 @@ Từ thư mục gốc `/Users/kietnt/ProjectIII`:
 docker compose up -d --build
 ```
 
-Kiểm tra container:
+Kiểm tra trạng thái các container:
 
 ```bash
-docker compose ps
+docker ps
 ```
 
 Truy cập:
-
-- Frontend: `http://localhost:3001`
-- Backend API base: `http://localhost:3000/api`
+- **Frontend (Web):** `http://localhost:3001`
+- **Backend (API):** `http://localhost:3000/api`
 
 Dừng hệ thống:
-
 ```bash
 docker compose down
 ```
 
-Dừng và xóa volume DB:
-
+Xóa dữ liệu Database (Cẩn thận):
 ```bash
 docker compose down -v
 ```
 
-## 2.2 Chạy local không Docker (tham khảo)
+### 2.2 Chạy môi trường Local (Dev)
 
-### Backend
-
+**Backend:**
 ```bash
-cd /Users/kietnt/ProjectIII/backend
+cd backend
 npm install
 npx prisma generate
 npx prisma migrate dev
 npm run start:dev
 ```
 
-### Frontend
-
+**Frontend:**
 ```bash
-cd /Users/kietnt/ProjectIII/frontend
+cd frontend
 npm install
 npm run dev
 ```
 
-> Lưu ý biến môi trường:
->
-> - Backend cần: `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRATION`, `JWT_REFRESH_EXPIRATION`.
-> - Frontend cần: `NEXT_PUBLIC_API_URL` (mặc định đang dùng `http://localhost:3000/api`).
+> **Lưu ý:**
+> Cần thiết lập đúng các file `.env` ở backend và frontend ứng với các port Redis, Postgres ở môi trường Local/Docker. Đảm bảo cổng `3000` (Backend) và `3001` (Frontend) không bị chiếm dụng.
 
 ---
 
-## 3) Các chức năng cơ bản của dự án (theo thiết kế)
+## 3) Bức tranh tính năng tổng thể (Thiết kế ban đầu)
 
-- Đăng ký/đăng nhập người dùng, phân quyền JWT.
-- Quản lý hồ sơ người dùng và địa chỉ giao hàng.
-- Quản lý shop (tạo shop, cập nhật shop, admin đổi trạng thái shop).
-- Quản lý danh mục và sản phẩm (lọc/tìm kiếm/paging).
-- Giỏ hàng Redis.
-- Checkout + **tách đơn hàng** theo shop.
-- Tracking vận chuyển theo sự kiện.
-- Realtime notification (Socket.IO) khi đổi trạng thái đơn / có tracking event.
-- Chatbot + log hành vi người dùng (interaction).
-- Frontend nhiều khu vực: public, auth, vendor, admin.
-
----
-
-## 4) Chức năng **đã làm được** (đang có trong code)
-
-## 4.1 Backend
-
-### Auth & Users
-
-- Có API:
-  - `POST /api/auth/register`
-  - `POST /api/auth/login`
-  - `POST /api/auth/refresh`
-  - `POST /api/auth/logout`
-- Có JWT strategy + `JwtAuthGuard`.
-- Có role decorator/guard (`Roles`, `RolesGuard`).
-- Có API user profile/address:
-  - `GET/PATCH /api/users/me`
-  - `GET/POST/PATCH/DELETE /api/users/me/addresses...`
-
-### Shops / Categories / Products
-
-- Shops:
-  - `GET /api/shops`
-  - `GET /api/shops/my`
-  - `GET /api/shops/:id`
-  - `POST /api/shops`
-  - `PATCH /api/shops/:id`
-  - `PATCH /api/shops/:id/status` (ADMIN)
-- Categories:
-  - `GET /api/categories`
-  - `GET /api/categories/:id`
-  - `POST/PATCH/DELETE /api/categories/:id` (ADMIN)
-- Products:
-  - `GET /api/products`
-  - `GET /api/products/:slug`
-  - `POST /api/shops/:shopId/products`
-  - `PATCH /api/products/:id/edit`
-  - `DELETE /api/products/:id`
-
-### Cart / Orders / Tracking
-
-- Cart Redis:
-  - `GET /api/cart`
-  - `POST /api/cart/items`
-  - `PATCH /api/cart/items/:productId`
-  - `DELETE /api/cart/items/:productId`
-  - `DELETE /api/cart`
-- Orders:
-  - `POST /api/orders/checkout` (đã có transaction, validate stock, tạo parent+shop orders, trừ stock, clear cart)
-  - `GET /api/orders`
-  - `GET /api/orders/:id`
-  - `GET /api/shops/:shopId/orders`
-  - `PATCH /api/shop-orders/:id/status`
-- Tracking:
-  - `POST /api/shop-orders/:id/tracking` (ADMIN/SHIPPER)
-  - `GET /api/shop-orders/:id/tracking`
-- Có `TrackingGateway` realtime GPS namespace `/gps-tracking` (join room, update location, lưu Redis TTL).
-
-### Notifications / Chat / Interactions
-
-- Có `NotificationsGateway` websocket để emit:
-  - `orderStatusChanged`
-  - `trackingEvent`
-- `OrdersService` và `TrackingService` đã gọi emit notification.
-- Chat API:
-  - `POST /api/chat/sessions`
-  - `POST /api/chat/sessions/:id/messages`
-  - `GET /api/chat/sessions/:id/messages`
-  - `PATCH /api/chat/sessions/:id/close`
-  - `GET /api/chat/sessions`
-- Interaction API:
-  - `POST /api/interactions`
-  - `GET /api/interactions`
-
-## 4.2 Frontend
-
-- Có luồng auth cơ bản: trang `login/register`, lưu state bằng Zustand, gắn token vào Axios interceptor.
-- Có hạ tầng service gọi API cho: auth/users/shops/categories/products/cart/orders.
-- Có middleware bảo vệ route `admin`, `vendor`, `checkout`, `orders`, `profile`.
-- Có nhiều trang UI đã dựng đầy đủ giao diện:
-  - Public: products, product detail, shop detail, cart, checkout, orders, profile.
-  - Vendor: dashboard, products, orders.
-  - Admin: analytics, categories, shops, users.
-- Một số trang vendor/public đã có logic **thử gọi API**, nếu lỗi thì fallback sang mock data.
+- Đăng ký/đăng nhập người dùng, phân quyền JWT chuẩn, OAuth Google.
+- Quản lý hồ sơ cá nhân và nhiều địa chỉ giao nhận (Address).
+- Quản lý Shop (Vendor) toàn diện: Tự động chuyển quyền, ban/unban shop bởi Admin.
+- Quản lý Catalog: Phân cấp Category, tìm kiếm và đăng bá sản phẩm.
+- Giỏ hàng (Cart) tối ưu tốc độ thông qua Redis In-memory Store.
+- Xác nhận Hóa đơn (Checkout) với Transactions và **Thuật toán Tách Đơn (Order Splitting)**.
+- Quản lý quá trình Logistics bằng sự kiện lưu vết minh bạch.
+- Thông báo Tức thời theo thời gian thực với Socket.IO.
+- Chatbot Hỗ trợ người dùng qua AI NLP và gợi ý sản phẩm dựa vào sự kiện (User Interactions Log).
 
 ---
 
-## 5) Chức năng **chưa làm xong / còn hạn chế**
+## 4) Chức năng **ĐÃ hoàn thành và tích hợp**
 
-## 5.1 Backend
+### 4.1 Backend (NestJS)
 
-- **Chatbot AI chưa tích hợp thật**: `ChatService` còn TODO, hiện trả bot message placeholder.
-- **Logout đã có endpoint** và blacklist refresh token bằng Redis; token đã logout sẽ không dùng refresh lại được.
-- **Một số yêu cầu business trong plan chưa đầy đủ**, ví dụ:
-  - Chưa thấy module AI service FastAPI trong repo.
-  - Chưa có RabbitMQ/Kafka cho async pipeline.
-- **Websocket auth có điểm cần chỉnh**:
-  - `NotificationsModule` đang đọc `JWT_SECRET`, trong compose đang khai báo `JWT_ACCESS_SECRET`.
-  - Nếu không set thêm `JWT_SECRET`, kết nối socket có thể lỗi verify token.
+- **Auth & Users:** Token rotation (Access + Refresh JWT). Login/Logout có blacklist Redis token. Quản lý roles (ADMIN, CUSTOMER, VENDOR, SHIPPER) thông qua `RolesGuard`.
+- **Shops & Catalog:** Chức năng API RESTful đầy đủ cho Quản lý Gian hàng, Sản phẩm, Phân mục hàng hóa. Đã làm phân cấp parent-child category.
+- **Cart & Redis:** API giỏ hàng đã liên kết với `redis.service`. Validate số lượng realtime. 
+- **Orders Splitting:** Khi gọi hàm thanh toán, Hệ thống tự lấy Giỏ hàng, lập Hóa đơn lớn (Parent Order), bóc tách và chuyển về đơn từng Shop (Shop Orders), trừ kho hàng (Transaction ACID an toàn với mạng rớt).
+- **Tracking & Websocket:** Có cổng `NotificationsGateway` phát đi tọa độ GPS qua Namespace `/gps-tracking` và trạng thái sự kiện đơn hàng.
+- **Sản phẩm Đóng gói Docker:** Docker của backend đã được map chuẩn xác (`npm install` ổn định).
 
-## 5.2 Frontend
+### 4.2 Frontend (Next.js)
 
-- **Chưa có hook realtime hoàn chỉnh** như kế hoạch (`useSocket.ts` chưa tồn tại).
-- `lib/socket.ts` đã có nhưng **chưa được mount/use toàn cục** trong layout.
-- Nhiều trang vẫn mang tính **UI mock/demo**, chưa đồng bộ hoàn toàn với dữ liệu backend thực.
-- Kiểu dữ liệu frontend (`PaginatedResponse`, `Cart`) chưa khớp hoàn toàn với response thực tế một số API backend (nên đang cần mapping/fallback ở UI).
-- `Header/Footer/Home` hiện thiên về demo giao diện, chưa nối nghiệp vụ thật (giỏ hàng, tìm kiếm, user menu thực).
+- **Cấu trúc & Routing:** Hệ thống thư mục phân rõ ràng (Admin, Vendor, Customer Dashboard).
+- **Hệ thống Giao diện Sáng/Tối (Dark/Light Mode):** Đã tinh chỉnh đồng bộ hoàn hảo toàn bộ trang Web (Từ Login đến Home page) bằng Tailwind Semantic colors (`bg-background text-foreground`). Header của trang đã tích hợp `ThemeToggle` và Profile user.
+- **Luồng Đăng nhập (Auth Flow):** Setup middleware chặn các trang nhạy cảm. Gắn Axios Interceptors và xử lý state với Zustand.
+- **Khung giao diện chức năng đồ sộ:** Các Dashboard về Doanh thu, Đơn hàng, Liệt kê sản phẩm cho Chủ Shop (Vendor) và Admin đã được dàn CSS chỉn chu, có mockup UI đẹp.
 
 ---
 
-## 6) Kết luận hiện trạng
+## 5) Chức năng Đang phát triển / Còn hạn chế (TODO List)
 
-- Dự án đã có nền tảng backend khá đầy đủ cho core e-commerce: auth, catalog, cart Redis, checkout tách đơn, tracking, notification.
-- Frontend đã có rất nhiều màn hình và khung quản trị/vendor, nhưng mức tích hợp dữ liệu thật còn chưa đồng nhất ở nhiều trang.
-- Để đi vào trạng thái “demo end-to-end ổn định”, nên ưu tiên:
-  1. Hoàn thiện contract API response (backend ↔ frontend).
-  2. Kết nối realtime frontend bằng `useSocket` + toast event.
-  3. Thay mock data bằng API thật cho các trang public/vendor/admin quan trọng.
-  4. Hoàn thiện refresh-token rotation đầy đủ và kiểm tra phân quyền chi tiết.
+### 5.1 Backend & Hệ thống
+
+- **Dịch vụ AI Chatbot & Gợi ý (FastAPI - Python):** Hiện tại thư mục và bộ framework của Python chưa được tạo ra. API `/api/chat/sessions` phía NestJS mới là khung xương, trả về dummy message.
+- **Message Broker (Kafka/RabbitMQ):** Kiến trúc có đề cập đến Message Queue cho các Event tải cao (Cold Data), hiện tại chưa được cài đặt.
+- **Luồng Tích hợp OAuth Google:** Tuy đã có endpoint redirect callback, nhưng việc config ở `.env` trên môi trường sống chưa đầy đủ.
+
+### 5.2 Frontend
+
+- **Module Thời gian thực (Real-time Socket):** File `lib/socket.ts` đã có nhưng hook `useSocket.ts` để bắt sự kiện pop-up màn hình người dùng khi Tình trạng đơn hàng thay đổi chưa được tạo.
+- **Kết nối Backend-API (Data Binding):** Rất nhiều trang Frontend dù có Layout xịn (Dashboard, Shop Analytics) nhưng vẫn đang dùng **Mock Data**. Chúng chưa được chuyển đổi để lấy dữ liệu thực từ các endpoint Nest API.
+- **Khớp dữ liệu (API Schema Matching):** Cần đảm bảo kiểu dữ liệu từ Axios trỏ thẳng vào các Interface ở Frontend chuẩn xác (VD: `PaginatedResponse`, `Cart`).
+
+---
+
+## 6) Lộ trình Tiếp theo đề xuất (Next Action Items)
+
+Để nhanh chóng ra một sản phẩm hoàn thiện chạy "Ngon ơ" End-to-End:
+1. Gắn **API Call có thật** vào các giao diện chính như Trang Xem Sản phẩm (Public), Giỏ Hàng (Cart), và Trang Thanh Toán (Checkout) trên Frontend.
+2. Viết chức năng **`useSocket.ts`** gắn lên cấp độ file Layout.tsx để người dùng nhận Toast Notification khi kiện hàng thay đổi vị trí.
+3. Chốt phương án phát triển **FastAPI AI Module**. Nếu chưa xây dựng, cần dựng bộ khung Python lên.

@@ -1,6 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
+import { usersService } from "@/services/users.service";
+import { ordersService } from "@/services/orders.service";
+import type { UserAddress, ParentOrder } from "@/types";
 import {
   User,
   MapPin,
@@ -64,14 +70,17 @@ interface WishlistItem {
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const USER = {
-  name: "Julianne Doe",
-  email: "j.doe@premium.com",
-  phone: "+1 (555) 902-3412",
-  avatar: "JD",
-  tier: "Platinum Member",
-  verified: true,
-  joined: "January 2023",
+// Dummy data wrapper function logic
+const getAvatar = (name: string) => {
+  return name ? name.slice(0, 2).toUpperCase() : "JD";
+};
+
+const formatDate = (dateString?: string | Date) => {
+  if (!dateString) return "Recently";
+  const str = String(dateString);
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return "Recently";
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 };
 
 const ADDRESSES: Address[] = [
@@ -207,8 +216,8 @@ function NavItem({
         danger
           ? "text-red-400 hover:bg-red-500/10 hover:text-red-300"
           : active
-          ? "bg-violet-600 text-white shadow-lg shadow-violet-900/40"
-          : "text-gray-400 hover:bg-white/5 hover:text-white"
+          ? "bg-violet-600 text-foreground shadow-lg shadow-violet-900/40"
+          : "text-gray-400 hover:bg-foreground/5 hover:text-foreground"
       }`}
     >
       <Icon size={16} />
@@ -220,18 +229,31 @@ function NavItem({
 // ─── Section: Profile Info ────────────────────────────────────────────────────
 
 function ProfileSection() {
+  const user = useAuthStore((state) => state.user);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
-    name: USER.name,
-    email: USER.email,
-    phone: USER.phone,
+    name: user?.full_name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.full_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user]);
+
+  if (!user) return null;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white">Profile Information</h2>
+        <h2 className="text-lg font-bold text-foreground">Profile Information</h2>
         <button
           onClick={() => setEditing(!editing)}
           className="flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors"
@@ -241,28 +263,26 @@ function ProfileSection() {
         </button>
       </div>
 
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-6">
+      <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-6">
         {/* Avatar row */}
         <div className="flex items-center gap-5 mb-8">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-600 to-violet-900 flex items-center justify-center text-2xl font-extrabold text-white shadow-lg">
-              {USER.avatar}
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-600 to-violet-900 flex items-center justify-center text-2xl font-extrabold text-foreground shadow-lg">
+              {getAvatar(user.full_name || user.email)}
             </div>
             <button className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-violet-600 border-2 border-[#14121C] flex items-center justify-center hover:bg-violet-500 transition-colors">
-              <Camera size={11} className="text-white" />
+              <Camera size={11} className="text-foreground" />
             </button>
           </div>
           <div>
-            <div className="text-base font-bold text-white">{USER.name}</div>
+            <div className="text-base font-bold text-foreground">{user.full_name}</div>
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-xs text-violet-400 font-semibold bg-violet-500/10 px-2 py-0.5 rounded-full border border-violet-500/20">
-                {USER.tier}
+                {user.role} Member
               </span>
-              {USER.verified && (
-                <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20 font-bold">
-                  <BadgeCheck size={10} /> Verified
-                </span>
-              )}
+              <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20 font-bold">
+                <BadgeCheck size={10} /> Verified
+              </span>
             </div>
           </div>
         </div>
@@ -273,7 +293,7 @@ function ProfileSection() {
             { label: "FULL NAME", field: "name" as const, value: form.name, type: "text" },
             { label: "EMAIL ADDRESS", field: "email" as const, value: form.email, type: "email" },
             { label: "PHONE NUMBER", field: "phone" as const, value: form.phone, type: "tel" },
-            { label: "MEMBER SINCE", value: USER.joined, type: "text", readonly: true },
+            { label: "MEMBER SINCE", value: formatDate(user.created_at), type: "text", readonly: true },
           ].map((item) => (
             <div key={item.label}>
               <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
@@ -286,10 +306,10 @@ function ProfileSection() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, [item.field!]: e.target.value }))
                   }
-                  className="w-full rounded-xl bg-white/5 border border-white/10 focus:border-violet-500/60 text-white text-sm px-4 py-2.5 outline-none transition-colors"
+                  className="w-full rounded-xl bg-foreground/5 border border-white/10 focus:border-violet-500/60 text-foreground text-sm px-4 py-2.5 outline-none transition-colors"
                 />
               ) : (
-                <div className="text-sm font-semibold text-white py-2.5 px-4 rounded-xl bg-white/[0.03] border border-transparent">
+                <div className="text-sm font-semibold text-foreground py-2.5 px-4 rounded-xl bg-foreground/[0.03] border border-transparent">
                   {item.value}
                 </div>
               )}
@@ -301,7 +321,7 @@ function ProfileSection() {
             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               ACCOUNT STATUS
             </label>
-            <div className="py-2.5 px-4 rounded-xl bg-white/[0.03] border border-transparent">
+            <div className="py-2.5 px-4 rounded-xl bg-foreground/[0.03] border border-transparent">
               <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-400">
                 <BadgeCheck size={14} /> Verified
               </span>
@@ -313,13 +333,13 @@ function ProfileSection() {
           <div className="flex justify-end mt-6 gap-3">
             <button
               onClick={() => setEditing(false)}
-              className="px-5 py-2 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+              className="px-5 py-2 rounded-xl border border-white/10 text-sm text-gray-300 hover:text-foreground hover:bg-foreground/5 transition-all"
             >
               Cancel
             </button>
             <button
               onClick={() => setEditing(false)}
-              className="px-5 py-2 rounded-xl bg-violet-600 text-sm font-semibold text-white hover:bg-violet-500 active:scale-95 transition-all shadow shadow-violet-900/40"
+              className="px-5 py-2 rounded-xl bg-violet-600 text-sm font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow shadow-violet-900/40"
             >
               Save Changes
             </button>
@@ -333,31 +353,111 @@ function ProfileSection() {
 // ─── Section: Address Book ────────────────────────────────────────────────────
 
 function AddressSection() {
-  const [addresses, setAddresses] = useState<Address[]>(ADDRESSES);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newAddr, setNewAddr] = useState({ address_line: "", ward: "", district: "", city: "" });
+  const [saving, setSaving] = useState(false);
 
-  const setDefault = (id: number) =>
-    setAddresses((prev) =>
-      prev.map((a) => ({ ...a, isDefault: a.id === id }))
-    );
+  useEffect(() => {
+    usersService.getAddresses().then(data => {
+      setAddresses(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
-  const remove = (id: number) =>
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
+  const setDefault = async (id: string) => {
+    try {
+      await usersService.updateAddress(id, { is_default: true });
+      const data = await usersService.getAddresses();
+      setAddresses(data);
+    } catch(e) {}
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await usersService.deleteAddress(id);
+      setAddresses(addresses.filter((a) => a.id !== id));
+    } catch(e) {}
+  };
+
+  const submitNewAddress = async () => {
+    if (!newAddr.address_line || !newAddr.city) return;
+    try {
+      setSaving(true);
+      const addr = await usersService.createAddress({
+        ...newAddr,
+        is_default: addresses.length === 0
+      });
+      setAddresses([...addresses, addr]);
+      setIsAdding(false);
+      setNewAddr({ address_line: "", ward: "", district: "", city: "" });
+    } catch(e) {
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white">Address Book</h2>
-        <button className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white hover:bg-violet-500 active:scale-95 transition-all shadow shadow-violet-900/40">
+        <h2 className="text-lg font-bold text-foreground">Address Book</h2>
+        <button onClick={() => setIsAdding(true)} className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow shadow-violet-900/40">
           <Plus size={13} /> Add New Address
         </button>
       </div>
 
+      {isAdding && (
+        <div className="rounded-2xl border border-card-border bg-card p-5 space-y-4 shadow-sm">
+          <h3 className="text-sm font-bold text-foreground">Add New Address</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Address Line (e.g. 123 Main St)"
+              value={newAddr.address_line}
+              onChange={(e) => setNewAddr({ ...newAddr, address_line: e.target.value })}
+              className="bg-foreground/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-violet-500/60 text-foreground transition-colors"
+            />
+            <input
+              type="text"
+              placeholder="Ward"
+              value={newAddr.ward}
+              onChange={(e) => setNewAddr({ ...newAddr, ward: e.target.value })}
+              className="bg-foreground/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-violet-500/60 text-foreground transition-colors"
+            />
+            <input
+              type="text"
+              placeholder="District"
+              value={newAddr.district}
+              onChange={(e) => setNewAddr({ ...newAddr, district: e.target.value })}
+              className="bg-foreground/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-violet-500/60 text-foreground transition-colors"
+            />
+            <input
+              type="text"
+              placeholder="City"
+              value={newAddr.city}
+              onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })}
+              className="bg-foreground/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-violet-500/60 text-foreground transition-colors"
+            />
+          </div>
+          <div className="flex gap-3 justify-end mt-4 pt-4 border-t border-card-border">
+            <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-xs font-semibold text-gray-400 hover:text-foreground">Cancel</button>
+            <button onClick={submitNewAddress} disabled={saving} className="px-4 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-foreground hover:bg-violet-500 transition-colors disabled:opacity-50">
+              {saving ? "Saving..." : "Save Address"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {loading && <div className="text-sm text-gray-500 p-4">Loading addresses...</div>}
+        {!loading && addresses.length === 0 && <div className="text-sm text-gray-500 p-4 col-span-2 text-center border border-dashed border-card-border rounded-xl py-10">No addresses configued yet. Click 'Add New Address'.</div>}
+
         {addresses.map((addr) => (
           <div
             key={addr.id}
-            className={`rounded-2xl bg-[#14121C] border p-5 transition-all ${
-              addr.isDefault ? "border-violet-500/40" : "border-white/5"
+            className={`rounded-2xl bg-card transition-colors duration-300 border p-5 transition-all ${
+              addr.is_default ? "border-violet-500/40" : "border-card-border"
             }`}
           >
             <div className="flex items-start justify-between mb-3">
@@ -365,31 +465,30 @@ function AddressSection() {
                 <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
                   <MapPin size={14} className="text-violet-400" />
                 </div>
-                <span className="text-sm font-bold text-white">{addr.label}</span>
+                <span className="text-sm font-bold text-foreground">{addr.city} Location</span>
               </div>
-              {addr.isDefault && (
+              {addr.is_default && (
                 <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-violet-300 bg-violet-500/15 px-2 py-0.5 rounded-full border border-violet-500/25">
                   <Check size={9} /> DEFAULT
                 </span>
               )}
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
-              {addr.line1}
-              {addr.line2 && `, ${addr.line2}`}
+              {addr.address_line}
               <br />
-              {addr.city}, {addr.state} {addr.zip}
+              {addr.ward}, {addr.district}
               <br />
-              {addr.country}
+              {addr.city}
             </p>
-            <div className="flex gap-3 mt-4 pt-4 border-t border-white/5">
+            <div className="flex gap-3 mt-4 pt-4 border-t border-card-border">
               <button className="text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors">
                 Edit
               </button>
-              {!addr.isDefault && (
+              {!addr.is_default && (
                 <>
                   <button
                     onClick={() => setDefault(addr.id)}
-                    className="text-xs text-gray-500 hover:text-white font-medium transition-colors"
+                    className="text-xs text-gray-500 hover:text-foreground font-medium transition-colors"
                   >
                     Set Default
                   </button>
@@ -404,16 +503,6 @@ function AddressSection() {
             </div>
           </div>
         ))}
-
-        {/* Add new CTA card */}
-        <button className="rounded-2xl border-2 border-dashed border-white/10 p-5 flex flex-col items-center justify-center gap-3 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all group min-h-[160px]">
-          <div className="w-10 h-10 rounded-full bg-white/5 group-hover:bg-violet-500/10 flex items-center justify-center transition-colors">
-            <Plus size={18} className="text-gray-500 group-hover:text-violet-400" />
-          </div>
-          <span className="text-sm text-gray-500 group-hover:text-violet-400 font-medium transition-colors">
-            Add New Address
-          </span>
-        </button>
       </div>
     </div>
   );
@@ -422,23 +511,33 @@ function AddressSection() {
 // ─── Section: Order History ───────────────────────────────────────────────────
 
 function OrdersSection() {
+  const [orders, setOrders] = useState<ParentOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    ordersService.getMyOrders().then(res => {
+      setOrders(res.items || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white">Order History</h2>
-        <span className="text-xs text-gray-500">{ORDERS.length} orders</span>
+        <h2 className="text-lg font-bold text-foreground">Order History</h2>
+        <span className="text-xs text-gray-500">{orders.length} orders</span>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { icon: Package, label: "Total Orders", value: ORDERS.length },
-          { icon: Check, label: "Delivered", value: ORDERS.filter((o) => o.status === "delivered").length },
-          { icon: Clock, label: "In Transit", value: ORDERS.filter((o) => o.status === "shipped" || o.status === "processing").length },
+          { icon: Package, label: "Total Orders", value: orders.length },
+          { icon: Check, label: "Paid", value: orders.filter((o) => o.payment_status === "PAID").length },
+          { icon: Clock, label: "Unpaid", value: orders.filter((o) => o.payment_status === "UNPAID").length },
         ].map((s) => (
-          <div key={s.label} className="rounded-2xl bg-[#14121C] border border-white/5 p-4 flex flex-col items-center text-center">
+          <div key={s.label} className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-4 flex flex-col items-center text-center">
             <s.icon size={18} className="text-violet-400 mb-2" />
-            <div className="text-2xl font-extrabold text-white">{s.value}</div>
+            <div className="text-2xl font-extrabold text-foreground">{s.value}</div>
             <div className="text-[10px] text-gray-500 mt-0.5">{s.label}</div>
           </div>
         ))}
@@ -446,37 +545,36 @@ function OrdersSection() {
 
       {/* Order list */}
       <div className="space-y-3">
-        {ORDERS.map((order) => {
-          const status = STATUS_STYLE[order.status];
+        {loading ? <div className="text-xs text-gray-500 p-4">Loading your orders...</div> : 
+          orders.length === 0 ? <div className="text-sm p-4 text-center border-dashed border border-card-border rounded-xl">No orders found.</div> :
+        orders.map((order) => {
           return (
             <div
               key={order.id}
-              className="group rounded-2xl bg-[#14121C] border border-white/5 hover:border-violet-500/20 p-4 flex items-center gap-4 transition-all cursor-pointer"
+              className="group rounded-2xl bg-card transition-colors duration-300 border border-card-border hover:border-violet-500/20 p-4 flex items-center gap-4 transition-all cursor-pointer"
             >
               <div className="w-12 h-12 rounded-xl bg-[#1C1828] flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
-                {order.emoji}
+                📦
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-gray-400">{order.id}</span>
+                  <span className="text-xs font-bold text-gray-400">#{order.id.slice(0,8).toUpperCase()}</span>
                   <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${status.cls}`}
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-violet-500/10 text-violet-400 border-violet-500/20`}
                   >
-                    {status.label}
+                    {order.payment_status}
                   </span>
                 </div>
-                <div className="text-sm font-semibold text-white mt-0.5 truncate">
-                  {order.productName}
+                <div className="text-sm font-semibold text-foreground mt-0.5 truncate">
+                  {order.payment_method} Payment
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-500">
-                  <span>{order.date}</span>
-                  <span>·</span>
-                  <span>{order.items} item{order.items > 1 ? "s" : ""}</span>
+                  <span>{formatDate(order.created_at as unknown as string)}</span>
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-sm font-extrabold text-white">
-                  ${order.total.toLocaleString()}
+                <div className="text-sm font-extrabold text-foreground">
+                  ${Number(order.total_payment).toLocaleString()}
                 </div>
                 <ChevronRight size={14} className="text-gray-600 group-hover:text-violet-400 mt-1 ml-auto transition-colors" />
               </div>
@@ -497,12 +595,12 @@ function WishlistSection() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-white">Wishlist</h2>
+        <h2 className="text-lg font-bold text-foreground">Wishlist</h2>
         <span className="text-xs text-gray-500">{items.length} items saved</span>
       </div>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-[#14121C] border border-white/5">
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-card transition-colors duration-300 border border-card-border">
           <Heart size={40} className="text-gray-700 mb-4" />
           <div className="text-sm font-semibold text-gray-400">Your wishlist is empty</div>
           <div className="text-xs text-gray-600 mt-1">Save items you love to buy later</div>
@@ -512,7 +610,7 @@ function WishlistSection() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="group flex gap-4 rounded-2xl bg-[#14121C] border border-white/5 hover:border-violet-500/20 p-4 transition-all"
+              className="group flex gap-4 rounded-2xl bg-card transition-colors duration-300 border border-card-border hover:border-violet-500/20 p-4 transition-all"
             >
               <div
                 className="w-20 h-20 rounded-xl shrink-0 flex items-center justify-center text-3xl"
@@ -524,7 +622,7 @@ function WishlistSection() {
               </div>
               <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-white line-clamp-2 group-hover:text-violet-100 transition-colors leading-snug">
+                  <div className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-violet-100 transition-colors leading-snug">
                     {item.name}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
@@ -545,7 +643,7 @@ function WishlistSection() {
                 </div>
                 <div className="flex items-center gap-2 mt-3">
                   {item.inStock && (
-                    <button className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 active:scale-95 transition-all">
+                    <button className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-1.5 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all">
                       <ShoppingBag size={12} /> Add to Cart
                     </button>
                   )}
@@ -574,11 +672,11 @@ function SecuritySection() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-bold text-white">Security & Privacy</h2>
+      <h2 className="text-lg font-bold text-foreground">Security & Privacy</h2>
 
       {/* Change Password */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-6 space-y-5">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+      <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-6 space-y-5">
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
           <Lock size={14} className="text-violet-400" /> Change Password
         </h3>
         {[
@@ -590,15 +688,15 @@ function SecuritySection() {
             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
               {f.label}
             </label>
-            <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 focus-within:border-violet-500/60 px-4 py-2.5 transition-colors">
+            <div className="flex items-center gap-2 rounded-xl bg-foreground/5 border border-white/10 focus-within:border-violet-500/60 px-4 py-2.5 transition-colors">
               <input
                 type={showPass ? "text" : "password"}
                 placeholder={f.placeholder}
-                className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-600 outline-none"
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-gray-600 outline-none [&:-webkit-autofill]:[transition-delay:9999s]"
               />
               <button
                 onClick={() => setShowPass(!showPass)}
-                className="text-gray-500 hover:text-white transition-colors"
+                className="text-gray-500 hover:text-foreground transition-colors"
               >
                 {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -606,14 +704,14 @@ function SecuritySection() {
           </div>
         ))}
         <div className="flex justify-end">
-          <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 active:scale-95 transition-all shadow shadow-violet-900/40">
+          <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow shadow-violet-900/40">
             Update Password
           </button>
         </div>
       </div>
 
       {/* Toggles */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 divide-y divide-white/5 overflow-hidden">
+      <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border divide-y divide-white/5 overflow-hidden">
         {[
           {
             icon: Smartphone,
@@ -635,7 +733,7 @@ function SecuritySection() {
               <row.icon size={16} className="text-violet-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-white">{row.title}</div>
+              <div className="text-sm font-semibold text-foreground">{row.title}</div>
               <div className="text-xs text-gray-500 mt-0.5">{row.desc}</div>
             </div>
             {/* Toggle switch */}
@@ -665,7 +763,20 @@ function SecuritySection() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function UserProfilePage() {
+  const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const [mounted, setMounted] = useState(false);
   const [section, setSection] = useState<Section>("profile");
+
+  useEffect(() => {
+    setMounted(true);
+    if (!isAuthenticated) {
+      router.push("/login"); // enforce auth constraint
+    }
+  }, [isAuthenticated, router]);
+
+  if (!mounted || !user) return null;
 
   const NAV: {
     id: Section;
@@ -680,12 +791,12 @@ export default function UserProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0A10] text-white">
+    <div className="min-h-screen bg-background transition-colors duration-300 text-foreground">
       <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-10">
 
         {/* Page breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-gray-500 mb-6">
-          <span className="hover:text-violet-400 cursor-pointer transition-colors">Home</span>
+          <Link href="/" className="hover:text-violet-400 cursor-pointer transition-colors">Home</Link>
           <ChevronRight size={12} />
           <span className="text-gray-300">My Account</span>
         </div>
@@ -694,18 +805,18 @@ export default function UserProfilePage() {
           {/* ─── Sidebar ─── */}
           <aside className="w-56 shrink-0 sticky top-24 space-y-1">
             {/* User pill */}
-            <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#14121C] border border-white/5 mb-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-violet-900 flex items-center justify-center text-sm font-extrabold text-white shrink-0">
-                {USER.avatar}
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-card transition-colors duration-300 border border-card-border mb-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-violet-900 flex items-center justify-center text-sm font-extrabold text-foreground shrink-0">
+                {getAvatar(user.full_name || user.email)}
               </div>
               <div className="min-w-0">
-                <div className="text-sm font-bold text-white truncate">{USER.name}</div>
-                <div className="text-[10px] text-violet-400">{USER.tier}</div>
+                <div className="text-sm font-bold text-foreground truncate">{user.full_name}</div>
+                <div className="text-[10px] text-violet-400 capitalize">{user.role} Member</div>
               </div>
             </div>
 
             {/* Nav */}
-            <div className="rounded-2xl bg-[#14121C] border border-white/5 p-2 space-y-0.5">
+            <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-2 space-y-0.5">
               {NAV.map((item) => (
                 <NavItem
                   key={item.id}
@@ -717,11 +828,11 @@ export default function UserProfilePage() {
               ))}
             </div>
 
-            <div className="rounded-2xl bg-[#14121C] border border-white/5 p-2 mt-2">
+            <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-2 mt-2">
               <NavItem
                 icon={LogOut}
                 label="Sign Out"
-                onClick={() => {}}
+                onClick={() => router.push("/logout")}
                 danger
               />
             </div>
