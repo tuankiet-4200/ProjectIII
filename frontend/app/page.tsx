@@ -3,10 +3,19 @@ import Link from "next/link";
 import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, Heart, ShoppingCart, CheckCircle2, Star, PackageOpen, Grid } from "lucide-react";
 import { Product, Category } from "@/types";
 
+const getApiUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+  // If running inside Docker server-side, replace localhost with the backend container name
+  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'test') {
+    return url.replace('localhost', 'backend');
+  }
+  return url;
+};
+
 async function getFeaturedProducts(): Promise<Product[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/products?limit=8`, { 
-      next: { revalidate: 60 } 
+    const res = await fetch(`${getApiUrl()}/products?limit=8`, { 
+      cache: 'no-store' 
     });
     if (!res.ok) return [];
     const json = await res.json();
@@ -19,7 +28,7 @@ async function getFeaturedProducts(): Promise<Product[]> {
 
 async function getTrendingCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/categories`, { next: { revalidate: 60 } });
+    const res = await fetch(`${getApiUrl()}/categories`, { cache: 'no-store' });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json) ? json.slice(0, 6) : [];

@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { toast } from "sonner";
+import { categoriesService } from "@/services/categories.service";
+import type { Category as ApiCategory } from "@/types";
 import {
   Plus,
   Trash2,
@@ -72,38 +75,28 @@ const ICON_OPTIONS: { name: string; icon: IconComponent }[] = [
   { name: "Dumbbell", icon: Dumbbell },
 ];
 
-const CATEGORY_TREE: Category[] = [
-  {
-    id: "cat-1", name: "Electronics", slug: "electronics", icon: "Monitor", iconComponent: Monitor, color: "#8B5CF6", productCount: 12, description: "Electronic devices, gadgets, and accessories.", parentId: null, visible: true, metaTitle: "Electronics - Shop Latest Devices", metaDescription: "Browse our collection of electronics and gadgets.",
-    children: [
-      {
-        id: "cat-1-1", name: "Audio", slug: "electronics-audio", icon: "Headphones", iconComponent: Headphones, color: "#8B5CF6", productCount: 8, description: "Audio equipment and accessories for audiophiles.", parentId: "cat-1", visible: true, metaTitle: "Audio Equipment - Premium Sound", metaDescription: "Find premium audio equipment and accessories.",
-        children: [
-          { id: "cat-1-1-1", name: "Headphones", slug: "electronics-audio-headphones", icon: "Headphones", iconComponent: Headphones, color: "#8B5AF6", productCount: 5, description: "High-fidelity over-ear and in-ear audio devices for enthusiasts.", parentId: "cat-1-1", visible: true, metaTitle: "Headphones - Best Audio Experience", metaDescription: "Shop premium headphones for music lovers.", children: [] },
-          { id: "cat-1-1-2", name: "Speakers", slug: "electronics-audio-speakers", icon: "Speaker", iconComponent: Speaker, color: "#8B5CF6", productCount: 3, description: "Portable and home speakers for every occasion.", parentId: "cat-1-1", visible: true, metaTitle: "Speakers - Room-Filling Sound", metaDescription: "Browse our collection of portable and home speakers.", children: [] },
-        ],
-      },
-      { id: "cat-1-2", name: "Smartphones", slug: "electronics-smartphones", icon: "Smartphone", iconComponent: Smartphone, color: "#3B82F6", productCount: 4, description: "Latest smartphones and mobile accessories.", parentId: "cat-1", visible: true, metaTitle: "Smartphones - Latest Models", metaDescription: "Find the latest smartphones and accessories.", children: [] },
-    ],
-  },
-  {
-    id: "cat-2", name: "Home & Living", slug: "home-living", icon: "Home", iconComponent: Home, color: "#F59E0B", productCount: 45, description: "Furniture, décor, and home essentials.", parentId: null, visible: true, metaTitle: "Home & Living - Décor & Essentials", metaDescription: "Transform your space with our home & living collection.",
-    children: [
-      { id: "cat-2-1", name: "Furniture", slug: "home-living-furniture", icon: "Home", iconComponent: Home, color: "#F59E0B", productCount: 28, description: "Modern and classic furniture for every room.", parentId: "cat-2", visible: true, metaTitle: "Furniture - Modern & Classic", metaDescription: "Shop modern and classic furniture pieces.", children: [] },
-      { id: "cat-2-2", name: "Kitchen", slug: "home-living-kitchen", icon: "Utensils", iconComponent: UtensilsCrossed, color: "#F59E0B", productCount: 17, description: "Kitchen appliances and cookware.", parentId: "cat-2", visible: true, metaTitle: "Kitchen - Appliances & Cookware", metaDescription: "Find kitchen appliances and cookware.", children: [] },
-    ],
-  },
-  {
-    id: "cat-3", name: "Fashion", slug: "fashion", icon: "Shirt", iconComponent: Shirt, color: "#EC4899", productCount: 128, description: "Clothing, footwear, and accessories.", parentId: null, visible: true, metaTitle: "Fashion - Trending Styles", metaDescription: "Discover the latest fashion trends and styles.",
-    children: [
-      { id: "cat-3-1", name: "Men's Clothing", slug: "fashion-mens", icon: "Shirt", iconComponent: Shirt, color: "#EC4899", productCount: 52, description: "Men's fashion and casual wear.", parentId: "cat-3", visible: true, metaTitle: "Men's Clothing - Style & Comfort", metaDescription: "Browse men's clothing collection.", children: [] },
-      { id: "cat-3-2", name: "Women's Clothing", slug: "fashion-womens", icon: "Shirt", iconComponent: Shirt, color: "#EC4899", productCount: 64, description: "Women's fashion, dresses, and accessories.", parentId: "cat-3", visible: true, metaTitle: "Women's Clothing - Latest Trends", metaDescription: "Shop women's clothing and accessories.", children: [] },
-      { id: "cat-3-3", name: "Footwear", slug: "fashion-footwear", icon: "Footprints", iconComponent: Footprints, color: "#EC4899", productCount: 12, description: "Shoes, boots, and sneakers for all occasions.", parentId: "cat-3", visible: true, metaTitle: "Footwear - Shoes & Sneakers", metaDescription: "Find shoes, boots, and sneakers.", children: [] },
-    ],
-  },
-  { id: "cat-4", name: "Sports & Outdoors", slug: "sports-outdoors", icon: "Dumbbell", iconComponent: Dumbbell, color: "#10B981", productCount: 36, description: "Sports equipment and outdoor gear.", parentId: null, visible: true, metaTitle: "Sports & Outdoors - Active Gear", metaDescription: "Shop sports equipment and outdoor gear.", children: [] },
-  { id: "cat-5", name: "Books & Media", slug: "books-media", icon: "Book", iconComponent: BookOpen, color: "#6366F1", productCount: 89, description: "Books, eBooks, music, and digital media.", parentId: null, visible: true, metaTitle: "Books & Media - Read & Listen", metaDescription: "Browse books, eBooks, and digital media.", children: [] },
-];
+const DEFAULT_COLORS = ["#8B5CF6", "#3B82F6", "#F59E0B", "#EC4899", "#10B981", "#6366F1"];
+const DEFAULT_ICONS = [Monitor, Home, Shirt, Dumbbell, BookOpen, Smartphone, Headphones];
+
+function mapApiToUiCategory(apiCat: ApiCategory, depth = 0): Category {
+  const color = DEFAULT_COLORS[(apiCat.id || depth) % DEFAULT_COLORS.length];
+  const iconComponent = DEFAULT_ICONS[(apiCat.id || depth) % DEFAULT_ICONS.length];
+  return {
+    id: String(apiCat.id),
+    name: apiCat.name,
+    slug: apiCat.slug,
+    icon: "Default",
+    iconComponent,
+    color,
+    productCount: apiCat._count?.products || 0,
+    description: "Generated category from API",
+    parentId: apiCat.parent_id ? String(apiCat.parent_id) : null,
+    visible: true,
+    metaTitle: `${apiCat.name} - Store`,
+    metaDescription: `Browse our collection of ${apiCat.name}.`,
+    children: apiCat.children ? apiCat.children.map(c => mapApiToUiCategory(c, depth + 1)) : []
+  };
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -127,7 +120,7 @@ function getParentName(cats: Category[], parentId: string | null): string {
   return getAllCategories(cats).find((c) => c.id === parentId)?.name || "None";
 }
 
-const totalCats = getAllCategories(CATEGORY_TREE).length;
+
 
 // ─── Tree Node ────────────────────────────────────────────────────────────────
 
@@ -171,16 +164,70 @@ function TreeNode({ category, depth, expanded, onToggle, selected, onSelect, che
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminCategories() {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ "cat-1": true, "cat-1-1": true });
-  const [selectedId, setSelectedId] = useState<string>("cat-1-1-1");
-  const [checked, setChecked] = useState<Record<string, boolean>>({ "cat-1-1-1": true });
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [editTab, setEditTab] = useState<EditTab>("general");
   const [showNewModal, setShowNewModal] = useState(false);
 
-  const allCategories = getAllCategories(CATEGORY_TREE);
+  // New Category State
+  const [newName, setNewName] = useState("");
+  const [newSlug, setNewSlug] = useState("");
+  const [newParentId, setNewParentId] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await categoriesService.getAll();
+      const uiData = data.map(c => mapApiToUiCategory(c));
+      setCategories(uiData);
+      if (uiData.length && !selectedId) {
+        setSelectedId(uiData[0].id);
+        setExpanded({ [uiData[0].id]: true });
+      }
+    } catch (error) {
+      toast.error("Failed to load categories");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const handleCreateCategory = async () => {
+    if (!newName || !newSlug) {
+      toast.error("Name and slug are required");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await categoriesService.create({ 
+        name: newName, 
+        slug: newSlug, 
+        parent_id: newParentId ? parseInt(newParentId) : undefined 
+      });
+      toast.success("Category created successfully");
+      setShowNewModal(false);
+      setNewName("");
+      setNewSlug("");
+      setNewParentId("");
+      await fetchCategories();
+    } catch (error) {
+      toast.error("Failed to create category");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const allCategories = getAllCategories(categories);
   const selectedCategory = allCategories.find((c) => c.id === selectedId) || null;
-  const breadcrumb = selectedCategory ? getBreadcrumb(CATEGORY_TREE, selectedCategory.id) : [];
-  const parentName = selectedCategory ? getParentName(CATEGORY_TREE, selectedCategory.parentId) : "";
+  const breadcrumb = selectedCategory ? getBreadcrumb(categories, selectedCategory.id) : [];
+  const parentName = selectedCategory ? getParentName(categories, selectedCategory.parentId) : "";
 
   const toggleExpand = useCallback((id: string) => { setExpanded((prev) => ({ ...prev, [id]: !prev[id] })); }, []);
   const toggleCheck = useCallback((id: string) => { setChecked((prev) => ({ ...prev, [id]: !prev[id] })); }, []);
@@ -223,9 +270,9 @@ export default function AdminCategories() {
           {/* Tree */}
           <div className="flex-1 overflow-y-auto rounded-2xl bg-[#14121C] border border-white/5 p-3">
             <div className="space-y-0.5">
-              {CATEGORY_TREE.map((cat) => (<TreeNode key={cat.id} category={cat} depth={0} expanded={expanded} onToggle={toggleExpand} selected={selectedId} onSelect={(c) => { setSelectedId(c.id); setEditTab("general"); }} checked={checked} onCheck={toggleCheck} />))}
+              {categories.map((cat) => (<TreeNode key={cat.id} category={cat} depth={0} expanded={expanded} onToggle={toggleExpand} selected={selectedId} onSelect={(c) => { setSelectedId(c.id); setEditTab("general"); }} checked={checked} onCheck={toggleCheck} />))}
             </div>
-            <div className="text-center mt-4 pb-2"><button className="text-[11px] font-semibold text-violet-400 hover:text-violet-300 transition-colors">View All {totalCats} Categories</button></div>
+            <div className="text-center mt-4 pb-2"><button className="text-[11px] font-semibold text-violet-400 hover:text-violet-300 transition-colors">View All {allCategories.length} Categories</button></div>
           </div>
 
           {/* Footer */}
@@ -310,8 +357,9 @@ export default function AdminCategories() {
           <div className="relative bg-[#14121C] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl shadow-black/50 animate-modal">
             <div className="flex items-center justify-between mb-5"><h2 className="text-base font-bold text-white">New Category</h2><button onClick={() => setShowNewModal(false)} className="text-gray-500 hover:text-white transition-colors"><X size={16} /></button></div>
             <div className="space-y-4">
-              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Category Name</label><input type="text" placeholder="e.g. Accessories" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors" /></div>
-              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Parent Category</label><select className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none"><option value="">None (Root Level)</option>{allCategories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
+              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Category Name</label><input type="text" value={newName} onChange={(e) => { setNewName(e.target.value); if (!newSlug) setNewSlug(e.target.value.toLowerCase().replace(/\\s+/g, '-')); }} placeholder="e.g. Accessories" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors" /></div>
+              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">URL Slug</label><input type="text" value={newSlug} onChange={(e) => setNewSlug(e.target.value)} placeholder="e.g. accessories" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors" /></div>
+              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Parent Category</label><select value={newParentId} onChange={e => setNewParentId(e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none"><option value="">None (Root Level)</option>{allCategories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
               <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Description</label><textarea placeholder="Brief description..." rows={2} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors resize-none" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Icon</label><select className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none">{ICON_OPTIONS.map((opt) => (<option key={opt.name} value={opt.name}>{opt.name}</option>))}</select></div>
@@ -319,7 +367,7 @@ export default function AdminCategories() {
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setShowNewModal(false)} className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40">Create Category</button>
+              <button disabled={isSubmitting} onClick={handleCreateCategory} className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40 disabled:opacity-50">{isSubmitting ? 'Creating...' : 'Create Category'}</button>
               <button onClick={() => setShowNewModal(false)} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all">Cancel</button>
             </div>
           </div>
