@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -9,13 +9,27 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/auth.service';
 import AuthLayout from '@/components/auth/AuthLayout';
 
+function isTokenValid(token: string | null) {
+  if (!token) return false;
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return Date.now() < payload.exp * 1000;
+  } catch {
+    return false;
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
 
+  const justLoggedIn = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -31,8 +45,30 @@ export default function LoginPage() {
 
   // Auto-redirect if already authenticated (e.g. user pressed Back to login page)
   useEffect(() => {
-    if (!mounted) return;
-    if (!isAuthenticated || !user) return;
+    if (!mounted || justLoggedIn.current) return;
+
+    // Check actual auth health instead of relying purely on URL params
+    const token = useAuthStore.getState().accessToken;
+    const hasValidToken = isTokenValid(token);
+    const hasCookie = document.cookie.includes('access_token=');
+    const isActuallyAuthenticated = isAuthenticated && user && hasValidToken && hasCookie;
+
+    // If Zustand says authenticated but token is bad or missing, force a clean slate
+    if (isAuthenticated && !isActuallyAuthenticated) {
+      logout();
+      return;
+    }
+
+    // If completely unauthenticated, stay on login page
+    if (!isActuallyAuthenticated) return;
+
+    // User IS fully authenticated. Let's redirect them away from the login page.
+    const reason = searchParams.get('reason');
+    if (reason === 'forbidden') {
+      // If they were forbidden from the requested page, just send them to their default dashboard
+      router.replace(user.role === 'ADMIN' ? '/admin/analytics' : '/');
+      return;
+    }
 
     const redirect = searchParams.get('redirect');
     if (redirect && !redirect.startsWith('/login') && !redirect.startsWith('/register')) {
@@ -64,6 +100,7 @@ export default function LoginPage() {
 
     try {
       const response = await authService.login(formData);
+      justLoggedIn.current = true;
       setAuth(
         response.user,
         response.access_token,
@@ -103,8 +140,15 @@ export default function LoginPage() {
   };
 
   // While checking auth state → render nothing to prevent flash of login form
-  if (!mounted || (isAuthenticated && user)) {
-    return null;
+  if (!mounted) return null;
+
+  if (isAuthenticated && user && !justLoggedIn.current) {
+    const token = useAuthStore.getState().accessToken;
+    const hasValidToken = isTokenValid(token);
+    const hasCookie = document.cookie.includes('access_token=');
+    if (hasValidToken && hasCookie) {
+      return null;
+    }
   }
 
   return (
