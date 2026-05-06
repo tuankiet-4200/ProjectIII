@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -11,14 +11,47 @@ import AuthLayout from '@/components/auth/AuthLayout';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
-  
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  // Wait for Zustand to rehydrate from localStorage
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Auto-redirect if already authenticated (e.g. user pressed Back to login page)
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isAuthenticated || !user) return;
+
+    const redirect = searchParams.get('redirect');
+    if (redirect && !redirect.startsWith('/login') && !redirect.startsWith('/register')) {
+      router.replace(redirect);
+    } else if (user.role === 'ADMIN') {
+      router.replace('/admin/analytics');
+    } else {
+      router.replace('/');
+    }
+  }, [mounted, isAuthenticated, user, router, searchParams]);
+
+  // Show reason toast (only when NOT already authenticated)
+  useEffect(() => {
+    if (!mounted || isAuthenticated) return;
+    const reason = searchParams.get('reason');
+    if (reason === 'unauthenticated') toast.info('Please login to continue');
+    else if (reason === 'session_expired') toast.warning('Your session has expired. Please login again.');
+    else if (reason === 'forbidden') toast.error('You do not have permission to access that page.');
+  }, [mounted, isAuthenticated]);
 
   const getInputClassName = (hasValue: boolean) =>
     `w-full rounded-xl border pl-12 py-4 text-slate-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all font-light shadow-sm ${
@@ -43,11 +76,11 @@ export default function LoginPage() {
       const searchParams = new URLSearchParams(window.location.search);
       const redirect = searchParams.get('redirect');
       if (redirect) {
-        router.push(redirect);
+        router.replace(redirect);
       } else if (response.user.role === 'ADMIN') {
-        router.push('/admin/analytics');
+        router.replace('/admin/analytics');
       } else {
-        router.push('/');
+        router.replace('/');
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -68,6 +101,11 @@ export default function LoginPage() {
 
     window.location.href = authService.getGoogleAuthUrl();
   };
+
+  // While checking auth state → render nothing to prevent flash of login form
+  if (!mounted || (isAuthenticated && user)) {
+    return null;
+  }
 
   return (
     <AuthLayout>

@@ -536,10 +536,13 @@ export default function VendorProducts() {
                       const catColor = CATEGORY_COLORS[product.category] || CATEGORY_COLORS.Tech;
                       const isSelected = selectedProduct?.id === product.id;
                       return (
-                        <button
+                        <div
                           key={product.id}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => setSelectedProduct(product)}
-                          className={`w-full grid grid-cols-12 items-center px-5 py-3.5 transition-all text-left ${
+                          onKeyDown={(e) => e.key === 'Enter' && setSelectedProduct(product)}
+                          className={`w-full grid grid-cols-12 items-center px-5 py-3.5 transition-all text-left cursor-pointer ${
                             isSelected
                               ? "bg-violet-500/5 border-l-2 border-l-violet-500"
                               : "hover:bg-white/[0.02] border-l-2 border-l-transparent"
@@ -601,7 +604,7 @@ export default function VendorProducts() {
                               <Trash2 size={11} />
                             </button>
                           </div>
-                        </button>
+                        </div>
                       );
                     })
                   )}

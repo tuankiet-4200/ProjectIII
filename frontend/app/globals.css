@@ -31,3 +31,16 @@ body {
   color: var(--foreground);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+/* Ensure all elements transition colors together when toggling theme */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.3s;
+  transition-timing-function: ease;
+}
+
+/* Override: don't apply color transition to elements that have their own transitions defined */
+.transition-all, .transition-transform, .transition-opacity {
+  transition-property: all;
+}
+

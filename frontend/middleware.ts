@@ -3,58 +3,80 @@ import type { NextRequest } from "next/server";
 
 /**
  * Route protection middleware
- * - /admin/* requires admin role (checked via cookie)
- * - /vendor/* requires authenticated user with a shop
+ * - /admin/* requires role === 'ADMIN' (decoded from JWT)
+ * - /vendor/* requires authenticated user (any role)
  * - All other routes are public
- *
- * Note: This is a basic implementation using cookies.
- * In production, you'd verify JWT tokens and check roles.
  */
+
+/** Decode JWT payload without verifying signature (Edge runtime safe) */
+function decodeJwt(token: string): { sub: string; email: string; role: string; exp: number } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    // Base64url → Base64 → decode
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const jsonStr = atob(padded);
+    return JSON.parse(jsonStr);
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(payload: { exp: number }): boolean {
+  return Date.now() >= payload.exp * 1000;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Get auth token from cookie
   const accessToken = request.cookies.get("access_token")?.value;
 
-  // Skip auth check in development when no backend is running
-  if (process.env.NODE_ENV === "development" && !accessToken) {
-    // Allow access in dev mode for mock data testing
-    return NextResponse.next();
-  }
+  // ─── Helper: redirect to login ───────────────────────────────────────────
+  const redirectToLogin = (reason?: string) => {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    if (reason) loginUrl.searchParams.set("reason", reason);
+    return NextResponse.redirect(loginUrl);
+  };
 
-  // Protected admin routes
+  // ─── /admin/* — requires ADMIN role ──────────────────────────────────────
   if (pathname.startsWith("/admin")) {
-    if (!accessToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    // In production: decode JWT, verify role === 'ADMIN'
+    if (!accessToken) return redirectToLogin("unauthenticated");
+
+    const payload = decodeJwt(accessToken);
+    if (!payload || isTokenExpired(payload)) return redirectToLogin("session_expired");
+    if (payload.role !== "ADMIN") return redirectToLogin("forbidden");
+
     return NextResponse.next();
   }
 
-  // Protected vendor routes
+  // ─── /vendor/* — requires any authenticated user ──────────────────────────
   if (pathname.startsWith("/vendor")) {
-    if (!accessToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    // In production: decode JWT, verify user has a shop
+    if (!accessToken) return redirectToLogin("unauthenticated");
+
+    const payload = decodeJwt(accessToken);
+    if (!payload || isTokenExpired(payload)) return redirectToLogin("session_expired");
+
+    // Only CUSTOMER and ADMIN can access vendor portal
+    // (checking if user has an active shop is done inside the page via API)
+    if (payload.role === "SHIPPER") return redirectToLogin("forbidden");
+
     return NextResponse.next();
   }
 
-  // Protected customer routes
+  // ─── /checkout, /orders, /profile — requires any authenticated user ───────
   if (
     pathname.startsWith("/checkout") ||
     pathname.startsWith("/orders") ||
     pathname.startsWith("/profile")
   ) {
-    if (!accessToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+    if (!accessToken) return redirectToLogin("unauthenticated");
+
+    const payload = decodeJwt(accessToken);
+    if (!payload || isTokenExpired(payload)) return redirectToLogin("session_expired");
+
     return NextResponse.next();
   }
 
