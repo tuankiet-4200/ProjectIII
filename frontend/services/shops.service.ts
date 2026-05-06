@@ -28,6 +28,11 @@ export const shopsService = {
   },
 
   // Admin only
+  adminGetAll: async (status?: ShopStatus, page = 1, limit = 50): Promise<{ shops: Shop[]; total: number }> => {
+    const response = await api.get('/shops', { params: { status, page, limit } });
+    return response.data;
+  },
+
   updateStatus: async (shopId: string, status: ShopStatus): Promise<Shop> => {
     const response = await api.patch(`/shops/${shopId}/status`, { status });
     return response.data;

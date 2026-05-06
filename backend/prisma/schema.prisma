@@ -21,7 +21,9 @@ enum UserRole {
 }
 
 enum ShopStatus {
+  PENDING
   ACTIVE
+  REJECTED
   BANNED
 }
 
@@ -109,7 +111,7 @@ model Shop {
   description String?    @db.Text
   logo_url    String?
   rating      Decimal    @default(0) @db.Decimal(3, 2)
-  status      ShopStatus @default(ACTIVE)
+  status      ShopStatus @default(PENDING)
   created_at  DateTime   @default(now())
   updated_at  DateTime   @updatedAt
 

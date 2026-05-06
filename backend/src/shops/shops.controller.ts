@@ -19,8 +19,12 @@ export class ShopsController {
   constructor(private shopsService: ShopsService) {}
 
   @Get()
-  findAll(@Query('page') page?: number, @Query('limit') limit?: number) {
-    return this.shopsService.findAll(page, limit);
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('status') status?: string,
+  ) {
+    return this.shopsService.findAll(page, limit, status);
   }
 
   @Get('my')

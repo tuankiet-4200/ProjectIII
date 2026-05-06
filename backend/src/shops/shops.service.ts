@@ -76,20 +76,21 @@ export class ShopsService {
     });
   }
 
-  async findAll(page = 1, limit = 20) {
+  async findAll(page = 1, limit = 20, status?: string) {
     const skip = (page - 1) * limit;
+    const where = status ? { status: status as any } : { status: 'ACTIVE' as any };
     const [shops, total] = await Promise.all([
       this.prisma.shop.findMany({
-        where: { status: 'ACTIVE' },
+        where,
         skip,
-        take: limit,
+        take: Number(limit),
         include: {
-          owner: { select: { id: true, full_name: true } },
+          owner: { select: { id: true, full_name: true, email: true, phone: true } },
           _count: { select: { products: true } },
         },
-        orderBy: { rating: 'desc' },
+        orderBy: { created_at: 'desc' },
       }),
-      this.prisma.shop.count({ where: { status: 'ACTIVE' } }),
+      this.prisma.shop.count({ where }),
     ]);
 
     return { shops, total, page, limit };

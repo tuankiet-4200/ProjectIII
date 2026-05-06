@@ -1,7 +1,7 @@
 // ─── Enums (matching Prisma) ─────────────────────────────────────────────────
 
 export type UserRole = 'CUSTOMER' | 'ADMIN' | 'SHIPPER';
-export type ShopStatus = 'ACTIVE' | 'BANNED';
+export type ShopStatus = 'PENDING' | 'ACTIVE' | 'REJECTED' | 'BANNED';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
 export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO';
 export type ShopOrderStatus = 'PENDING' | 'PREPARING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
@@ -40,7 +40,12 @@ export interface Shop {
   status: ShopStatus;
   created_at: string;
   updated_at: string;
-  owner?: User;
+  owner?: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+  };
   products?: Product[];
   _count?: { products: number };
 }
