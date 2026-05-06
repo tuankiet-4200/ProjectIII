@@ -10,7 +10,8 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards';
-import { CurrentUser } from '../common/decorators';
+import { RolesGuard } from '../common/guards';
+import { CurrentUser, Roles } from '../common/decorators';
 import { CreateAddressDto, UpdateAddressDto, UpdateProfileDto } from './dto';
 
 @Controller('users')
@@ -18,9 +19,23 @@ import { CreateAddressDto, UpdateAddressDto, UpdateProfileDto } from './dto';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  getAllUsers() {
+    return this.usersService.getAllUsers();
+  }
+
   @Get('me')
   getProfile(@CurrentUser('id') userId: string) {
     return this.usersService.getProfile(userId);
+  }
+
+  @Patch(':id/ban')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  toggleBan(@Param('id') userId: string) {
+    return this.usersService.toggleBan(userId);
   }
 
   @Patch('me')

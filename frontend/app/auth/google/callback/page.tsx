@@ -5,13 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/useAuthStore';
 
-type OAuthUser = {
-  id: string;
-  email: string;
-  full_name: string;
-  role: 'CUSTOMER' | 'ADMIN' | 'SHIPPER';
-  phone?: string;
-};
+import type { User } from '@/types';
 
 export default function GoogleCallbackPage() {
   const router = useRouter();
@@ -37,13 +31,13 @@ export default function GoogleCallbackPage() {
     }
 
     try {
-      const user = JSON.parse(userParam) as OAuthUser;
+      const user = JSON.parse(userParam) as Partial<User>;
 
       setAuth(
         {
           ...user,
           phone: user.phone || '',
-        },
+        } as User,
         accessToken,
         refreshToken,
       );

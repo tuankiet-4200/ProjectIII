@@ -2,6 +2,16 @@ import api from '../lib/axios';
 import type { User, UserAddress, CreateAddressData } from '../types';
 
 export const usersService = {
+  getAll: async (): Promise<{ users: any[]; total: number }> => {
+    const response = await api.get('/users');
+    return response.data;
+  },
+
+  toggleBan: async (userId: string): Promise<any> => {
+    const response = await api.patch(`/users/${userId}/ban`);
+    return response.data;
+  },
+
   getProfile: async (): Promise<User> => {
     const response = await api.get('/users/me');
     return response.data;

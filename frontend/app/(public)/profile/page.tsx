@@ -516,7 +516,7 @@ function OrdersSection() {
 
   useEffect(() => {
     ordersService.getMyOrders().then(res => {
-      setOrders(res.items || []);
+      setOrders(res.data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);

@@ -177,6 +177,9 @@ export default function AdminCategories() {
   const [newSlug, setNewSlug] = useState("");
   const [newParentId, setNewParentId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Edit Category State
+  const [editForm, setEditForm] = useState({ name: "", slug: "", parentId: "", description: "" });
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -229,6 +232,70 @@ export default function AdminCategories() {
   const breadcrumb = selectedCategory ? getBreadcrumb(categories, selectedCategory.id) : [];
   const parentName = selectedCategory ? getParentName(categories, selectedCategory.parentId) : "";
 
+  useEffect(() => {
+    if (selectedCategory) {
+      setEditForm({
+        name: selectedCategory.name || "",
+        slug: selectedCategory.slug || "",
+        parentId: selectedCategory.parentId || "",
+        description: selectedCategory.description || "",
+      });
+    }
+  }, [selectedCategory?.id, selectedCategory?.name]);
+
+  const handleSaveChanges = async () => {
+    if (!selectedId) return;
+    try {
+      setIsSubmitting(true);
+      await categoriesService.update(Number(selectedId), {
+        name: editForm.name,
+        slug: editForm.slug,
+        parent_id: editForm.parentId ? Number(editForm.parentId) : undefined,
+      });
+      toast.success("Category updated successfully");
+      await fetchCategories();
+    } catch (error) {
+      toast.error("Failed to update category");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    const idsToDelete = Object.keys(checked).filter(id => checked[id]);
+    if (!idsToDelete.length) return;
+    
+    if (!confirm(`Are you sure you want to delete ${idsToDelete.length} categories?`)) return;
+
+    try {
+      setIsSubmitting(true);
+      await Promise.all(idsToDelete.map(id => categoriesService.delete(Number(id))));
+      toast.success("Categories deleted successfully");
+      setChecked({});
+      if (idsToDelete.includes(selectedId)) setSelectedId("");
+      await fetchCategories();
+    } catch (error) {
+      toast.error("Failed to delete categories. Ensure no products are attached.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSingle = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this category?")) return;
+    try {
+      setIsSubmitting(true);
+      await categoriesService.delete(Number(id));
+      toast.success("Category deleted successfully");
+      if (id === selectedId) setSelectedId("");
+      await fetchCategories();
+    } catch (error) {
+      toast.error("Failed to delete category. Ensure no products are attached.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const toggleExpand = useCallback((id: string) => { setExpanded((prev) => ({ ...prev, [id]: !prev[id] })); }, []);
   const toggleCheck = useCallback((id: string) => { setChecked((prev) => ({ ...prev, [id]: !prev[id] })); }, []);
 
@@ -259,7 +326,7 @@ export default function AdminCategories() {
           {/* Selection actions */}
           <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#14121C] border border-white/5 mb-4 shrink-0">
             <span className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Selection Actions:</span>
-            <button className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${checkedCount > 0 ? "text-red-400 hover:text-red-300" : "text-gray-600 cursor-not-allowed"}`} disabled={checkedCount === 0}><Trash2 size={10} /> Delete</button>
+            <button onClick={handleDeleteSelected} disabled={checkedCount === 0 || isSubmitting} className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${checkedCount > 0 ? "text-red-400 hover:text-red-300" : "text-gray-600 cursor-not-allowed"}`}><Trash2 size={10} /> Delete</button>
             <button className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${checkedCount > 0 ? "text-violet-400 hover:text-violet-300" : "text-gray-600 cursor-not-allowed"}`} disabled={checkedCount === 0}><FileJson size={10} /> Export JSON</button>
             <div className="ml-auto flex items-center gap-1">
               <button onClick={expandAll} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all" title="Expand all"><Maximize2 size={12} /></button>
@@ -299,14 +366,14 @@ export default function AdminCategories() {
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
               {editTab === "general" && (
                 <>
-                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Category Title</label><input type="text" defaultValue={selectedCategory.name} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors" /></div>
-                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">URL Slug</label><div className="flex items-center bg-white/[0.03] border border-white/5 rounded-xl overflow-hidden focus-within:border-violet-500/40 transition-colors"><span className="px-3 text-[10px] text-gray-600 border-r border-white/5 py-2.5 bg-white/[0.02]">/store/</span><input type="text" defaultValue={selectedCategory.slug} className="flex-1 bg-transparent px-3 py-2.5 text-xs text-white outline-none" /></div></div>
+                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Category Title</label><input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors" /></div>
+                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">URL Slug</label><div className="flex items-center bg-white/[0.03] border border-white/5 rounded-xl overflow-hidden focus-within:border-violet-500/40 transition-colors"><span className="px-3 text-[10px] text-gray-600 border-r border-white/5 py-2.5 bg-white/[0.02]">/store/</span><input type="text" value={editForm.slug} onChange={e => setEditForm({...editForm, slug: e.target.value})} className="flex-1 bg-transparent px-3 py-2.5 text-xs text-white outline-none" /></div></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Icon</label><div className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2"><div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${selectedCategory.color}20` }}><selectedCategory.iconComponent size={12} style={{ color: selectedCategory.color }} /></div><span className="flex-1 text-xs text-white">{selectedCategory.icon}</span><ChevronDown size={10} className="text-gray-600" /></div></div>
                     <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Badge Color</label><div className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2"><div className="w-5 h-5 rounded-md shrink-0" style={{ backgroundColor: selectedCategory.color }} /><span className="flex-1 text-xs text-gray-400 font-mono">{selectedCategory.color}</span></div></div>
                   </div>
-                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Parent Category</label><div className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5"><span className="text-xs text-white">{parentName}</span><ChevronDown size={10} className="text-gray-600" /></div></div>
-                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Description</label><textarea defaultValue={selectedCategory.description} rows={3} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-gray-300 outline-none focus:border-violet-500/40 transition-colors resize-none leading-relaxed" /></div>
+                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Parent Category</label><select value={editForm.parentId} onChange={e => setEditForm({...editForm, parentId: e.target.value})} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none"><option value="">None (Root Level)</option>{allCategories.filter(c => c.id !== selectedId).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
+                  <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Description</label><textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} rows={3} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-gray-300 outline-none focus:border-violet-500/40 transition-colors resize-none leading-relaxed" /></div>
                   <label className="flex items-center gap-2 cursor-pointer group"><div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedCategory.visible ? "bg-violet-600 border-violet-600" : "border-white/10"}`}>{selectedCategory.visible && <Check size={10} className="text-white" />}</div><span className="text-xs text-gray-300 group-hover:text-white transition-colors">Visible in navigation menu</span></label>
                 </>
               )}
@@ -338,8 +405,9 @@ export default function AdminCategories() {
 
             <div className="px-5 py-4 border-t border-white/5 space-y-3 shrink-0">
               <div className="flex gap-2">
-                <button className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40">Save Changes</button>
+                <button onClick={handleSaveChanges} disabled={isSubmitting} className="rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40 disabled:opacity-50">{isSubmitting ? "Saving..." : "Save Changes"}</button>
                 <button className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all">Discard</button>
+                <button onClick={() => handleDeleteSingle(selectedId)} disabled={isSubmitting} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all disabled:opacity-50" title="Delete Category"><Trash2 size={14} /> Delete</button>
               </div>
               <div className="rounded-xl bg-violet-600/10 border border-violet-500/20 p-3 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-violet-600/20 flex items-center justify-center shrink-0"><TrendingUp size={16} className="text-violet-400" /></div>

@@ -2,6 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAddressDto, UpdateAddressDto, UpdateProfileDto } from './dto';
 
+export const USER_SELECT_FIELDS = {
+  id: true,
+  email: true,
+  full_name: true,
+  phone: true,
+  role: true,
+  is_banned: true,
+  created_at: true,
+};
+
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -9,18 +19,35 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        full_name: true,
-        phone: true,
-        role: true,
-        created_at: true,
-      },
+      select: USER_SELECT_FIELDS,
     });
 
     if (!user) throw new NotFoundException('User not found');
     return user;
+  }
+
+  async getAllUsers() {
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        select: {
+          ...USER_SELECT_FIELDS,
+          shops: { select: { id: true, name: true } },
+        },
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.user.count(),
+    ]);
+    return { users, total };
+  }
+
+  async toggleBan(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { is_banned: !user.is_banned },
+      select: USER_SELECT_FIELDS,
+    });
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {

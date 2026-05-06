@@ -71,6 +71,7 @@ model User {
   full_name     String
   phone         String   @unique
   role          UserRole @default(CUSTOMER)
+  is_banned     Boolean  @default(false)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
