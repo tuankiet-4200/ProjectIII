@@ -18,6 +18,8 @@ import {
   XCircle,
   Loader2,
   AlertTriangle,
+  LogOut,
+  Home,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { shopsService } from "@/services/shops.service";
@@ -93,10 +95,16 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const logout = useAuthStore((s) => s.logout);
 
   const [gateState, setGateState] = useState<GateState>("loading");
   const [shop, setShop] = useState<Shop | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+  };
 
   // Step 1: wait one render cycle for Zustand to rehydrate from localStorage
   useEffect(() => {
@@ -293,9 +301,14 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
               <div className="text-xs font-bold text-white truncate">{user?.full_name || "Vendor"}</div>
               <div className="text-[10px] text-violet-400 truncate">{shop?.name || "My Store"}</div>
             </div>
-            <button className="text-gray-500 hover:text-white transition-colors">
-              <Settings size={13} />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors" title="Settings">
+                <Settings size={13} />
+              </button>
+              <button onClick={handleLogout} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Logout">
+                <LogOut size={13} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -319,6 +332,13 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
             />
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-[11px] font-semibold text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+            >
+              <Home size={12} />
+              Shopping
+            </Link>
             <button className="relative text-gray-500 hover:text-white transition-colors">
               <Bell size={16} />
               <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-violet-500 border border-[#0F0D1A] text-[8px] flex items-center justify-center font-bold">5</span>

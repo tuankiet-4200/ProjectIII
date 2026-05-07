@@ -13,6 +13,7 @@ import {
   Bell,
   ShieldCheck,
   Wifi,
+  Home,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -166,6 +167,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="text-violet-400">{breadcrumbLabel}</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 text-[11px] font-semibold text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+            >
+              <Home size={12} />
+              Shopping
+            </Link>
             <div className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-xl px-3 py-2 focus-within:border-violet-500/40 transition-colors max-w-xs">
               <Search size={13} className="text-gray-500 shrink-0" />
               <input
