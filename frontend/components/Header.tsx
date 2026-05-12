@@ -4,18 +4,24 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Search, ShoppingCart, Grid, Store, ChevronRight, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useCartStore } from "@/store/useCartStore";
 import { shopsService } from "@/services/shops.service";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export function Header() {
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const totalItems = useCartStore((state) => state.totalItems);
+  const fetchCart = useCartStore((state) => state.fetchCart);
   const [mounted, setMounted] = useState(false);
   const [hasShop, setHasShop] = useState<boolean | null>(null); // null = loading
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (isAuthenticated) {
+      fetchCart();
+    }
+  }, [isAuthenticated, fetchCart]);
 
   // Check if the logged-in customer already owns a shop
   useEffect(() => {
@@ -74,9 +80,11 @@ export function Header() {
 
           <Link href="/cart" className="relative text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors">
             <ShoppingCart size={22} />
-            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[10px] font-bold text-white shadow-sm">
-              3
-            </span>
+            {mounted && totalItems > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-[10px] font-bold text-white shadow-sm animate-in fade-in zoom-in duration-300">
+                {totalItems}
+              </span>
+            )}
           </Link>
 
           {/* ─── Vendor / Seller CTA ─────────────────────────── */}

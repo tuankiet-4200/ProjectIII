@@ -36,33 +36,36 @@ export class CartService {
 
     const items = products.map((product) => ({
       product_id: product.id,
-      name: product.name,
-      price: product.price,
-      stock_quantity: product.stock_quantity,
       quantity: parseInt(cartData[product.id], 10),
-      shop: product.shop,
-      image_url: null, // Placeholder for product image
+      product: product,
     }));
 
-    // Group items by shop (needed for order splitting later)
+    // Group items by shop
     const shopMap = new Map<string, any>();
+    let totalItems = 0;
+    let totalAmount = 0;
+
     for (const item of items) {
-      const shopId = item.shop.id;
+      const shopId = item.product.shop.id;
       if (!shopMap.has(shopId)) {
         shopMap.set(shopId, {
-          shop: item.shop,
+          shop: item.product.shop,
           items: [],
           subtotal: 0,
         });
       }
       const group = shopMap.get(shopId);
       group.items.push(item);
-      group.subtotal += Number(item.price) * item.quantity;
+      const itemSubtotal = Number(item.product.price) * item.quantity;
+      group.subtotal += itemSubtotal;
+      totalItems += item.quantity;
+      totalAmount += itemSubtotal;
     }
 
     return {
-      items,
-      grouped_by_shop: Array.from(shopMap.values()),
+      groups: Array.from(shopMap.values()),
+      total_items: totalItems,
+      total_amount: totalAmount,
     };
   }
 

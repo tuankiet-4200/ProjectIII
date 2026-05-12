@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   Star,
   Heart,
@@ -398,6 +400,7 @@ function ShippingTab() {
 
 export default function ProductDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [activeThumb, setActiveThumb] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [qty, setQty] = useState(1);
@@ -417,6 +420,7 @@ export default function ProductDetailPage() {
         if (p?.name) {
           setProductData({
             ...PRODUCT,
+            id: p.id as any,
             name: p.name,
             price: p.price,
             description: p.description || PRODUCT.description,
@@ -435,17 +439,31 @@ export default function ProductDetailPage() {
   }, [params?.id]);
 
   const handleAddToCart = async () => {
-    try {
-      const { cartService } = await import('@/services/cart.service');
-      const productId = params?.id as string;
-      if (productId) {
-        await cartService.addItem(productId, qty);
-      }
-    } catch {
-      // Silent fail
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      toast.error("Please login to add products to cart");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
     }
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+
+    try {
+      const addItem = useCartStore.getState().addItem;
+      const productId = typeof productData.id === 'string' ? productData.id : null;
+      if (productId) {
+        await addItem(productId, qty);
+        setAddedToCart(true);
+        setTimeout(() => setAddedToCart(false), 2000);
+        toast.success("Added to cart successfully!");
+      }
+    } catch (error: any) {
+      console.error("Failed to add to cart", error);
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      } else {
+        toast.error(error.response?.data?.message || "Failed to add to cart");
+      }
+    }
   };
 
   const TABS: { id: DetailTab; label: string }[] = [

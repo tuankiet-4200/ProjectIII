@@ -48,6 +48,11 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null, 
           isAuthenticated: false 
         });
+
+        // Clear cart store
+        const { useCartStore } = await import('./useCartStore');
+        useCartStore.getState().clearCart();
+
         if (typeof window !== 'undefined') {
           localStorage.removeItem('auth-storage');
           document.cookie = 'access_token=; path=/; max-age=0';

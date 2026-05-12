@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useCartStore } from "@/store/useCartStore";
 import {
   Trash2,
   Plus,
@@ -29,11 +30,13 @@ interface CartItem {
   emoji: string;
   bgFrom: string;
   bgTo: string;
-  shopId: number;
+  shopId: string | number;
+  shopName: string;
+  imageUrl?: string;
 }
 
 interface CartShop {
-  id: number;
+  id: string | number;
   name: string;
   badge?: string;
 }
@@ -55,7 +58,7 @@ const INITIAL_ITEMS: CartItem[] = [
     emoji: "🎧",
     bgFrom: "#1a1a1a",
     bgTo: "#2d2d2d",
-    shopId: 1,
+    shopId: 1, shopName: "TechHub Official Store",
   },
   {
     id: "prod-2",
@@ -66,7 +69,7 @@ const INITIAL_ITEMS: CartItem[] = [
     emoji: "🖱️",
     bgFrom: "#0d1b2a",
     bgTo: "#1b2838",
-    shopId: 1,
+    shopId: 1, shopName: "TechHub Official Store",
   },
   {
     id: "prod-3",
@@ -77,7 +80,7 @@ const INITIAL_ITEMS: CartItem[] = [
     emoji: "🕯️",
     bgFrom: "#f5f0e0",
     bgTo: "#e8dcb8",
-    shopId: 2,
+    shopId: 2, shopName: "Luxe Living Home",
   },
 ];
 
@@ -90,54 +93,50 @@ const PERKS = [
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CartPage() {
+  const { groups, totalItems, fetchCart, updateItem: updateItemStore, removeItem: removeItemStore, isLoading } = useCartStore();
   const [items, setItems] = useState<CartItem[]>(INITIAL_ITEMS);
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
-  const [useApi, setUseApi] = useState(false);
 
-  // Try to load cart from API
+  // Sync items with store groups
   useEffect(() => {
-    const loadCart = async () => {
-      try {
-        const { cartService } = await import('@/services/cart.service');
-        const cart = await cartService.getCart();
-        if (cart?.groups?.length) {
-          const EMOJI_MAP = ['🎧', '🖱️', '🕯️', '👜', '⌚', '🎵'];
-          const BG_MAP = [
-            { from: '#1a1a1a', to: '#2d2d2d' }, { from: '#0d1b2a', to: '#1b2838' },
-            { from: '#f5f0e0', to: '#e8dcb8' },
-          ];
-          let idx = 0;
-          const mapped: CartItem[] = [];
-          const shopMap: CartShop[] = [];
-          cart.groups.forEach((group: any, gi: number) => {
-            if (!shopMap.find(s => s.id === gi + 1)) {
-              shopMap.push({ id: gi + 1, name: group.shop?.name || 'Shop', badge: 'Verified' });
-            }
-            group.items.forEach((item: any) => {
-              mapped.push({
-                id: item.product_id || `prod-${idx}`,
-                name: item.product?.name || `Product ${idx + 1}`,
-                variant: item.product?.description || '',
-                price: item.product?.price || 0,
-                qty: item.quantity,
-                emoji: EMOJI_MAP[idx % EMOJI_MAP.length],
-                bgFrom: BG_MAP[idx % BG_MAP.length].from,
-                bgTo: BG_MAP[idx % BG_MAP.length].to,
-                shopId: gi + 1,
-              });
-              idx++;
-            });
+    if (groups && groups.length > 0) {
+      const EMOJI_MAP = ['🎧', '🖱️', '🕯️', '👜', '⌚', '🎵'];
+      const BG_MAP = [
+        { from: '#1a1a1a', to: '#2d2d2d' }, { from: '#0d1b2a', to: '#1b2838' },
+        { from: '#f5f0e0', to: '#e8dcb8' },
+      ];
+      let idx = 0;
+      const mapped: CartItem[] = [];
+      groups.forEach((group: any, gi: number) => {
+        const shopId = group.shop?.id || gi + 1;
+        const shopName = group.shop?.name || 'Shop';
+        group.items.forEach((item: any) => {
+          mapped.push({
+            id: item.product_id || `prod-${idx}`,
+            name: item.product?.name || `Product ${idx + 1}`,
+            variant: item.product?.category?.name || '',
+            price: Number(item.product?.price) || 0,
+            qty: item.quantity,
+            emoji: EMOJI_MAP[idx % EMOJI_MAP.length],
+            bgFrom: BG_MAP[idx % BG_MAP.length].from,
+            bgTo: BG_MAP[idx % BG_MAP.length].to,
+            shopId: shopId,
+            shopName: shopName,
+            imageUrl: item.product?.images?.[0]
           });
-          setItems(mapped);
-          setUseApi(true);
-        }
-      } catch {
-        // Fallback to mock data silently
-      }
-    };
-    loadCart();
-  }, []);
+          idx++;
+        });
+      });
+      setItems(mapped);
+    } else if (!isLoading) {
+      setItems([]);
+    }
+  }, [groups, isLoading]);
+
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
 
   const updateQty = async (id: string, delta: number) => {
     const item = items.find(i => i.id === id);
@@ -147,24 +146,15 @@ export default function CartPage() {
       return removeItem(id);
     }
     
+    // Optimistic update
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, qty: newQty } : i));
-    
-    if (useApi) {
-      try {
-        const { cartService } = await import('@/services/cart.service');
-        await cartService.updateItem(id, newQty);
-      } catch (e) {}
-    }
+    await updateItemStore(id, newQty);
   };
 
   const removeItem = async (id: string) => {
+    // Optimistic update
     setItems((prev) => prev.filter((i) => i.id !== id));
-    if (useApi) {
-      try {
-        const { cartService } = await import('@/services/cart.service');
-        await cartService.removeItem(id);
-      } catch (e) {}
-    }
+    await removeItemStore(id);
   };
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -173,10 +163,15 @@ export default function CartPage() {
   const tax = Math.round(subtotal * 0.035 * 100) / 100;
   const total = subtotal - discount + shipping + tax;
 
-  const itemsByShop = SHOPS.map((shop) => ({
-    ...shop,
-    items: items.filter((i) => i.shopId === shop.id),
-  })).filter((s) => s.items.length > 0);
+  const itemsByShop = items.reduce((acc, item) => {
+    let group = acc.find(g => g.id === item.shopId);
+    if (!group) {
+      group = { id: item.shopId, name: item.shopName, badge: 'Verified', items: [] };
+      acc.push(group);
+    }
+    group.items.push(item);
+    return acc;
+  }, [] as (CartShop & { items: CartItem[] })[]);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -240,14 +235,20 @@ export default function CartPage() {
                     {shop.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-5">
                         {/* Thumbnail */}
-                        <div
-                          className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-2xl"
-                          style={{
-                            background: `linear-gradient(135deg, ${item.bgFrom}, ${item.bgTo})`,
-                          }}
-                        >
-                          {item.emoji}
-                        </div>
+                        {item.imageUrl ? (
+                          <div className="w-16 h-16 rounded-xl shrink-0 overflow-hidden bg-white">
+                            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div
+                            className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center text-2xl"
+                            style={{
+                              background: `linear-gradient(135deg, ${item.bgFrom}, ${item.bgTo})`,
+                            }}
+                          >
+                            {item.emoji}
+                          </div>
+                        )}
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
