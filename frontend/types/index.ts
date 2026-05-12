@@ -74,6 +74,7 @@ export interface Product {
   price: number;
   stock_quantity: number;
   sales_count: number;
+  images: string[];
   created_at: string;
   updated_at: string;
   shop?: Shop;
@@ -178,6 +179,7 @@ export interface CreateProductData {
   description?: string;
   price: number;
   stock_quantity: number;
+  images?: string[];
 }
 
 export interface UpdateProductData {
@@ -187,6 +189,7 @@ export interface UpdateProductData {
   description?: string;
   price?: number;
   stock_quantity?: number;
+  images?: string[];
 }
 
 export interface ProductQuery {

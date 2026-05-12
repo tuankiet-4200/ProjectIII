@@ -4,6 +4,18 @@ import type { Product, PaginatedResponse, CreateProductData, UpdateProductData, 
 export const productsService = {
   getAll: async (query?: ProductQuery): Promise<PaginatedResponse<Product>> => {
     const response = await api.get('/products', { params: query });
+    const { products, total, page, limit } = response.data;
+    if (products) {
+      return {
+        data: products,
+        meta: {
+          total: total || 0,
+          page: page || 1,
+          limit: limit || 20,
+          totalPages: Math.ceil((total || 0) / (limit || 20))
+        }
+      };
+    }
     return response.data;
   },
 

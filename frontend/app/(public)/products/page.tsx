@@ -193,7 +193,7 @@ function StarRating({ rating }: { rating: number }) {
           className={
             s <= Math.round(rating)
               ? "fill-yellow-400 text-yellow-400"
-              : "fill-white/10 text-white/10"
+              : "fill-white/10 text-foreground/10"
           }
         />
       ))}
@@ -211,7 +211,7 @@ function ProductCard({
   onToggleWish: () => void;
 }) {
   return (
-    <div className="group relative rounded-2xl overflow-hidden border border-white/5 bg-[#14121C] hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col">
+    <div className="group relative rounded-2xl overflow-hidden border border-card-border bg-card hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col">
       {/* Image area */}
       <div
         className="relative aspect-[4/3] flex items-center justify-center overflow-hidden"
@@ -222,7 +222,7 @@ function ProductCard({
         {/* Badge */}
         {product.badge && (
           <span
-            className={`absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm text-white ${product.badgeColor}`}
+            className={`absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm text-foreground ${product.badgeColor}`}
           >
             {product.badge}
           </span>
@@ -241,7 +241,7 @@ function ProductCard({
           className={`absolute top-3 right-3 z-10 h-8 w-8 rounded-full backdrop-blur-md flex items-center justify-center transition-all duration-200 ${
             wished
               ? "bg-rose-500 text-white"
-              : "bg-black/30 text-gray-300 hover:bg-black/50 hover:text-white"
+              : "bg-black/30 text-slate-600 dark:text-gray-300 hover:bg-black/50 hover:text-white"
           }`}
         >
           <Heart size={14} fill={wished ? "currentColor" : "none"} />
@@ -259,7 +259,7 @@ function ProductCard({
           <MapPin size={9} />
           {product.brand} · {product.location}
         </p>
-        <h3 className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-3 group-hover:text-violet-100 transition-colors">
+        <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-2 mb-3 group-hover:text-violet-100 transition-colors">
           {product.name}
         </h3>
 
@@ -267,7 +267,7 @@ function ProductCard({
         <div className="flex items-center gap-2 mb-3">
           <StarRating rating={product.rating} />
           <span className="text-[10px] text-yellow-400 font-bold">{product.rating.toFixed(1)}</span>
-          <span className="text-[10px] text-gray-500">{product.sold.toLocaleString()} sold</span>
+          <span className="text-[10px] text-slate-400 dark:text-gray-500">{product.sold.toLocaleString()} sold</span>
         </div>
 
         {/* Price + CTA */}
@@ -277,7 +277,7 @@ function ProductCard({
               ${product.price.toLocaleString()}.00
             </div>
             {product.originalPrice && (
-              <div className="text-[10px] text-gray-500 line-through">
+              <div className="text-[10px] text-slate-400 dark:text-gray-500 line-through">
                 ${product.originalPrice.toLocaleString()}.00
               </div>
             )}
@@ -285,12 +285,12 @@ function ProductCard({
           {product.viewOnly ? (
             <Link
               href={`/products/${product.id}`}
-              className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 transition-colors shrink-0"
+              className="flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-2 text-xs font-semibold text-foreground hover:bg-white/10 transition-colors shrink-0"
             >
               View Details
             </Link>
           ) : (
-            <button className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40 shrink-0">
+            <button className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40 shrink-0">
               <ShoppingCart size={13} />
               Add to Cart
             </button>
@@ -325,8 +325,8 @@ function Sidebar({
   return (
     <aside className="w-64 shrink-0 space-y-6">
       {/* Categories */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5">
-        <h3 className="text-xs uppercase font-bold text-gray-400 tracking-widest mb-4 flex items-center gap-2">
+      <div className="rounded-2xl bg-card border border-card-border p-5">
+        <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4 flex items-center gap-2">
           <LayoutGrid size={13} />
           Categories
         </h3>
@@ -338,15 +338,15 @@ function Sidebar({
                 className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-all ${
                   activeCategory === cat.name
                     ? "bg-violet-600 text-white font-semibold"
-                    : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    : "text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:bg-white/5 hover:text-foreground"
                 }`}
               >
                 <span>{cat.name}</span>
                 <span
                   className={`text-[10px] rounded-full px-2 py-0.5 font-mono ${
                     activeCategory === cat.name
-                      ? "bg-white/20 text-white"
-                      : "bg-white/5 text-gray-500"
+                      ? "bg-white/20 text-foreground"
+                      : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-500"
                   }`}
                 >
                   {cat.count.toLocaleString()}
@@ -358,8 +358,8 @@ function Sidebar({
       </div>
 
       {/* Price Range */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5">
-        <h3 className="text-xs uppercase font-bold text-gray-400 tracking-widest mb-4">
+      <div className="rounded-2xl bg-card border border-card-border p-5">
+        <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4">
           💰 Price Range
         </h3>
         <input
@@ -371,7 +371,7 @@ function Sidebar({
           onChange={(e) => setPriceRange(Number(e.target.value))}
           className="w-full accent-violet-500 cursor-pointer"
         />
-        <div className="flex justify-between text-xs text-gray-400 mt-2">
+        <div className="flex justify-between text-xs text-slate-500 dark:text-gray-400 mt-2">
           <span>$0</span>
           <span className="text-violet-400 font-semibold">
             Up to ${priceRange.toLocaleString()}
@@ -381,8 +381,8 @@ function Sidebar({
       </div>
 
       {/* Rating */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5">
-        <h3 className="text-xs uppercase font-bold text-gray-400 tracking-widest mb-4">
+      <div className="rounded-2xl bg-card border border-card-border p-5">
+        <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4">
           ⭐ Customer Rating
         </h3>
         <div className="space-y-2">
@@ -406,12 +406,12 @@ function Sidebar({
                     className={
                       s <= r
                         ? "fill-yellow-400 text-yellow-400"
-                        : "fill-white/10 text-white/10"
+                        : "fill-white/10 text-foreground/10"
                     }
                   />
                 ))}
               </div>
-              <span className="text-xs text-gray-400 group-hover:text-white transition-colors">
+              <span className="text-xs text-slate-500 dark:text-gray-400 group-hover:text-foreground transition-colors">
                 & Up
               </span>
             </label>
@@ -420,8 +420,8 @@ function Sidebar({
       </div>
 
       {/* Shop Type */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5">
-        <h3 className="text-xs uppercase font-bold text-gray-400 tracking-widest mb-4">
+      <div className="rounded-2xl bg-card border border-card-border p-5">
+        <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4">
           🏪 Shop Type
         </h3>
         <label className="flex items-center gap-3 cursor-pointer mb-3">
@@ -433,11 +433,11 @@ function Sidebar({
           >
             {verifiedOnly && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
           </div>
-          <span className="text-sm text-gray-300">Verified Boutiques</span>
+          <span className="text-sm text-slate-600 dark:text-gray-300">Verified Boutiques</span>
         </label>
         <label className="flex items-center gap-3 cursor-pointer">
           <div className="w-4 h-4 rounded-full border-2 border-gray-600" />
-          <span className="text-sm text-gray-300">Direct from Brand</span>
+          <span className="text-sm text-slate-600 dark:text-gray-300">Direct from Brand</span>
         </label>
       </div>
     </aside>
@@ -518,23 +518,23 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0B0A10] text-white">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-8">
         {/* ─── Page Header ─── */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+          <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-gray-500 mb-3">
             <Link href="/" className="hover:text-violet-400 transition-colors">
               Home
             </Link>
             <span>/</span>
-            <span className="text-gray-300">Marketplace</span>
+            <span className="text-slate-600 dark:text-gray-300">Marketplace</span>
             <span>/</span>
             <span className="text-violet-400">{activeCategory}</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-white">{activeCategory}</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <h1 className="text-3xl font-extrabold text-foreground">{activeCategory}</h1>
+          <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
             Showing 1–{filteredProducts.length} of{" "}
-            <span className="text-white font-medium">1,246</span> results
+            <span className="text-foreground font-medium">1,246</span> results
           </p>
         </div>
 
@@ -558,18 +558,18 @@ export default function ProductsPage() {
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-3 mb-6">
               {/* Search */}
-              <div className="flex-1 min-w-48 flex items-center gap-2 rounded-xl bg-white/5 border border-white/5 px-4 py-2.5 focus-within:border-violet-500/50 transition-colors">
-                <Search size={14} className="text-gray-500 shrink-0" />
+              <div className="flex-1 min-w-48 flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-card-border px-4 py-2.5 focus-within:border-violet-500/50 transition-colors">
+                <Search size={14} className="text-slate-400 dark:text-gray-500 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search products..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-600 focus:outline-none"
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-slate-400 dark:text-gray-600 focus:outline-none"
                 />
                 {search && (
                   <button onClick={() => setSearch("")}>
-                    <X size={13} className="text-gray-500 hover:text-white" />
+                    <X size={13} className="text-slate-400 dark:text-gray-500 hover:text-foreground" />
                   </button>
                 )}
               </div>
@@ -577,7 +577,7 @@ export default function ProductsPage() {
               {/* Mobile filter toggle */}
               <button
                 onClick={() => setShowMobileSidebar(!showMobileSidebar)}
-                className="lg:hidden flex items-center gap-2 rounded-xl bg-white/5 border border-white/5 px-4 py-2.5 text-sm text-gray-300 hover:text-white transition-colors"
+                className="lg:hidden flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-card-border px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 hover:text-foreground transition-colors"
               >
                 <SlidersHorizontal size={14} />
                 Filters
@@ -587,19 +587,19 @@ export default function ProductsPage() {
               <div className="relative">
                 <button
                   onClick={() => setSortOpen(!sortOpen)}
-                  className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/5 px-4 py-2.5 text-sm text-gray-300 hover:text-white transition-colors"
+                  className="flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-card-border px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 hover:text-foreground transition-colors"
                 >
-                  <span className="font-medium text-xs text-gray-500 uppercase tracking-wide">
+                  <span className="font-medium text-xs text-slate-400 dark:text-gray-500 uppercase tracking-wide">
                     Sort by
                   </span>
-                  <span className="text-white font-semibold">{sortBy}</span>
+                  <span className="text-foreground font-semibold">{sortBy}</span>
                   <ChevronDown
                     size={14}
                     className={`transition-transform ${sortOpen ? "rotate-180" : ""}`}
                   />
                 </button>
                 {sortOpen && (
-                  <div className="absolute right-0 top-full mt-2 z-20 w-52 rounded-xl bg-[#1C1828] border border-white/10 shadow-2xl overflow-hidden">
+                  <div className="absolute right-0 top-full mt-2 z-20 w-52 rounded-xl bg-[#1C1828] border border-border dark:border-white/10 shadow-2xl overflow-hidden">
                     {SORT_OPTIONS.map((opt) => (
                       <button
                         key={opt}
@@ -610,7 +610,7 @@ export default function ProductsPage() {
                         className={`w-full text-left px-4 py-3 text-sm transition-colors ${
                           sortBy === opt
                             ? "text-violet-400 bg-violet-500/10"
-                            : "text-gray-300 hover:bg-white/5 hover:text-white"
+                            : "text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:bg-white/5 hover:text-foreground"
                         }`}
                       >
                         {opt}
@@ -621,13 +621,13 @@ export default function ProductsPage() {
               </div>
 
               {/* View mode */}
-              <div className="flex rounded-xl border border-white/5 bg-white/5 overflow-hidden">
+              <div className="flex rounded-xl border border-card-border bg-slate-100 dark:bg-white/5 overflow-hidden">
                 <button
                   onClick={() => setViewMode("grid")}
                   className={`px-3 py-2.5 transition-colors ${
                     viewMode === "grid"
                       ? "bg-violet-600 text-white"
-                      : "text-gray-500 hover:text-white"
+                      : "text-slate-400 dark:text-gray-500 hover:text-foreground"
                   }`}
                 >
                   <LayoutGrid size={14} />
@@ -637,7 +637,7 @@ export default function ProductsPage() {
                   className={`px-3 py-2.5 transition-colors ${
                     viewMode === "list"
                       ? "bg-violet-600 text-white"
-                      : "text-gray-500 hover:text-white"
+                      : "text-slate-400 dark:text-gray-500 hover:text-foreground"
                   }`}
                 >
                   <List size={14} />
@@ -695,10 +695,10 @@ export default function ProductsPage() {
             {filteredProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <span className="text-5xl mb-4">🔍</span>
-                <h3 className="text-lg font-semibold text-white mb-2">
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                   No products found
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-400 dark:text-gray-500">
                   Try adjusting your filters or search term.
                 </p>
               </div>
@@ -722,7 +722,7 @@ export default function ProductsPage() {
                     /* List view */
                     <div
                       key={product.id}
-                      className="group flex gap-4 rounded-2xl bg-[#14121C] border border-white/5 hover:border-violet-500/30 transition-all overflow-hidden p-4"
+                      className="group flex gap-4 rounded-2xl bg-card border border-card-border hover:border-violet-500/30 transition-all overflow-hidden p-4"
                     >
                       <div
                         className="w-28 h-28 rounded-xl shrink-0 flex items-center justify-center text-4xl"
@@ -738,7 +738,7 @@ export default function ProductsPage() {
                             <MapPin size={9} />
                             {product.brand} · {product.location}
                           </p>
-                          <h3 className="text-sm font-semibold text-white line-clamp-1 group-hover:text-violet-100">
+                          <h3 className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-violet-100">
                             {product.name}
                           </h3>
                           <div className="flex items-center gap-2 mt-1">
@@ -746,7 +746,7 @@ export default function ProductsPage() {
                             <span className="text-[10px] text-yellow-400 font-bold">
                               {product.rating.toFixed(1)}
                             </span>
-                            <span className="text-[10px] text-gray-500">
+                            <span className="text-[10px] text-slate-400 dark:text-gray-500">
                               {product.sold.toLocaleString()} sold
                             </span>
                           </div>
@@ -755,7 +755,7 @@ export default function ProductsPage() {
                           <div className="text-base font-extrabold text-violet-400">
                             ${product.price.toLocaleString()}.00
                             {product.originalPrice && (
-                              <span className="ml-2 text-xs text-gray-500 line-through font-normal">
+                              <span className="ml-2 text-xs text-slate-400 dark:text-gray-500 line-through font-normal">
                                 ${product.originalPrice.toLocaleString()}.00
                               </span>
                             )}
@@ -766,7 +766,7 @@ export default function ProductsPage() {
                               className={`h-8 w-8 rounded-full border flex items-center justify-center transition-all ${
                                 wished.has(product.id)
                                   ? "bg-rose-500 border-rose-500 text-white"
-                                  : "border-white/10 text-gray-500 hover:text-white hover:border-white/30"
+                                  : "border-border dark:border-white/10 text-slate-400 dark:text-gray-500 hover:text-foreground hover:border-white/30"
                               }`}
                             >
                               <Heart
@@ -777,7 +777,7 @@ export default function ProductsPage() {
                             {product.viewOnly ? (
                               <Link
                                 href={`/products/${product.id}`}
-                                className="text-xs rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 font-semibold hover:bg-white/10 transition-colors"
+                                className="text-xs rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-1.5 font-semibold hover:bg-white/10 transition-colors"
                               >
                                 View Details
                               </Link>
@@ -800,7 +800,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="h-9 w-9 rounded-lg flex items-center justify-center border border-white/10 text-gray-400 hover:border-violet-500/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                className="h-9 w-9 rounded-lg flex items-center justify-center border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -812,21 +812,21 @@ export default function ProductsPage() {
                   className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
                     currentPage === p
                       ? "bg-violet-600 text-white shadow-lg shadow-violet-900/50"
-                      : "border border-white/10 text-gray-400 hover:border-violet-500/50 hover:text-white"
+                      : "border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground"
                   }`}
                 >
                   {p}
                 </button>
               ))}
 
-              <span className="text-gray-600 px-1">...</span>
+              <span className="text-slate-400 dark:text-gray-600 px-1">...</span>
 
               <button
                 onClick={() => setCurrentPage(TOTAL_PAGES)}
                 className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
                   currentPage === TOTAL_PAGES
                     ? "bg-violet-600 text-white"
-                    : "border border-white/10 text-gray-400 hover:border-violet-500/50 hover:text-white"
+                    : "border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground"
                 }`}
               >
                 {TOTAL_PAGES}
@@ -835,7 +835,7 @@ export default function ProductsPage() {
               <button
                 onClick={() => setCurrentPage(Math.min(TOTAL_PAGES, currentPage + 1))}
                 disabled={currentPage === TOTAL_PAGES}
-                className="h-9 w-9 rounded-lg flex items-center justify-center border border-white/10 text-gray-400 hover:border-violet-500/50 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                className="h-9 w-9 rounded-lg flex items-center justify-center border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
                 <ChevronRight size={16} />
               </button>

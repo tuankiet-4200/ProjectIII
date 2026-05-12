@@ -25,6 +25,10 @@ export class CreateProductDto {
   @IsInt()
   @Min(0)
   stock_quantity: number;
+
+  @IsOptional()
+  @IsString({ each: true })
+  images?: string[];
 }
 
 export class UpdateProductDto {
@@ -54,6 +58,10 @@ export class UpdateProductDto {
   @Min(0)
   @IsOptional()
   stock_quantity?: number;
+
+  @IsOptional()
+  @IsString({ each: true })
+  images?: string[];
 }
 
 export class ProductQueryDto {

@@ -53,8 +53,8 @@ type Product = {
   description: string;
   metaTitle: string;
   metaDescription: string;
-  variations: ProductVariation[];
   mediaImages: string[];
+  images: string[];
 };
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -81,211 +81,9 @@ const TAB_ITEMS: { key: ProductTab; label: string }[] = [
   { key: "alerts", label: "Inventory Alerts" },
 ];
 
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "PROD-001",
-    name: "Neo Quartz Watch Gen 4",
-    sku: "TECH-W-001",
-    category: "Tech",
-    categoryColor: "Tech",
-    price: 249.0,
-    stock: 85,
-    maxStock: 100,
-    status: "active",
-    image: "⌚",
-    imageBg: "from-violet-600/30 to-violet-800/30",
-    description: "Premium smartwatch with sapphire crystal display, heart rate monitoring, and 5-day battery life.",
-    metaTitle: "Neo Quartz Watch Gen 4 - Premium Smartwatch",
-    metaDescription: "Experience the ultimate smartwatch with sapphire display and advanced health tracking...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Black, Silver, Rose Gold" },
-      { type: "Size", icon: Ruler, values: "40mm, 44mm" },
-    ],
-    mediaImages: ["⌚", "📱"],
-  },
-  {
-    id: "PROD-002",
-    name: "Aura Runner Pro",
-    sku: "FASH-S-042",
-    category: "Fashion",
-    categoryColor: "Fashion",
-    price: 120.0,
-    stock: 52,
-    maxStock: 80,
-    status: "draft",
-    image: "👟",
-    imageBg: "from-rose-600/30 to-rose-800/30",
-    description: "Ultra-lightweight running shoes with responsive cushioning and breathable mesh upper.",
-    metaTitle: "Aura Runner Pro - Performance Running Shoes",
-    metaDescription: "Run faster and further with the Aura Runner Pro featuring advanced cushioning...",
-    variations: [
-      { type: "Color", icon: Palette, values: "White, Black, Neon" },
-      { type: "Size", icon: Ruler, values: "US 6-13, EU 39-48" },
-    ],
-    mediaImages: ["👟", "🏃"],
-  },
-  {
-    id: "PROD-003",
-    name: "Studio Beats X",
-    sku: "TECH-H-992",
-    category: "Tech",
-    categoryColor: "Tech",
-    price: 399.0,
-    stock: 150,
-    maxStock: 200,
-    status: "active",
-    image: "🎧",
-    imageBg: "from-blue-600/30 to-blue-800/30",
-    description: "Premium wireless headphones with noise cancellation, spatial audio, and 40-hour battery.",
-    metaTitle: "Studio Beats X - Best Wireless Headphones",
-    metaDescription: "Get the best audio experience with noise cancelling tech...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Black, White, Red" },
-      { type: "Size", icon: Ruler, values: "One size fits all" },
-    ],
-    mediaImages: ["🎧", "🎵"],
-  },
-  {
-    id: "PROD-004",
-    name: "Eclipse Leather Bag",
-    sku: "FASH-B-118",
-    category: "Fashion",
-    categoryColor: "Fashion",
-    price: 185.0,
-    stock: 12,
-    maxStock: 50,
-    status: "active",
-    image: "👜",
-    imageBg: "from-amber-600/30 to-amber-800/30",
-    description: "Handcrafted Italian leather crossbody bag with adjustable strap and multiple compartments.",
-    metaTitle: "Eclipse Leather Bag - Premium Crossbody",
-    metaDescription: "Elevate your style with the Eclipse handcrafted Italian leather bag...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Tan, Black, Burgundy" },
-    ],
-    mediaImages: ["👜"],
-  },
-  {
-    id: "PROD-005",
-    name: "Zen Aroma Diffuser",
-    sku: "HOME-D-076",
-    category: "Home",
-    categoryColor: "Home",
-    price: 68.0,
-    stock: 200,
-    maxStock: 250,
-    status: "active",
-    image: "🌿",
-    imageBg: "from-emerald-600/30 to-emerald-800/30",
-    description: "Ultra-quiet essential oil diffuser with ambient LED lighting and 12-hour run time.",
-    metaTitle: "Zen Aroma Diffuser - Essential Oil Diffuser",
-    metaDescription: "Create a calming atmosphere with the Zen Aroma Diffuser...",
-    variations: [
-      { type: "Color", icon: Palette, values: "White, Wood Grain" },
-    ],
-    mediaImages: ["🌿", "💧"],
-  },
-  {
-    id: "PROD-006",
-    name: "Titan Fitness Tracker",
-    sku: "TECH-T-233",
-    category: "Tech",
-    categoryColor: "Tech",
-    price: 89.0,
-    stock: 8,
-    maxStock: 100,
-    status: "active",
-    image: "📱",
-    imageBg: "from-cyan-600/30 to-cyan-800/30",
-    description: "Advanced fitness tracker with GPS, SpO2, sleep analysis, and 14-day battery life.",
-    metaTitle: "Titan Fitness Tracker - Smart Health Band",
-    metaDescription: "Track your health and fitness goals with the Titan Fitness Tracker...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Black, Navy, Grey" },
-      { type: "Size", icon: Ruler, values: "S, M, L" },
-    ],
-    mediaImages: ["📱"],
-  },
-  {
-    id: "PROD-007",
-    name: "Prism Sunglasses",
-    sku: "ACC-S-401",
-    category: "Accessories",
-    categoryColor: "Accessories",
-    price: 145.0,
-    stock: 3,
-    maxStock: 60,
-    status: "draft",
-    image: "🕶️",
-    imageBg: "from-gray-600/30 to-gray-800/30",
-    description: "Polarized titanium sunglasses with UV400 protection and anti-scratch coating.",
-    metaTitle: "Prism Sunglasses - Polarized Titanium",
-    metaDescription: "See the world clearly with Prism polarized titanium sunglasses...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Gold, Silver, Matte Black" },
-    ],
-    mediaImages: ["🕶️"],
-  },
-  {
-    id: "PROD-008",
-    name: "Velocity Cycling Jersey",
-    sku: "SPR-C-089",
-    category: "Sports",
-    categoryColor: "Sports",
-    price: 75.0,
-    stock: 0,
-    maxStock: 120,
-    status: "archived",
-    image: "🚴",
-    imageBg: "from-indigo-600/30 to-indigo-800/30",
-    description: "Aerodynamic cycling jersey with moisture-wicking fabric and 3 rear pockets.",
-    metaTitle: "Velocity Cycling Jersey - Performance Gear",
-    metaDescription: "Ride faster with the Velocity aerodynamic cycling jersey...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Red, Blue, Black" },
-      { type: "Size", icon: Ruler, values: "XS, S, M, L, XL" },
-    ],
-    mediaImages: ["🚴"],
-  },
-  {
-    id: "PROD-009",
-    name: "Nimbus Wireless Speaker",
-    sku: "TECH-A-567",
-    category: "Audio",
-    categoryColor: "Audio",
-    price: 159.0,
-    stock: 45,
-    maxStock: 80,
-    status: "active",
-    image: "🔊",
-    imageBg: "from-violet-600/30 to-violet-800/30",
-    description: "360° surround sound speaker with deep bass, waterproof design, and 20-hour playback.",
-    metaTitle: "Nimbus Wireless Speaker - 360° Sound",
-    metaDescription: "Immerse yourself in premium 360° sound with the Nimbus Speaker...",
-    variations: [
-      { type: "Color", icon: Palette, values: "Midnight, Ocean, Sand" },
-    ],
-    mediaImages: ["🔊", "🎶"],
-  },
-  {
-    id: "PROD-010",
-    name: "Lux Scented Candle Set",
-    sku: "HOME-C-145",
-    category: "Home",
-    categoryColor: "Home",
-    price: 42.0,
-    stock: 180,
-    maxStock: 200,
-    status: "active",
-    image: "🕯️",
-    imageBg: "from-orange-600/30 to-orange-800/30",
-    description: "Hand-poured soy wax candle set with 3 premium scents. 45-hour burn time each.",
-    metaTitle: "Lux Scented Candle Set - Soy Wax Candles",
-    metaDescription: "Relax and unwind with the Lux hand-poured soy wax scented candle set...",
-    variations: [],
-    mediaImages: ["🕯️"],
-  },
-];
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { productsService } from "@/services/products.service";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -324,55 +122,71 @@ function StockBar({ stock, max }: { stock: number; max: number }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function VendorProducts() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ProductTab>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showNewProductModal, setShowNewProductModal] = useState(false);
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  // Try to load products from API
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const { shopsService } = await import('@/services/shops.service');
-        const { productsService } = await import('@/services/products.service');
-        const shop = await shopsService.getMyShop();
-        if (shop?.id) {
-          const result = await productsService.getAll({ shop_id: shop.id, limit: 50 });
-          if (result?.data?.length) {
-            const EMOJI_MAP = ['⌚', '👟', '🎧', '👜', '🌿', '📱', '🕶️', '🚴', '🔊', '🕯️'];
-            const BG_MAP = ['from-violet-600/30 to-violet-800/30', 'from-rose-600/30 to-rose-800/30', 'from-blue-600/30 to-blue-800/30', 'from-amber-600/30 to-amber-800/30', 'from-emerald-600/30 to-emerald-800/30', 'from-cyan-600/30 to-cyan-800/30'];
-            const CAT_MAP = ['Tech', 'Fashion', 'Audio', 'Accessories', 'Home', 'Sports'];
-            const mapped: Product[] = result.data.map((p: any, i: number) => ({
-              id: p.id || `PROD-${String(i + 1).padStart(3, '0')}`,
-              name: p.name,
-              sku: `SKU-${String(i + 1).padStart(3, '0')}`,
-              category: p.category?.name || CAT_MAP[i % CAT_MAP.length],
-              categoryColor: p.category?.name || CAT_MAP[i % CAT_MAP.length],
-              price: p.price,
-              stock: p.stock_quantity,
-              maxStock: Math.max(p.stock_quantity, 100),
-              status: p.stock_quantity === 0 ? 'archived' as const : p.stock_quantity < 20 ? 'draft' as const : 'active' as const,
-              image: EMOJI_MAP[i % EMOJI_MAP.length],
-              imageBg: BG_MAP[i % BG_MAP.length],
-              description: p.description || '',
-              metaTitle: p.name,
-              metaDescription: p.description || '',
-              variations: [],
-              mediaImages: [EMOJI_MAP[i % EMOJI_MAP.length]],
-            }));
-            setProducts(mapped);
-            if (mapped.length > 0) setSelectedProduct(mapped[0]);
-          }
+  // Load products from API
+  const loadProducts = async () => {
+    setIsLoading(true);
+    try {
+      const { shopsService } = await import('@/services/shops.service');
+      const shop = await shopsService.getMyShop();
+      if (shop?.id) {
+        const result = await productsService.getAll({ shop_id: shop.id, limit: 50 });
+        if (result?.data) {
+          const EMOJI_MAP = ['⌚', '👟', '🎧', '👜', '🌿', '📱', '🕶️', '🚴', '🔊', '🕯️', '🛒', '🎁'];
+          const BG_MAP = ['from-violet-600/30 to-violet-800/30', 'from-rose-600/30 to-rose-800/30', 'from-blue-600/30 to-blue-800/30', 'from-amber-600/30 to-amber-800/30', 'from-emerald-600/30 to-emerald-800/30', 'from-cyan-600/30 to-cyan-800/30'];
+          
+          const mapped: Product[] = result.data.map((p: any, i: number) => ({
+            id: p.id,
+            name: p.name,
+            sku: p.slug?.substring(0, 10).toUpperCase() || `SKU-${String(i + 1).padStart(3, '0')}`,
+            category: p.category?.name || 'Uncategorized',
+            categoryColor: p.category?.name || 'Tech',
+            price: Number(p.price) || 0,
+            stock: p.stock_quantity || 0,
+            maxStock: Math.max(p.stock_quantity || 0, 100),
+            status: p.stock_quantity === 0 ? 'archived' as const : p.stock_quantity < 20 ? 'draft' as const : 'active' as const,
+            image: EMOJI_MAP[i % EMOJI_MAP.length],
+            imageBg: BG_MAP[i % BG_MAP.length],
+            description: p.description || '',
+            metaDescription: p.description || '',
+            variations: [],
+            mediaImages: p.images || [EMOJI_MAP[i % EMOJI_MAP.length]],
+            images: p.images || [],
+          }));
+          setProducts(mapped);
+          if (mapped.length > 0) setSelectedProduct(mapped[0]);
         }
-      } catch {
-        // Fallback to mock data
-        setSelectedProduct(MOCK_PRODUCTS[2]);
       }
-    };
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load products');
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProducts();
   }, []);
+
+  const handleDelete = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    try {
+      await productsService.delete(productId);
+      toast.success('Product deleted successfully');
+      if (selectedProduct?.id === productId) setSelectedProduct(null);
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete product');
+    }
+  };
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -432,7 +246,7 @@ export default function VendorProducts() {
                     <Download size={12} /> Export
                   </button>
                   <button
-                    onClick={() => setShowNewProductModal(true)}
+                    onClick={() => router.push('/vendor/products/create')}
                     className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-95 shadow shadow-violet-900/40"
                   >
                     <Plus size={12} /> New Product
@@ -443,9 +257,8 @@ export default function VendorProducts() {
               {/* Tabs */}
               <div className="flex gap-1 border-b border-white/5">
                 {TAB_ITEMS.map((tab) => {
-                  // badge counts
                   let badge: number | null = null;
-                  if (tab.key === "drafts") badge = MOCK_PRODUCTS.filter((p) => p.status === "draft").length;
+                  if (tab.key === "drafts") badge = products.filter((p) => p.status === "draft").length;
                   if (tab.key === "alerts") badge = lowStockCount + outOfStockCount;
                   return (
                     <button
@@ -551,9 +364,13 @@ export default function VendorProducts() {
                           {/* Image */}
                           <div className="col-span-1">
                             <div
-                              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${product.imageBg} border border-white/5 flex items-center justify-center text-lg`}
+                              className={`w-10 h-10 rounded-xl bg-gradient-to-br ${product.imageBg} border border-white/5 flex items-center justify-center text-lg overflow-hidden shrink-0`}
                             >
-                              {product.image}
+                              {product.images && product.images.length > 0 ? (
+                                <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                              ) : (
+                                product.image
+                              )}
                             </div>
                           </div>
 
@@ -600,7 +417,7 @@ export default function VendorProducts() {
                             <button className="p-1.5 rounded-lg text-gray-600 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
                               <Copy size={11} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                            <button onClick={() => handleDelete(product.id)} className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all">
                               <Trash2 size={11} />
                             </button>
                           </div>
@@ -715,18 +532,32 @@ export default function VendorProducts() {
                   <h3 className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-3">
                     Media
                   </h3>
-                  <div className="flex gap-2">
-                    {selectedProduct.mediaImages.map((emoji, idx) => (
-                      <div
-                        key={idx}
-                        className={`w-16 h-16 rounded-xl bg-gradient-to-br ${selectedProduct.imageBg} border border-white/5 flex items-center justify-center text-2xl relative group cursor-pointer`}
-                      >
-                        {emoji}
-                        <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Eye size={14} className="text-white" />
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProduct.images && selectedProduct.images.length > 0 ? (
+                      selectedProduct.images.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="w-16 h-16 rounded-xl border border-white/5 overflow-hidden relative group cursor-pointer shrink-0"
+                        >
+                          <img src={img} alt={`Media ${idx}`} className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Eye size={14} className="text-white" />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      selectedProduct.mediaImages.map((emoji, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-16 h-16 rounded-xl bg-gradient-to-br ${selectedProduct.imageBg} border border-white/5 flex items-center justify-center text-2xl relative group cursor-pointer shrink-0`}
+                        >
+                          {emoji}
+                          <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Eye size={14} className="text-white" />
+                          </div>
+                        </div>
+                      ))
+                    )}
                     <button className="w-16 h-16 rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/40 flex flex-col items-center justify-center gap-1 transition-colors group">
                       <Upload size={14} className="text-gray-600 group-hover:text-violet-400 transition-colors" />
                       <span className="text-[8px] text-gray-600 group-hover:text-violet-400 transition-colors font-medium">Upload</span>
@@ -866,96 +697,6 @@ export default function VendorProducts() {
             </aside>
           )}
         </div>
-
-      {/* ─── New Product Modal ─── */}
-      {showNewProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowNewProductModal(false)}
-          />
-          {/* Modal */}
-          <div className="relative bg-[#14121C] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl shadow-black/50 animate-modal">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-white">New Product</h2>
-              <button
-                onClick={() => setShowNewProductModal(false)}
-                className="text-gray-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Product Name</label>
-                <input
-                  type="text"
-                  placeholder="Enter product name"
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Category</label>
-                  <select className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none">
-                    <option value="">Select category</option>
-                    <option value="tech">Tech</option>
-                    <option value="fashion">Fashion</option>
-                    <option value="audio">Audio</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="home">Home</option>
-                    <option value="sports">Sports</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Price</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Description</label>
-                <textarea
-                  placeholder="Describe your product..."
-                  rows={3}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Media</label>
-                <div className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-violet-500/30 transition-colors cursor-pointer">
-                  <Upload size={20} className="text-gray-600 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">Drag & drop images or click to upload</p>
-                  <p className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={() => setShowNewProductModal(false)}
-                className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40"
-              >
-                Create Product
-              </button>
-              <button
-                onClick={() => setShowNewProductModal(false)}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Animations */}
       <style jsx>{`

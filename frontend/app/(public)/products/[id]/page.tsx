@@ -93,6 +93,7 @@ const PRODUCT = {
     { name: "+4", hex: "#2a1a3e" },
   ],
   thumbnails: ["🎧", "🔇", "🔋", "🎵"],
+  images: [] as string[],
   shop: {
     name: "SonicStore Official",
     followers: "118k",
@@ -201,7 +202,7 @@ function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
           className={
             s <= Math.round(rating)
               ? "fill-yellow-400 text-yellow-400"
-              : "fill-white/10 text-white/10"
+              : "fill-white/10 text-foreground/10"
           }
         />
       ))}
@@ -215,7 +216,7 @@ function RelatedCard({ product }: { product: RelatedProduct }) {
   return (
     <Link
       href={`/products/${product.id}`}
-      className="group rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.08)] transition-all"
+      className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.08)] transition-all"
     >
       <div
         className="aspect-[4/3] flex items-center justify-center text-4xl"
@@ -229,7 +230,7 @@ function RelatedCard({ product }: { product: RelatedProduct }) {
         <div className="text-[9px] text-violet-400 font-bold uppercase tracking-widest mb-1">
           {product.category}
         </div>
-        <div className="text-xs font-semibold text-white line-clamp-2 leading-snug group-hover:text-violet-100 mb-2">
+        <div className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-violet-100 mb-2">
           {product.name}
         </div>
         <div className="flex items-center justify-between">
@@ -238,7 +239,7 @@ function RelatedCard({ product }: { product: RelatedProduct }) {
           </span>
           <div className="flex items-center gap-1">
             <Star size={9} className="fill-yellow-400 text-yellow-400" />
-            <span className="text-[10px] text-gray-400">{product.rating}</span>
+            <span className="text-[10px] text-slate-500 dark:text-gray-400">{product.rating}</span>
           </div>
         </div>
       </div>
@@ -252,13 +253,13 @@ function DetailsTab() {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-base font-bold text-white mb-2">Precision Audio for Professionals</h3>
-        <p className="text-sm text-gray-400 leading-relaxed mb-4">
+        <h3 className="text-base font-bold text-foreground mb-2">Precision Audio for Professionals</h3>
+        <p className="text-sm text-slate-500 dark:text-gray-400 leading-relaxed mb-4">
           {PRODUCT.longDescription}
         </p>
         <ul className="space-y-2">
           {PRODUCT.features.map((f) => (
-            <li key={f} className="flex items-start gap-2.5 text-sm text-gray-300">
+            <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-gray-300">
               <Check size={14} className="text-violet-400 shrink-0 mt-0.5" />
               {f}
             </li>
@@ -271,7 +272,7 @@ function DetailsTab() {
 
 function SpecificationsTab() {
   return (
-    <div className="rounded-xl overflow-hidden border border-white/5">
+    <div className="rounded-xl overflow-hidden border border-card-border">
       {PRODUCT.specs.map((spec, idx) => (
         <div
           key={spec.label}
@@ -279,8 +280,8 @@ function SpecificationsTab() {
             idx % 2 === 0 ? "bg-white/[0.02]" : "bg-transparent"
           }`}
         >
-          <span className="text-gray-500 w-44 shrink-0">{spec.label}</span>
-          <span className="text-white font-medium">{spec.value}</span>
+          <span className="text-slate-400 dark:text-gray-500 w-44 shrink-0">{spec.label}</span>
+          <span className="text-foreground font-medium">{spec.value}</span>
         </div>
       ))}
     </div>
@@ -298,26 +299,26 @@ function ReviewsTab() {
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="flex flex-col md:flex-row gap-6 rounded-2xl bg-[#14121C] border border-white/5 p-5">
+      <div className="flex flex-col md:flex-row gap-6 rounded-2xl bg-card border border-card-border p-5">
         <div className="flex flex-col items-center justify-center text-center md:w-36 shrink-0">
-          <div className="text-5xl font-black text-white mb-1">{PRODUCT.rating}</div>
+          <div className="text-5xl font-black text-foreground mb-1">{PRODUCT.rating}</div>
           <StarRating rating={PRODUCT.rating} size={16} />
-          <div className="text-xs text-gray-500 mt-2">{PRODUCT.reviewCount.toLocaleString()} reviews</div>
+          <div className="text-xs text-slate-400 dark:text-gray-500 mt-2">{PRODUCT.reviewCount.toLocaleString()} reviews</div>
         </div>
         <div className="flex-1 space-y-2">
           {ratingDist.map(({ stars, pct }) => (
             <div key={stars} className="flex items-center gap-3">
-              <span className="text-xs text-gray-400 w-4 text-right">{stars}</span>
+              <span className="text-xs text-slate-500 dark:text-gray-400 w-4 text-right">{stars}</span>
               <Star size={10} className="fill-yellow-400 text-yellow-400 shrink-0" />
-              <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+              <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/5 overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400" style={{ width: `${pct}%` }} />
               </div>
-              <span className="text-xs text-gray-500 w-7">{pct}%</span>
+              <span className="text-xs text-slate-400 dark:text-gray-500 w-7">{pct}%</span>
             </div>
           ))}
         </div>
         <div className="flex flex-col items-center justify-center gap-2 md:w-40 shrink-0">
-          <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-500 active:scale-95 transition-all">
+          <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-foreground hover:bg-violet-500 active:scale-95 transition-all">
             <MessageSquare size={12} /> Write a Review
           </button>
         </div>
@@ -325,26 +326,26 @@ function ReviewsTab() {
       {/* Reviews */}
       <div className="space-y-4">
         {REVIEWS.map((review) => (
-          <div key={review.id} className="rounded-2xl bg-[#14121C] border border-white/5 p-5">
+          <div key={review.id} className="rounded-2xl bg-card border border-card-border p-5">
             <div className="flex items-start gap-3 mb-3">
-              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${review.avatarBg} flex items-center justify-center text-xs font-bold text-white shrink-0`}>
+              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${review.avatarBg} flex items-center justify-center text-xs font-bold text-foreground shrink-0`}>
                 {review.avatar}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-white">{review.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{review.name}</span>
                   {review.verified && (
                     <span className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
                       <BadgeCheck size={9} /> VERIFIED
                     </span>
                   )}
-                  <span className="ml-auto text-xs text-gray-500">{review.date}</span>
+                  <span className="ml-auto text-xs text-slate-400 dark:text-gray-500">{review.date}</span>
                 </div>
                 <StarRating rating={review.rating} />
               </div>
             </div>
-            <p className="text-sm text-gray-300 leading-relaxed mb-3">{review.comment}</p>
-            <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-violet-400 transition-colors">
+            <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed mb-3">{review.comment}</p>
+            <button className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-gray-500 hover:text-violet-400 transition-colors">
               <ThumbsUp size={11} /> Helpful ({review.helpful})
             </button>
           </div>
@@ -379,13 +380,13 @@ function ShippingTab() {
           desc: "All products are shipped in original, factory-sealed packaging with authenticity certificate.",
         },
       ].map((item) => (
-        <div key={item.title} className="flex gap-4 rounded-2xl bg-[#14121C] border border-white/5 p-5">
+        <div key={item.title} className="flex gap-4 rounded-2xl bg-card border border-card-border p-5">
           <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
             <item.icon size={18} className="text-violet-400" />
           </div>
           <div>
-            <div className="text-sm font-bold text-white mb-1">{item.title}</div>
-            <div className="text-xs text-gray-400 leading-relaxed">{item.desc}</div>
+            <div className="text-sm font-bold text-foreground mb-1">{item.title}</div>
+            <div className="text-xs text-slate-500 dark:text-gray-400 leading-relaxed">{item.desc}</div>
           </div>
         </div>
       ))}
@@ -423,6 +424,7 @@ export default function ProductDetailPage() {
             stockCount: p.stock_quantity,
             brand: p.shop?.name || PRODUCT.brand,
             category: p.category?.name || PRODUCT.category,
+            images: p.images || [],
           });
         }
       } catch {
@@ -454,18 +456,18 @@ export default function ProductDetailPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0A10] text-white">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-8">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-6 flex-wrap">
+        <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-gray-500 mb-6 flex-wrap">
           <Link href="/" className="hover:text-violet-400 transition-colors">Home</Link>
           <ChevronRight size={11} />
           <Link href="/products" className="hover:text-violet-400 transition-colors">Audio</Link>
           <ChevronRight size={11} />
           <Link href="/products" className="hover:text-violet-400 transition-colors">Over-Ear Headphones</Link>
           <ChevronRight size={11} />
-          <span className="text-gray-400 truncate max-w-[200px]">{productData.name}</span>
+          <span className="text-slate-500 dark:text-gray-400 truncate max-w-[200px]">{productData.name}</span>
         </div>
 
         {/* ─── Product Section ─── */}
@@ -474,21 +476,23 @@ export default function ProductDetailPage() {
           {/* Left: Images */}
           <div className="space-y-4">
             {/* Main image */}
-            <div className="relative aspect-square rounded-3xl overflow-hidden bg-gradient-to-br from-[#1a1a2e] to-[#16213e] flex items-center justify-center border border-white/5">
-              <span className="text-[120px] select-none">{PRODUCT.thumbnails[activeThumb]}</span>
-              {/* Glow */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+            <div className="relative aspect-square rounded-3xl overflow-hidden bg-secondary/50 dark:bg-gradient-to-br dark:from-[#1a1a2e] dark:to-[#16213e] flex items-center justify-center">
+              {productData.images && productData.images.length > 0 ? (
+                <img src={productData.images[activeThumb] || productData.images[0]} alt={productData.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[120px] select-none">{PRODUCT.thumbnails[activeThumb]}</span>
+              )}
               {/* Wish + Share */}
               <div className="absolute top-4 right-4 flex flex-col gap-2">
                 <button
                   onClick={() => setWished(!wished)}
                   className={`w-9 h-9 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
-                    wished ? "bg-rose-500 text-white" : "bg-black/40 text-gray-300 hover:text-white"
+                    wished ? "bg-rose-500 text-white" : "bg-black/40 text-slate-600 dark:text-gray-300 hover:text-white"
                   }`}
                 >
                   <Heart size={15} fill={wished ? "currentColor" : "none"} />
                 </button>
-                <button className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-gray-300 hover:text-white transition-colors">
+                <button className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-slate-600 dark:text-gray-300 hover:text-foreground transition-colors">
                   <Share2 size={14} />
                 </button>
               </div>
@@ -502,17 +506,21 @@ export default function ProductDetailPage() {
 
             {/* Thumbnails */}
             <div className="grid grid-cols-4 gap-3">
-              {PRODUCT.thumbnails.map((thumb, idx) => (
+              {(productData.images && productData.images.length > 0 ? productData.images : PRODUCT.thumbnails).map((thumb, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveThumb(idx)}
-                  className={`aspect-square rounded-2xl flex items-center justify-center text-3xl border transition-all ${
+                  className={`aspect-square rounded-2xl flex items-center justify-center text-3xl border transition-all overflow-hidden ${
                     activeThumb === idx
                       ? "border-violet-500 bg-violet-500/10 shadow-md shadow-violet-900/40"
-                      : "border-white/5 bg-[#14121C] hover:border-white/20"
+                      : "border-card-border bg-card hover:border-white/20"
                   }`}
                 >
-                  {thumb}
+                  {productData.images && productData.images.length > 0 ? (
+                    <img src={thumb} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+                  ) : (
+                    thumb
+                  )}
                 </button>
               ))}
             </div>
@@ -526,23 +534,23 @@ export default function ProductDetailPage() {
                 <span className="text-xs font-bold text-violet-400 uppercase tracking-widest">
                   {productData.brand}
                 </span>
-                <span className="text-gray-600">·</span>
+                <span className="text-slate-400 dark:text-gray-600">·</span>
                 <div className="flex items-center gap-1">
                   <StarRating rating={productData.rating} size={12} />
                   <span className="text-xs text-yellow-400 font-bold">{productData.rating}</span>
-                  <span className="text-xs text-gray-500">({productData.reviewCount.toLocaleString()} reviews)</span>
+                  <span className="text-xs text-slate-400 dark:text-gray-500">({productData.reviewCount.toLocaleString()} reviews)</span>
                 </div>
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-tight mb-3">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight mb-3">
                 {productData.name}
               </h1>
-              <p className="text-sm text-gray-400 leading-relaxed">{productData.description}</p>
+              <p className="text-sm text-slate-500 dark:text-gray-400 leading-relaxed">{productData.description}</p>
             </div>
 
             {/* Price */}
             <div className="flex items-end gap-3">
-              <span className="text-4xl font-black text-white">${productData.price}.00</span>
-              <span className="text-lg text-gray-500 line-through mb-1">${productData.originalPrice}.00</span>
+              <span className="text-4xl font-black text-foreground">${productData.price}.00</span>
+              <span className="text-lg text-slate-400 dark:text-gray-500 line-through mb-1">${productData.originalPrice}.00</span>
               <span className="mb-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1">
                 Save {productData.discount}%
               </span>
@@ -550,15 +558,15 @@ export default function ProductDetailPage() {
 
             {/* Color */}
             <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                Color — <span className="text-white">{PRODUCT.colors[selectedColor].name}</span>
+              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">
+                Color — <span className="text-foreground">{PRODUCT.colors[selectedColor].name}</span>
               </div>
               <div className="flex items-center gap-2">
                 {PRODUCT.colors.map((color, idx) => (
                   <button
                     key={color.name}
                     onClick={() => setSelectedColor(idx)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center text-[8px] font-bold text-white ${
+                    className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center text-[8px] font-bold text-foreground ${
                       selectedColor === idx ? "border-violet-400 scale-110 ring-2 ring-violet-400/30" : "border-transparent hover:scale-105"
                     }`}
                     style={{ backgroundColor: color.hex }}
@@ -572,19 +580,19 @@ export default function ProductDetailPage() {
 
             {/* Qty */}
             <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Quantity</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">Quantity</div>
               <div className="flex items-center gap-4">
-                <div className="flex items-center rounded-xl border border-white/10 bg-white/5">
+                <div className="flex items-center rounded-xl border border-border dark:border-white/10 bg-slate-100 dark:bg-white/5">
                   <button
                     onClick={() => setQty(Math.max(1, qty - 1))}
-                    className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                    className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
                   >
                     <Minus size={14} />
                   </button>
-                  <span className="w-10 text-center text-sm font-bold text-white select-none">{qty}</span>
+                  <span className="w-10 text-center text-sm font-bold text-foreground select-none">{qty}</span>
                   <button
                     onClick={() => setQty(qty + 1)}
-                    className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                    className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
                   >
                     <Plus size={14} />
                   </button>
@@ -612,23 +620,23 @@ export default function ProductDetailPage() {
                   <><ShoppingCart size={15} /> Add to Cart</>
                 )}
               </button>
-              <button className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3.5 text-sm font-bold text-white hover:bg-white/10 transition-all active:scale-95">
+              <button className="flex items-center justify-center gap-2 rounded-xl border border-border dark:border-white/10 bg-slate-100 dark:bg-white/5 py-3.5 text-sm font-bold text-foreground hover:bg-white/10 transition-all active:scale-95">
                 <Zap size={15} className="text-yellow-400" /> Buy It Now
               </button>
             </div>
 
             {/* Shop card */}
-            <div className="flex items-center gap-3 rounded-2xl bg-[#14121C] border border-white/5 p-4">
+            <div className="flex items-center gap-3 rounded-2xl bg-card border border-card-border p-4">
               <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-lg shrink-0">
                 🎧
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <Store size={11} className="text-violet-400" />
-                  <span className="text-sm font-bold text-white">{PRODUCT.shop.name}</span>
+                  <span className="text-sm font-bold text-foreground">{PRODUCT.shop.name}</span>
                   {PRODUCT.shop.verified && <BadgeCheck size={13} className="text-violet-400" />}
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
                   <Star size={9} className="fill-yellow-400 text-yellow-400" />
                   {PRODUCT.shop.rating} · {PRODUCT.shop.followers} followers
                 </div>
@@ -644,9 +652,9 @@ export default function ProductDetailPage() {
             {/* Perks */}
             <div className="grid grid-cols-2 gap-2">
               {PRODUCT.perks.map((perk) => (
-                <div key={perk.label} className="flex items-center gap-2 rounded-xl bg-white/[0.03] border border-white/5 px-3 py-2">
+                <div key={perk.label} className="flex items-center gap-2 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-card-border px-3 py-2">
                   <perk.icon size={13} className="text-violet-400 shrink-0" />
-                  <span className="text-[11px] text-gray-400">{perk.label}</span>
+                  <span className="text-[11px] text-slate-500 dark:text-gray-400">{perk.label}</span>
                 </div>
               ))}
             </div>
@@ -656,7 +664,7 @@ export default function ProductDetailPage() {
         {/* ─── Detail Tabs ─── */}
         <div className="mb-14">
           {/* Tab nav */}
-          <div className="flex gap-1 border-b border-white/5 mb-6 overflow-x-auto">
+          <div className="flex gap-1 border-b border-card-border mb-6 overflow-x-auto">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -664,7 +672,7 @@ export default function ProductDetailPage() {
                 className={`shrink-0 px-5 py-3 text-sm font-medium border-b-2 transition-all ${
                   tab === t.id
                     ? "border-violet-500 text-violet-400"
-                    : "border-transparent text-gray-500 hover:text-gray-300"
+                    : "border-transparent text-slate-400 dark:text-gray-500 hover:text-slate-600 dark:text-gray-300"
                 }`}
               >
                 {t.label}
@@ -681,7 +689,7 @@ export default function ProductDetailPage() {
         {/* ─── You might also like ─── */}
         <section className="mb-14">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-white">You might also like</h2>
+            <h2 className="text-lg font-bold text-foreground">You might also like</h2>
             <Link
               href="/products"
               className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors"
@@ -699,7 +707,7 @@ export default function ProductDetailPage() {
         {/* ─── Customer Reviews preview ─── */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-white">Customer Reviews</h2>
+            <h2 className="text-lg font-bold text-foreground">Customer Reviews</h2>
             <button
               onClick={() => setTab("reviews")}
               className="flex items-center gap-1.5 rounded-xl bg-violet-600/20 border border-violet-500/30 text-violet-300 hover:bg-violet-600/30 px-4 py-2 text-xs font-semibold transition-all"
@@ -709,23 +717,23 @@ export default function ProductDetailPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {REVIEWS.slice(0, 2).map((review) => (
-              <div key={review.id} className="rounded-2xl bg-[#14121C] border border-white/5 p-5">
+              <div key={review.id} className="rounded-2xl bg-card border border-card-border p-5">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${review.avatarBg} flex items-center justify-center text-xs font-bold text-white shrink-0`}>
+                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${review.avatarBg} flex items-center justify-center text-xs font-bold text-foreground shrink-0`}>
                     {review.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{review.name}</span>
+                      <span className="text-sm font-semibold text-foreground">{review.name}</span>
                       {review.verified && (
                         <BadgeCheck size={12} className="text-emerald-400" />
                       )}
                     </div>
                     <StarRating rating={review.rating} />
                   </div>
-                  <span className="text-[10px] text-gray-500 shrink-0">{review.date}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-gray-500 shrink-0">{review.date}</span>
                 </div>
-                <p className="text-xs text-gray-300 leading-relaxed line-clamp-3">{review.comment}</p>
+                <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed line-clamp-3">{review.comment}</p>
               </div>
             ))}
           </div>

@@ -35,6 +35,7 @@ type OrderItem = {
 
 type Order = {
   id: string;
+  displayId: string;
   customer: string;
   email: string;
   phone: string;
@@ -67,218 +68,8 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: "delivered", label: "Delivered" },
 ];
 
-// ── Mock Orders ────────────────────────────────────
-
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "#ORD-9913",
-    customer: "Alex Rivera",
-    email: "alex.rivera@example.com",
-    phone: "+1 (555) 184-7292",
-    avatar: "AR",
-    avatarBg: "from-violet-500 to-violet-700",
-    items: [
-      { name: "Pro Wireless Headphones", variant: "Midnight Black", qty: 1, price: 45 },
-      { name: "USB-C Charging Dock", qty: 1, price: 35 },
-      { name: "Audio Cable 3.5mm", qty: 1, price: 24 },
-    ],
-    totalItems: 3,
-    totalAmount: 104.0,
-    status: "pending",
-    date: "Oct 24, 2023",
-    address: "842 Evergreen Terrace, Springfield, IL 62704",
-    paymentMethod: "Visa •••• 4242",
-  },
-  {
-    id: "#ORD-9914",
-    customer: "Sarah Chen",
-    email: "sarah.chen@example.com",
-    phone: "+1 (555) 384-1044",
-    avatar: "SC",
-    avatarBg: "from-emerald-500 to-emerald-700",
-    items: [{ name: "Pro Wireless Headphones", variant: "Pearl White", qty: 1, price: 45 }],
-    totalItems: 1,
-    totalAmount: 45.0,
-    status: "pending",
-    date: "Oct 23, 2023",
-    address: "1200 Market St, San Francisco, CA 94103",
-    paymentMethod: "Mastercard •••• 8821",
-  },
-  {
-    id: "#ORD-9915",
-    customer: "Marco V",
-    email: "marco.v@example.com",
-    phone: "+1 (555) 209-3387",
-    avatar: "MV",
-    avatarBg: "from-blue-500 to-blue-700",
-    items: [
-      { name: "Studio Monitor Speakers", qty: 1, price: 220 },
-      { name: "XLR Cable 10ft", qty: 2, price: 24 },
-      { name: "Pop Filter", qty: 1, price: 44.2 },
-    ],
-    totalItems: 3,
-    totalAmount: 312.2,
-    status: "shipping",
-    date: "Oct 23, 2023",
-    address: "485 Sunset Blvd, Los Angeles, CA 90028",
-    paymentMethod: "PayPal",
-  },
-  {
-    id: "#ORD-9916",
-    customer: "Elena Smith",
-    email: "elena.smith@example.com",
-    phone: "+1 (555) 772-0101",
-    avatar: "ES",
-    avatarBg: "from-rose-500 to-rose-700",
-    items: [
-      { name: "Noise Cancelling Buds", qty: 1, price: 68 },
-      { name: "Silicone Tips Set", qty: 1, price: 20 },
-    ],
-    totalItems: 2,
-    totalAmount: 88.0,
-    status: "delivered",
-    date: "Oct 22, 2023",
-    address: "300 Peachtree Rd NE, Atlanta, GA 30308",
-    paymentMethod: "Apple Pay",
-  },
-  {
-    id: "#ORD-9917",
-    customer: "James Wong",
-    email: "james.wong@example.com",
-    phone: "+1 (555) 610-8823",
-    avatar: "JW",
-    avatarBg: "from-amber-500 to-amber-700",
-    items: [
-      { name: "Mechanical Keyboard", variant: "TKL", qty: 1, price: 189 },
-      { name: "Wrist Rest", qty: 1, price: 29 },
-    ],
-    totalItems: 2,
-    totalAmount: 218.0,
-    status: "preparing",
-    date: "Oct 22, 2023",
-    address: "77 Massachusetts Ave, Cambridge, MA 02139",
-    paymentMethod: "Visa •••• 1155",
-  },
-  {
-    id: "#ORD-9918",
-    customer: "Lily Park",
-    email: "lily.park@example.com",
-    phone: "+1 (555) 331-4457",
-    avatar: "LP",
-    avatarBg: "from-cyan-500 to-cyan-700",
-    items: [{ name: "USB Microphone Pro", qty: 1, price: 149 }],
-    totalItems: 1,
-    totalAmount: 149.0,
-    status: "shipping",
-    date: "Oct 21, 2023",
-    address: "5th Ave & W 34th St, New York, NY 10118",
-    paymentMethod: "Mastercard •••• 3209",
-  },
-  {
-    id: "#ORD-9919",
-    customer: "David Kim",
-    email: "david.kim@example.com",
-    phone: "+1 (555) 887-2290",
-    avatar: "DK",
-    avatarBg: "from-indigo-500 to-indigo-700",
-    items: [
-      { name: "Webcam 4K Ultra", qty: 1, price: 199 },
-      { name: "Ring Light 12\"", qty: 1, price: 79 },
-      { name: "Tripod Mount", qty: 1, price: 45 },
-    ],
-    totalItems: 3,
-    totalAmount: 323.0,
-    status: "delivered",
-    date: "Oct 21, 2023",
-    address: "200 E Randolph St, Chicago, IL 60601",
-    paymentMethod: "PayPal",
-  },
-  {
-    id: "#ORD-9920",
-    customer: "Ana Morales",
-    email: "ana.morales@example.com",
-    phone: "+1 (555) 442-6678",
-    avatar: "AM",
-    avatarBg: "from-pink-500 to-pink-700",
-    items: [{ name: "Portable Charger 20000mAh", qty: 2, price: 45 }],
-    totalItems: 2,
-    totalAmount: 90.0,
-    status: "cancelled",
-    date: "Oct 20, 2023",
-    address: "600 Navarro St, San Antonio, TX 78205",
-    paymentMethod: "Visa •••• 9903",
-  },
-  {
-    id: "#ORD-9921",
-    customer: "Tom Baker",
-    email: "tom.baker@example.com",
-    phone: "+1 (555) 119-5501",
-    avatar: "TB",
-    avatarBg: "from-teal-500 to-teal-700",
-    items: [
-      { name: "Wireless Mouse", qty: 1, price: 79 },
-      { name: "Mouse Pad XL", qty: 1, price: 25 },
-    ],
-    totalItems: 2,
-    totalAmount: 104.0,
-    status: "pending",
-    date: "Oct 20, 2023",
-    address: "1401 Constitution Ave NW, Washington, DC 20560",
-    paymentMethod: "Apple Pay",
-  },
-  {
-    id: "#ORD-9922",
-    customer: "Nina Patel",
-    email: "nina.patel@example.com",
-    phone: "+1 (555) 223-4490",
-    avatar: "NP",
-    avatarBg: "from-fuchsia-500 to-fuchsia-700",
-    items: [
-      { name: "Smart Watch Pro", variant: "Rose Gold", qty: 1, price: 399 },
-    ],
-    totalItems: 1,
-    totalAmount: 399.0,
-    status: "preparing",
-    date: "Oct 19, 2023",
-    address: "700 Clark Ave, St. Louis, MO 63102",
-    paymentMethod: "Mastercard •••• 5567",
-  },
-  {
-    id: "#ORD-9923",
-    customer: "Chris Hall",
-    email: "chris.hall@example.com",
-    phone: "+1 (555) 880-3321",
-    avatar: "CH",
-    avatarBg: "from-lime-500 to-lime-700",
-    items: [
-      { name: "Gaming Headset RGB", qty: 1, price: 129 },
-      { name: "Audio Mixer", qty: 1, price: 259 },
-    ],
-    totalItems: 2,
-    totalAmount: 388.0,
-    status: "delivered",
-    date: "Oct 19, 2023",
-    address: "400 Broad St, Seattle, WA 98109",
-    paymentMethod: "Visa •••• 2277",
-  },
-  {
-    id: "#ORD-9924",
-    customer: "Yuki Tanaka",
-    email: "yuki.tanaka@example.com",
-    phone: "+1 (555) 556-7712",
-    avatar: "YT",
-    avatarBg: "from-orange-500 to-orange-700",
-    items: [
-      { name: "Laptop Stand Aluminum", qty: 1, price: 89 },
-    ],
-    totalItems: 1,
-    totalAmount: 89.0,
-    status: "shipping",
-    date: "Oct 18, 2023",
-    address: "1 Infinite Loop, Cupertino, CA 95014",
-    paymentMethod: "PayPal",
-  },
-];
+import { toast } from "sonner";
+import { ordersService } from "@/services/orders.service";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -289,49 +80,63 @@ export default function VendorOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Try to load orders from API
-  useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        const { shopsService } = await import('@/services/shops.service');
-        const { ordersService } = await import('@/services/orders.service');
-        const shop = await shopsService.getMyShop();
-        if (shop?.id) {
-          const result = await ordersService.getShopOrders(shop.id, 1, 50);
-          if (result?.data?.length) {
-            const AVATAR_BGS = ['from-violet-500 to-violet-700', 'from-emerald-500 to-emerald-700', 'from-blue-500 to-blue-700', 'from-rose-500 to-rose-700', 'from-amber-500 to-amber-700'];
-            const mapped: Order[] = result.data.map((o: any, i: number) => ({
-              id: `#ORD-${String(i + 9000).padStart(4, '0')}`,
-              customer: o.parent_order?.user?.full_name || `Customer ${i + 1}`,
-              email: o.parent_order?.user?.email || '',
-              phone: o.parent_order?.user?.phone || '',
-              avatar: (o.parent_order?.user?.full_name || 'U').slice(0, 2).toUpperCase(),
-              avatarBg: AVATAR_BGS[i % AVATAR_BGS.length],
-              items: (o.order_items || []).map((item: any) => ({
-                name: item.product?.name || 'Product',
-                qty: item.quantity,
-                price: item.price_at_purchase,
-              })),
-              totalItems: o.order_items?.length || 0,
-              totalAmount: o.order_items?.reduce((sum: number, item: any) => sum + item.price_at_purchase * item.quantity, 0) || 0,
-              status: (o.status || 'pending').toLowerCase() as any,
-              date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              address: o.parent_order?.shipping_address || '',
-              paymentMethod: o.parent_order?.payment_method || 'COD',
-            }));
-            setOrders(mapped);
-            if (mapped.length > 0) setSelectedOrder(mapped[0]);
-          }
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      const { shopsService } = await import('@/services/shops.service');
+      const shop = await shopsService.getMyShop();
+      if (shop?.id) {
+        const result = await ordersService.getShopOrders(shop.id, 1, 50);
+        if (result?.data) {
+          const AVATAR_BGS = ['from-violet-500 to-violet-700', 'from-emerald-500 to-emerald-700', 'from-blue-500 to-blue-700', 'from-rose-500 to-rose-700', 'from-amber-500 to-amber-700'];
+          const mapped: Order[] = result.data.map((o: any, i: number) => ({
+            id: o.id,
+            displayId: `#ORD-${String(i + 9000).padStart(4, '0')}`,
+            customer: o.parent_order?.user?.full_name || `Customer ${i + 1}`,
+            email: o.parent_order?.user?.email || '',
+            phone: o.parent_order?.user?.phone || '',
+            avatar: (o.parent_order?.user?.full_name || 'U').slice(0, 2).toUpperCase(),
+            avatarBg: AVATAR_BGS[i % AVATAR_BGS.length],
+            items: (o.order_items || []).map((item: any) => ({
+              name: item.product?.name || 'Product',
+              qty: item.quantity,
+              price: Number(item.price_at_purchase) || 0,
+            })),
+            totalItems: o.order_items?.length || 0,
+            totalAmount: o.order_items?.reduce((sum: number, item: any) => sum + Number(item.price_at_purchase) * item.quantity, 0) || 0,
+            status: (o.status || 'pending').toLowerCase() as any,
+            date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            address: o.parent_order?.shipping_address || '',
+            paymentMethod: o.parent_order?.payment_method || 'COD',
+          }));
+          setOrders(mapped);
+          if (mapped.length > 0) setSelectedOrder(mapped[0]);
         }
-      } catch {
-        // Fallback to mock data
-        setSelectedOrder(MOCK_ORDERS[1]);
       }
-    };
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load orders');
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadOrders();
   }, []);
+
+  const handleUpdateStatus = async (orderId: string, status: string) => {
+    try {
+      await ordersService.updateShopOrderStatus(orderId, status.toUpperCase() as any);
+      toast.success('Order status updated');
+      loadOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update order status');
+    }
+  };
 
   // Filter orders
   const filteredOrders = useMemo(() => {
@@ -484,7 +289,7 @@ export default function VendorOrders() {
                         >
                           <div className="col-span-2">
                             <span className="text-xs font-mono text-violet-400 font-semibold">
-                              {order.id}
+                              {order.displayId}
                             </span>
                           </div>
                           <div className="col-span-3 flex items-center gap-2.5">
@@ -614,7 +419,7 @@ export default function VendorOrders() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono text-violet-400 font-bold">
-                        {selectedOrder.id}
+                        {selectedOrder.displayId}
                       </span>
                       <button className="text-gray-600 hover:text-gray-400 transition-colors">
                         <Copy size={10} />
@@ -719,23 +524,26 @@ export default function VendorOrders() {
                   const nextAction = getNextAction(selectedOrder.status);
                   if (!nextAction) return null;
                   return (
-                    <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40">
+                    <button 
+                      onClick={() => handleUpdateStatus(selectedOrder.id, nextAction.action)}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40"
+                    >
                       <nextAction.icon size={14} />
                       {nextAction.label}
                     </button>
                   );
                 })()}
 
-                {selectedOrder.status === "pending" && (
-                  <button className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all">
-                    <Truck size={14} />
-                    Handover to Shipper
-                  </button>
-                )}
-
                 {selectedOrder.status !== "delivered" &&
                   selectedOrder.status !== "cancelled" && (
-                    <button className="w-full text-center text-xs font-semibold text-red-400 hover:text-red-300 transition-colors py-1.5">
+                    <button 
+                      onClick={() => {
+                        if (confirm('Are you sure you want to cancel this order?')) {
+                          handleUpdateStatus(selectedOrder.id, "cancelled");
+                        }
+                      }}
+                      className="w-full text-center text-xs font-semibold text-red-400 hover:text-red-300 transition-colors py-1.5"
+                    >
                       Cancel Order
                     </button>
                   )}

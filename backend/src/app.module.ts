@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { ChatModule } from './chat/chat.module';
 import { RedisModule } from './redis/redis.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { RedisModule } from './redis/redis.module';
     NotificationsModule, 
     TrackingModule, 
     ChatModule, 
-    RedisModule
+    RedisModule,
+    UploadsModule
   ],
   controllers: [AppController],
   providers: [AppService],

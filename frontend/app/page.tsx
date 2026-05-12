@@ -122,14 +122,18 @@ export default async function Home() {
           {products.length > 0 ? (
             products.map((product) => (
               <div key={product.id} className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-black/10 dark:hover:border-white/10 transition-all flex flex-col">
-                <div className="relative aspect-square p-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center">
+                <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center">
                   <button className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-black/60 transition-colors z-10">
                     <Heart size={16} />
                   </button>
-                  {/* Dummy placeholder for real product since we don't have images yet */}
-                  <div className="w-3/4 h-3/4 rounded-2xl bg-white shadow-xl border border-gray-200 dark:border-white/5 dark:bg-black/50 overflow-hidden flex items-center justify-center">
-                    <span className="text-4xl text-slate-300 dark:text-gray-600">P3</span>
-                  </div>
+                  {/* Render actual product image if available, else fallback to placeholder */}
+                  {product.images && product.images.length > 0 ? (
+                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-3/4 h-3/4 rounded-2xl bg-white shadow-xl border border-gray-200 dark:border-white/5 dark:bg-black/50 overflow-hidden flex items-center justify-center">
+                      <span className="text-4xl text-slate-300 dark:text-gray-600">P3</span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex items-center justify-between mb-2">
