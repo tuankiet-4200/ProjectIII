@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useCartStore } from "@/store/useCartStore";
 import {
   Star,
   Heart,
@@ -448,13 +449,15 @@ export default function ProductDetailPage() {
 
     try {
       const addItem = useCartStore.getState().addItem;
-      const productId = typeof productData.id === 'string' ? productData.id : null;
-      if (productId) {
-        await addItem(productId, qty);
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 2000);
-        toast.success("Added to cart successfully!");
+      const productId = typeof productData.id === 'string' ? productData.id : '';
+      if (!productId) {
+        toast.error("Product is not ready yet. Please try again.");
+        return;
       }
+      await addItem(productId, qty);
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
+      toast.success("Added to cart successfully!");
     } catch (error: any) {
       console.error("Failed to add to cart", error);
       if (error.response?.status === 401) {
