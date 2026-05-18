@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { getPublicImageUrl } from "@/lib/images";
 import {
   Package,
   Search,
@@ -53,8 +54,10 @@ type Product = {
   description: string;
   metaTitle: string;
   metaDescription: string;
+  variations: ProductVariation[];
   mediaImages: string[];
   images: string[];
+  categoryId?: number;
 };
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -84,6 +87,8 @@ const TAB_ITEMS: { key: ProductTab; label: string }[] = [
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { productsService } from "@/services/products.service";
+import { formatVnd } from "@/lib/currency";
+import CategorySelect from "@/components/vendor/CategorySelect";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -129,6 +134,61 @@ export default function VendorProducts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // ── Edit form state (mirrors selectedProduct, editable)
+  const [editForm, setEditForm] = useState<{
+    name: string;
+    description: string;
+    price: string;
+    stock: string;
+    category_id: string;
+  }>({ name: '', description: '', price: '', stock: '', category_id: '' });
+
+  // Sync editForm whenever selectedProduct changes
+  const selectProduct = (p: Product) => {
+    setSelectedProduct(p);
+    setEditForm({
+      name: p.name,
+      description: p.description,
+      price: String(p.price),
+      stock: String(p.stock),
+      category_id: String(p.categoryId || ''),
+    });
+  };
+
+  const handleDiscard = () => {
+    if (!selectedProduct) return;
+    setEditForm({
+      name: selectedProduct.name,
+      description: selectedProduct.description,
+      price: String(selectedProduct.price),
+      stock: String(selectedProduct.stock),
+      category_id: String(selectedProduct.categoryId || ''),
+    });
+    toast.info('Changes discarded');
+  };
+
+  const handleSave = async () => {
+    if (!selectedProduct) return;
+    setIsSaving(true);
+    try {
+      await productsService.update(selectedProduct.id, {
+        name: editForm.name,
+        description: editForm.description,
+        price: Number(editForm.price),
+        stock_quantity: Number(editForm.stock),
+        ...(editForm.category_id ? { category_id: Number(editForm.category_id) } : {}),
+      });
+      toast.success('Product updated successfully');
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update product');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Load products from API
   const loadProducts = async () => {
@@ -148,6 +208,7 @@ export default function VendorProducts() {
             sku: p.slug?.substring(0, 10).toUpperCase() || `SKU-${String(i + 1).padStart(3, '0')}`,
             category: p.category?.name || 'Uncategorized',
             categoryColor: p.category?.name || 'Tech',
+            categoryId: p.category_id || p.category?.id,
             price: Number(p.price) || 0,
             stock: p.stock_quantity || 0,
             maxStock: Math.max(p.stock_quantity || 0, 100),
@@ -155,13 +216,14 @@ export default function VendorProducts() {
             image: EMOJI_MAP[i % EMOJI_MAP.length],
             imageBg: BG_MAP[i % BG_MAP.length],
             description: p.description || '',
+            metaTitle: p.name || '',
             metaDescription: p.description || '',
             variations: [],
             mediaImages: p.images || [EMOJI_MAP[i % EMOJI_MAP.length]],
             images: p.images || [],
           }));
           setProducts(mapped);
-          if (mapped.length > 0) setSelectedProduct(mapped[0]);
+          if (mapped.length > 0) selectProduct(mapped[0]);
         }
       }
     } catch (error: any) {
@@ -174,6 +236,10 @@ export default function VendorProducts() {
 
   useEffect(() => {
     loadProducts();
+    // Load categories for the edit dropdown
+    import('@/services/categories.service').then(({ categoriesService }) => {
+      categoriesService.getAll().then(setCategories).catch(() => {});
+    });
   }, []);
 
   const handleDelete = async (productId: string) => {
@@ -353,8 +419,8 @@ export default function VendorProducts() {
                           key={product.id}
                           role="button"
                           tabIndex={0}
-                          onClick={() => setSelectedProduct(product)}
-                          onKeyDown={(e) => e.key === 'Enter' && setSelectedProduct(product)}
+                          onClick={() => selectProduct(product)}
+                          onKeyDown={(e) => e.key === 'Enter' && selectProduct(product)}
                           className={`w-full grid grid-cols-12 items-center px-5 py-3.5 transition-all text-left cursor-pointer ${
                             isSelected
                               ? "bg-violet-500/5 border-l-2 border-l-violet-500"
@@ -367,7 +433,7 @@ export default function VendorProducts() {
                               className={`w-10 h-10 rounded-xl bg-gradient-to-br ${product.imageBg} border border-white/5 flex items-center justify-center text-lg overflow-hidden shrink-0`}
                             >
                               {product.images && product.images.length > 0 ? (
-                                <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                                <img src={getPublicImageUrl(product.images[0])} alt={product.name} className="w-full h-full object-contain bg-white dark:bg-[#1a1a2e] p-1" />
                               ) : (
                                 product.image
                               )}
@@ -392,7 +458,7 @@ export default function VendorProducts() {
                           {/* Price */}
                           <div className="col-span-2 text-right">
                             <span className="text-xs font-bold text-white">
-                              ${product.price.toFixed(2)}
+                              {formatVnd(product.price)}
                             </span>
                           </div>
 
@@ -489,40 +555,41 @@ export default function VendorProducts() {
                 {/* Basic Information */}
                 <div>
                   <h3 className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-3">
-                    Basic Information
+                    Thông tin cơ bản
                   </h3>
                   <div className="space-y-3">
                     {/* Product Name */}
                     <div>
-                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Product Name</label>
-                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus-within:border-violet-500/40 transition-colors">
-                        {selectedProduct.name}
-                      </div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Tên sản phẩm</label>
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-violet-500/60 focus:outline-none transition-colors"
+                        placeholder="Tên sản phẩm"
+                      />
                     </div>
 
-                    {/* SKU + Category row */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] text-gray-500 font-medium mb-1 block">SKU</label>
-                        <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white font-mono">
-                          {selectedProduct.sku}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-gray-500 font-medium mb-1 block">Category</label>
-                        <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white flex items-center justify-between">
-                          {selectedProduct.category}
-                          <ChevronRight size={10} className="text-gray-600 rotate-90" />
-                        </div>
-                      </div>
+                    {/* Category */}
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Danh mục</label>
+                      <CategorySelect
+                        categories={categories}
+                        value={editForm.category_id}
+                        onChange={(v) => setEditForm(f => ({ ...f, category_id: v }))}
+                      />
                     </div>
 
                     {/* Description */}
                     <div>
-                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Description</label>
-                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed min-h-[65px]">
-                        {selectedProduct.description}
-                      </div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Mô tả</label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                        rows={4}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed focus:border-violet-500/60 focus:outline-none transition-colors resize-none"
+                        placeholder="Mô tả sản phẩm..."
+                      />
                     </div>
                   </div>
                 </div>
@@ -539,7 +606,7 @@ export default function VendorProducts() {
                           key={idx}
                           className="w-16 h-16 rounded-xl border border-white/5 overflow-hidden relative group cursor-pointer shrink-0"
                         >
-                          <img src={img} alt={`Media ${idx}`} className="w-full h-full object-cover" />
+                          <img src={getPublicImageUrl(img)} alt={`Media ${idx}`} className="w-full h-full object-contain bg-white dark:bg-[#1a1a2e] p-1" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <Eye size={14} className="text-white" />
                           </div>
@@ -568,34 +635,43 @@ export default function VendorProducts() {
                 {/* Pricing & Stock */}
                 <div>
                   <h3 className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-3">
-                    Pricing & Stock
+                    Giá & Tồn kho
                   </h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Price</label>
-                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white font-bold">
-                        ${selectedProduct.price.toFixed(2)}
-                      </div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Giá (VNĐ)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editForm.price}
+                        onChange={(e) => setEditForm(f => ({ ...f, price: e.target.value }))}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white font-bold focus:border-violet-500/60 focus:outline-none transition-colors"
+                        placeholder="0"
+                      />
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Stock</label>
-                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white flex items-center gap-2">
-                        <span className="font-bold">{selectedProduct.stock}</span>
-                        <span className="text-gray-600">/ {selectedProduct.maxStock}</span>
-                      </div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Tồn kho</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editForm.stock}
+                        onChange={(e) => setEditForm(f => ({ ...f, stock: e.target.value }))}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white font-bold focus:border-violet-500/60 focus:outline-none transition-colors"
+                        placeholder="0"
+                      />
                     </div>
                   </div>
                   <div className="mt-2">
-                    <StockBar stock={selectedProduct.stock} max={selectedProduct.maxStock} />
+                    <StockBar stock={Number(editForm.stock) || 0} max={selectedProduct.maxStock} />
                   </div>
-                  {selectedProduct.stock <= selectedProduct.maxStock * 0.2 && selectedProduct.stock > 0 && (
+                  {(Number(editForm.stock) <= selectedProduct.maxStock * 0.2) && Number(editForm.stock) > 0 && (
                     <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5">
-                      <AlertTriangle size={10} /> Low stock — consider restocking soon
+                      <AlertTriangle size={10} /> Tồn kho thấp — nên nhập thêm hàng
                     </div>
                   )}
-                  {selectedProduct.stock === 0 && (
+                  {Number(editForm.stock) === 0 && (
                     <div className="mt-2 flex items-center gap-1.5 text-[10px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-2.5 py-1.5">
-                      <AlertTriangle size={10} /> Out of stock!
+                      <AlertTriangle size={10} /> Hết hàng!
                     </div>
                   )}
                 </div>
@@ -686,11 +762,23 @@ export default function VendorProducts() {
               {/* Action buttons */}
               <div className="px-5 py-4 border-t border-white/5 shrink-0">
                 <div className="flex gap-2">
-                  <button className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40">
-                    Save Product
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? (
+                      <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang lưu...</>
+                    ) : (
+                      'Lưu sản phẩm'
+                    )}
                   </button>
-                  <button className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all">
-                    Discard
+                  <button
+                    onClick={handleDiscard}
+                    disabled={isSaving}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all disabled:opacity-60"
+                  >
+                    Huỷ
                   </button>
                 </div>
               </div>

@@ -17,6 +17,7 @@ import {
   ChevronDown,
   BadgeCheck,
 } from "lucide-react";
+import { formatVnd } from "@/lib/currency";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,7 +157,7 @@ export default function CheckoutPage() {
   const allItems = groups.flatMap((g) => g.items);
   const subtotal = allItems.reduce((s, i) => s + i.price * i.qty, 0);
   const shippingFee = subtotal >= 200 ? 0 : 12;
-  const tax = +(subtotal * 0.035).toFixed(2);
+  const tax = Math.round(subtotal * 0.035);
   const total = subtotal + shippingFee + tax;
   const itemCount = allItems.reduce((s, i) => s + i.qty, 0);
   const router = useRouter();
@@ -252,9 +253,9 @@ export default function CheckoutPage() {
                     <Store size={12} className="text-violet-400" />
                     <span className="text-xs font-bold text-gray-300">{group.name}</span>
                     <span className="ml-auto text-xs text-gray-500">
-                      Subtotal:{" "}
+                      Tạm tính:{" "}
                       <span className="text-white font-semibold">
-                        ${group.items.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2)}
+                        {formatVnd(group.items.reduce((s, i) => s + i.price * i.qty, 0))}
                       </span>
                     </span>
                   </div>
@@ -271,7 +272,7 @@ export default function CheckoutPage() {
                         <div className="text-sm font-semibold text-white truncate">{item.name}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{item.variant}</div>
                         <div className="text-sm font-bold text-violet-400 mt-1">
-                          ${item.price.toFixed(2)}
+                          {formatVnd(item.price)}
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
@@ -280,7 +281,7 @@ export default function CheckoutPage() {
                           onChange={(d) => updateQty(group.id, item.id, d)}
                         />
                         <div className="text-sm font-bold text-white w-14 text-right">
-                          ${(item.price * item.qty).toFixed(2)}
+                          {formatVnd(item.price * item.qty)}
                         </div>
                       </div>
                     </div>
@@ -442,22 +443,22 @@ export default function CheckoutPage() {
 
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between text-gray-400">
-                  <span>Subtotal ({itemCount} items)</span>
-                  <span className="text-white font-medium">${subtotal.toFixed(2)}</span>
+                  <span>Tạm tính ({itemCount} sản phẩm)</span>
+                  <span className="text-white font-medium">{formatVnd(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>Shipping Total</span>
+                  <span>Vận chuyển</span>
                   <span className={shippingFee === 0 ? "text-emerald-400 font-bold" : "text-white font-medium"}>
-                    {shippingFee === 0 ? "FREE" : `$${shippingFee.toFixed(2)}`}
+                    {shippingFee === 0 ? "MIỄN PHÍ" : formatVnd(shippingFee)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-400">
-                  <span>Tax</span>
-                  <span className="text-white font-medium">${tax.toFixed(2)}</span>
+                  <span>Thuế</span>
+                  <span className="text-white font-medium">{formatVnd(tax)}</span>
                 </div>
                 <div className="border-t border-white/5 pt-3 flex justify-between items-baseline">
-                  <span className="font-bold text-white">Total Payment</span>
-                  <span className="font-extrabold text-violet-400 text-xl">${total.toFixed(2)}</span>
+                  <span className="font-bold text-white">Tổng thanh toán</span>
+                  <span className="font-extrabold text-violet-400 text-xl">{formatVnd(total)}</span>
                 </div>
               </div>
 

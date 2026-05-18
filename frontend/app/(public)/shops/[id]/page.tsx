@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatVnd } from "@/lib/currency";
 import Link from "next/link";
 import {
   Star,
@@ -207,8 +208,8 @@ function ProductCard({ product }: { product: FeaturedProduct }) {
   const [wished, setWished] = useState(false);
   return (
     <div className="group rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden hover:border-violet-500/30 hover:shadow-[0_0_24px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col">
-      <div
-        className="relative aspect-[4/3] flex items-center justify-center"
+          <div
+            className="relative aspect-4/3 flex items-center justify-center"
         style={{
           background: `linear-gradient(135deg, ${product.bgFrom}, ${product.bgTo})`,
         }}
@@ -247,8 +248,8 @@ function ProductCard({ product }: { product: FeaturedProduct }) {
         </h3>
         <div className="flex items-center justify-between mt-1">
           <div>
-            <span className="text-sm font-extrabold text-violet-400">
-              ${product.price.toLocaleString()}.00
+               <span className="text-sm font-extrabold text-violet-400">
+                 {formatVnd(Number(product.price))}
             </span>
             {product.originalPrice && (
               <span className="ml-1.5 text-[10px] text-gray-500 line-through">
@@ -411,7 +412,7 @@ function ReviewsTab() {
               <Star size={11} className="fill-yellow-400 text-yellow-400 shrink-0" />
               <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-600 to-violet-400 transition-all duration-700"
+                  className="h-full rounded-full bg-linear-to-r from-violet-600 to-violet-400 transition-all duration-700"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -536,7 +537,7 @@ export default function ShopProfilePage() {
     <div className="min-h-screen bg-[#0B0A10] text-white">
 
       {/* ─── Banner ─── */}
-      <div className={`relative h-52 md:h-64 w-full bg-gradient-to-r ${SHOP.bannerGradient} overflow-hidden`}>
+      <div className={`relative h-52 md:h-64 w-full bg-linear-to-r ${SHOP.bannerGradient} overflow-hidden`}>
         {/* Decorative glow */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-72 h-72 rounded-full bg-violet-500/20 blur-[80px]" />
@@ -561,7 +562,7 @@ export default function ShopProfilePage() {
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10 pb-4">
             {/* Logo */}
             <div className="relative shrink-0">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-700 to-violet-900 border-2 border-white/10 shadow-2xl flex items-center justify-center text-3xl">
+              <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-violet-700 to-violet-900 border-2 border-white/10 shadow-2xl flex items-center justify-center text-3xl">
                 {SHOP.logoEmoji}
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-violet-500 border-2 border-[#0F0D1A] flex items-center justify-center">

@@ -29,8 +29,8 @@ async function bootstrap() {
   });
 
   // Serve static files from the uploads directory
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads',
   });
 
   const port = process.env.PORT || 3000;

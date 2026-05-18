@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, Heart, ShoppingCart, CheckCircle2, Star, PackageOpen, Grid } from "lucide-react";
-import { Product, Category } from "@/types";
+import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, Heart, ShoppingCart, CheckCircle2, Star, PackageOpen } from "lucide-react";
+import { Product } from "@/types";
+import { formatVnd } from "@/lib/currency";
+import { getPublicImageUrl } from "@/lib/images";
 
 const getApiUrl = () => {
   const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -26,21 +28,8 @@ async function getFeaturedProducts(): Promise<Product[]> {
   }
 }
 
-async function getTrendingCategories(): Promise<Category[]> {
-  try {
-    const res = await fetch(`${getApiUrl()}/categories`, { cache: 'no-store' });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return Array.isArray(json) ? json.slice(0, 6) : [];
-  } catch (error) {
-    console.error("Failed to fetch categories", error);
-    return [];
-  }
-}
-
 export default async function Home() {
   const products = await getFeaturedProducts();
-  const categories = await getTrendingCategories();
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -75,37 +64,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Trending Categories Section */}
-      <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-12">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Trending Categories</h2>
-            <p className="text-sm text-slate-500 dark:text-gray-400">Most sought after this week</p>
-          </div>
-          <Link href="/categories" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-            View All &gt;
-          </Link>
-        </div>
-
-        {categories.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((cat) => (
-              <Link href={`/categories/${cat.slug}`} key={cat.id} className="flex flex-col items-center justify-center p-6 rounded-xl bg-card border border-card-border hover:border-primary/50 hover:bg-black/5 dark:hover:bg-white/5 transition-all cursor-pointer group">
-                <Grid size={28} className="text-primary mb-4 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-slate-600 dark:text-gray-300 group-hover:text-foreground text-center line-clamp-1">{cat.name}</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="w-full flex items-center justify-center p-12 bg-card border border-card-border border-dashed rounded-xl">
-             <div className="text-center flex flex-col items-center">
-                <Grid size={32} className="text-slate-400 mb-3" />
-                <h3 className="text-slate-600 dark:text-gray-300 font-medium tracking-wide">Chưa có danh mục nào (Empty Data)</h3>
-             </div>
-          </div>
-        )}
-      </section>
-
       {/* Featured Drops Section */}
       <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-12">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
@@ -128,7 +86,7 @@ export default async function Home() {
                   </button>
                   {/* Render actual product image if available, else fallback to placeholder */}
                   {product.images && product.images.length > 0 ? (
-                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                    <img src={getPublicImageUrl(product.images[0])} alt={product.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-3/4 h-3/4 rounded-2xl bg-white shadow-xl border border-gray-200 dark:border-white/5 dark:bg-black/50 overflow-hidden flex items-center justify-center">
                       <span className="text-4xl text-slate-300 dark:text-gray-600">P3</span>
@@ -148,7 +106,7 @@ export default async function Home() {
                   </Link>
                   <div className="mt-auto flex items-center justify-between">
                     <div>
-                      <div className="text-xl font-bold text-foreground">${Number(product.price).toFixed(2)}</div>
+                      <div className="text-xl font-bold text-foreground">{formatVnd(Number(product.price))}</div>
                       <div className="text-[10px] text-slate-500 dark:text-gray-500">Stock: {product.stock_quantity}</div>
                     </div>
                     <button className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-transform active:scale-95 shadow-lg shadow-primary/20">

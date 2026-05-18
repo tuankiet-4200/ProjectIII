@@ -221,8 +221,8 @@ export default function AdminAnalytics() {
         {/* Stat Cards */}
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: "TOTAL USERS", value: "862,000", sub: "850k Customers · 12k Vendors", change: "+5.2%", icon: Users, iconBg: "bg-violet-600/20", iconColor: "text-violet-400" },
-            { label: "TOTAL GMV", value: "$12.4M", sub: "Net volume after commission", change: "+12.8%", icon: Activity, iconBg: "bg-emerald-600/20", iconColor: "text-emerald-400" },
+            { label: "TOTAL USERS", value: "862.000", sub: "850k Khách hàng · 12k Nhà bán", change: "+5.2%", icon: Users, iconBg: "bg-violet-600/20", iconColor: "text-violet-400" },
+            { label: "TỔNG GMV", value: "31 tỷ ₫", sub: "Doanh thu ròng sau hoa hồng", change: "+12.8%", icon: Activity, iconBg: "bg-emerald-600/20", iconColor: "text-emerald-400" },
             { label: "ACTIVE SHOPS", value: "10,200", sub: null, change: "+3.1%", icon: Store, iconBg: "bg-blue-600/20", iconColor: "text-blue-400" },
             { label: "SERVER STATUS", value: "Healthy", sub: "Response: 42ms | Load: 12%", change: "100% UP", icon: Server, iconBg: "bg-emerald-600/20", iconColor: "text-emerald-400", isStatus: true },
           ].map((card) => (
@@ -312,7 +312,7 @@ export default function AdminAnalytics() {
                   <div className="col-span-2"><span className="text-xs font-mono text-violet-400 font-semibold">{txn.id}</span></div>
                   <div className="col-span-3"><span className="text-xs text-white font-medium">{txn.vendor}</span></div>
                   <div className="col-span-2"><span className="text-xs text-gray-400">{txn.customer}</span></div>
-                  <div className="col-span-2 text-right"><span className="text-xs font-bold text-white">${txn.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
+                  <div className="col-span-2 text-right"><span className="text-xs font-bold text-white">{txn.amount.toLocaleString('vi-VN')}₫</span></div>
                   <div className="col-span-1 flex justify-center"><span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${s.cls}`}>{s.label}</span></div>
                   <div className="col-span-2 text-right"><span className="text-[10px] font-mono text-gray-500">{txn.node}</span></div>
                 </div>

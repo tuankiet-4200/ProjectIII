@@ -156,7 +156,7 @@ export default function VendorDashboard() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="Total Sales" value="$128,450" change="+12.5%" changeUp icon={ShoppingCart} iconBg="bg-violet-600" chart={<MiniBar values={[35, 42, 38, 55, 48, 60, 72, 65, 80, 70, 90, 128]} color="#8B5CF6" />} />
+        <StatCard title="Tổng Doanh Thu" value="128.450.000₫" change="+12.5%" changeUp icon={ShoppingCart} iconBg="bg-violet-600" chart={<MiniBar values={[35, 42, 38, 55, 48, 60, 72, 65, 80, 70, 90, 128]} color="#8B5CF6" />} />
         <StatCard title="Total Orders" value="1,240" sub={<div className="text-[10px] text-gray-500">Monthly Target</div>} icon={ShoppingBag} iconBg="bg-blue-600" chart={<MiniBar values={[80, 95, 88, 105, 98, 120, 112, 130, 115, 125, 118, 128]} color="#3B82F6" />} />
         <StatCard title="Pending Orders" value="18" sub={<div className="flex gap-3 text-[10px] mt-0.5"><span className="text-red-400 font-semibold">8 Priority</span><span className="text-gray-500">10 Regular</span></div>} actionLabel="Action Required" icon={AlertCircle} iconBg="bg-amber-600" />
         <StatCard title="Store Views" value="45.2k" change="+18.3%" changeUp icon={Eye} iconBg="bg-rose-600" chart={<MiniLine values={[20, 28, 24, 32, 30, 38, 35, 42, 45]} color="#F43F5E" />} />
@@ -168,7 +168,7 @@ export default function VendorDashboard() {
           <div className="flex-1">
             <h2 className="text-sm font-bold text-white mb-1">Monthly Revenue</h2>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-violet-400">$128,450.00</span>
+              <span className="text-2xl font-extrabold text-violet-400">128.450.000₫</span>
               <span className="text-xs text-emerald-400 font-semibold">+15.2% vs last year</span>
             </div>
           </div>
@@ -200,7 +200,7 @@ export default function VendorDashboard() {
                 <div key={order.id} className="grid grid-cols-12 items-center px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
                   <div className="col-span-3"><span className="text-xs font-mono text-violet-400">{order.id}</span><div className="text-[10px] text-gray-600 mt-0.5">{order.date}</div></div>
                   <div className="col-span-4 flex items-center gap-2"><div className={`w-7 h-7 rounded-full bg-gradient-to-br ${order.avatarBg} flex items-center justify-center text-[10px] font-bold text-white shrink-0`}>{order.avatar}</div><div><div className="text-xs font-semibold text-white truncate">{order.customer}</div><div className="text-[10px] text-gray-500 truncate">{order.product}</div></div></div>
-                  <div className="col-span-2 text-right"><span className="text-xs font-bold text-white">${order.amount.toLocaleString()}.00</span></div>
+                  <div className="col-span-2 text-right"><span className="text-xs font-bold text-white">{order.amount.toLocaleString('vi-VN')}₫</span></div>
                   <div className="col-span-2 flex justify-center"><span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${s.cls}`}>{s.label}</span></div>
                   <div className="col-span-1 flex justify-end"><button className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400 hover:text-violet-300 transition-colors">View <ChevronRight size={10} /></button></div>
                 </div>
@@ -220,7 +220,7 @@ export default function VendorDashboard() {
           </div>
           <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5 space-y-3">
             <h3 className="text-sm font-bold text-white mb-2">Quick Stats</h3>
-            {[{ label: "Avg. Order Value", value: "$103.60", up: true }, { label: "Conversion Rate", value: "3.24%", up: true }, { label: "Return Rate", value: "1.8%", up: false }, { label: "New Customers", value: "284", up: true }].map((s) => (
+            {[{ label: "Avg. Order Value", value: "103.600₫", up: true }, { label: "Conversion Rate", value: "3.24%", up: true }, { label: "Return Rate", value: "1.8%", up: false }, { label: "New Customers", value: "284", up: true }].map((s) => (
               <div key={s.label} className="flex items-center justify-between"><span className="text-xs text-gray-500">{s.label}</span><div className="flex items-center gap-1.5"><span className="text-xs font-bold text-white">{s.value}</span>{s.up ? <TrendingUp size={10} className="text-emerald-400" /> : <TrendingDown size={10} className="text-red-400" />}</div></div>
             ))}
           </div>

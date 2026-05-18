@@ -6,6 +6,8 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCartStore } from "@/store/useCartStore";
+import { formatVnd } from "@/lib/currency";
+import { getPublicImageUrl } from "@/lib/images";
 import {
   Star,
   Heart,
@@ -238,7 +240,7 @@ function RelatedCard({ product }: { product: RelatedProduct }) {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm font-extrabold text-violet-400">
-            ${product.price}
+            {formatVnd(Number(product.price))}
           </span>
           <div className="flex items-center gap-1">
             <Star size={9} className="fill-yellow-400 text-yellow-400" />
@@ -408,7 +410,11 @@ export default function ProductDetailPage() {
   const [wished, setWished] = useState(false);
   const [tab, setTab] = useState<DetailTab>("details");
   const [addedToCart, setAddedToCart] = useState(false);
-  const [productData, setProductData] = useState(PRODUCT);
+  const [productData, setProductData] = useState({
+    ...PRODUCT,
+    parentCategory: '' as string,
+    shopSlug: '' as string,
+  });
 
   // Try to load product from API
   useEffect(() => {
@@ -429,6 +435,8 @@ export default function ProductDetailPage() {
             stockCount: p.stock_quantity,
             brand: p.shop?.name || PRODUCT.brand,
             category: p.category?.name || PRODUCT.category,
+            parentCategory: p.category?.parent?.name || '',
+            shopSlug: p.shop?.id || '',
             images: p.images || [],
           });
         }
@@ -484,10 +492,24 @@ export default function ProductDetailPage() {
         <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-gray-500 mb-6 flex-wrap">
           <Link href="/" className="hover:text-violet-400 transition-colors">Home</Link>
           <ChevronRight size={11} />
-          <Link href="/products" className="hover:text-violet-400 transition-colors">Audio</Link>
-          <ChevronRight size={11} />
-          <Link href="/products" className="hover:text-violet-400 transition-colors">Over-Ear Headphones</Link>
-          <ChevronRight size={11} />
+          {/* Parent category */}
+          {productData.parentCategory && (
+            <>
+              <Link href="/products" className="hover:text-violet-400 transition-colors">
+                {productData.parentCategory}
+              </Link>
+              <ChevronRight size={11} />
+            </>
+          )}
+          {/* Category (leaf) */}
+          {productData.category && (
+            <>
+              <Link href="/products" className="hover:text-violet-400 transition-colors">
+                {productData.category}
+              </Link>
+              <ChevronRight size={11} />
+            </>
+          )}
           <span className="text-slate-500 dark:text-gray-400 truncate max-w-[200px]">{productData.name}</span>
         </div>
 
@@ -497,11 +519,15 @@ export default function ProductDetailPage() {
           {/* Left: Images */}
           <div className="space-y-4">
             {/* Main image */}
-            <div className="relative aspect-square rounded-3xl overflow-hidden bg-secondary/50 dark:bg-gradient-to-br dark:from-[#1a1a2e] dark:to-[#16213e] flex items-center justify-center">
+            <div className="relative aspect-square rounded-3xl bg-white border border-card-border flex items-center justify-center overflow-hidden w-full">
               {productData.images && productData.images.length > 0 ? (
-                <img src={productData.images[activeThumb] || productData.images[0]} alt={productData.name} className="w-full h-full object-cover" />
+                <img
+                  src={getPublicImageUrl(productData.images[activeThumb] || productData.images[0])}
+                  alt={productData.name}
+                  className="w-full h-full object-contain"
+                />
               ) : (
-                <span className="text-[120px] select-none">{PRODUCT.thumbnails[activeThumb]}</span>
+                <span className="text-[120px] select-none py-16">{PRODUCT.thumbnails[activeThumb]}</span>
               )}
               {/* Wish + Share */}
               <div className="absolute top-4 right-4 flex flex-col gap-2">
@@ -533,14 +559,18 @@ export default function ProductDetailPage() {
                   onClick={() => setActiveThumb(idx)}
                   className={`aspect-square rounded-2xl flex items-center justify-center text-3xl border transition-all overflow-hidden ${
                     activeThumb === idx
-                      ? "border-violet-500 bg-violet-500/10 shadow-md shadow-violet-900/40"
-                      : "border-card-border bg-card hover:border-white/20"
+                      ? "border-violet-500 shadow-md shadow-violet-900/40"
+                      : "border-card-border bg-white hover:border-violet-400/40"
                   }`}
                 >
                   {productData.images && productData.images.length > 0 ? (
-                    <img src={thumb} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+                    <img
+                      src={getPublicImageUrl(thumb as string)}
+                      alt={`Thumbnail ${idx}`}
+                      className="w-full h-full object-contain bg-white"
+                    />
                   ) : (
-                    thumb
+                    <span className="py-4">{thumb}</span>
                   )}
                 </button>
               ))}
@@ -570,8 +600,8 @@ export default function ProductDetailPage() {
 
             {/* Price */}
             <div className="flex items-end gap-3">
-              <span className="text-4xl font-black text-foreground">${productData.price}.00</span>
-              <span className="text-lg text-slate-400 dark:text-gray-500 line-through mb-1">${productData.originalPrice}.00</span>
+              <span className="text-4xl font-black text-foreground">{formatVnd(Number(productData.price))}</span>
+              <span className="text-lg text-slate-400 dark:text-gray-500 line-through mb-1">{formatVnd(Number(productData.originalPrice))}</span>
               <span className="mb-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1">
                 Save {productData.discount}%
               </span>

@@ -22,6 +22,7 @@ import { shopsService } from "@/services/shops.service";
 import { uploadService } from "@/services/upload.service";
 import type { Category } from "@/types";
 import Link from "next/link";
+import CategorySelect from "@/components/vendor/CategorySelect";
 
 export default function CreateProduct() {
   const router = useRouter();
@@ -259,19 +260,13 @@ export default function CreateProduct() {
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Product Category <span className="text-red-400">*</span></label>
-                  <select
-                    required
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Danh mục sản phẩm <span className="text-red-400">*</span></label>
+                  <CategorySelect
+                    categories={categories}
                     value={formData.category_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category_id: e.target.value }))}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-3 text-xs font-medium text-white outline-none focus:border-violet-500/40 focus:bg-white/[0.05] transition-all appearance-none"
-                  >
-                    <option value="" disabled className="bg-[#14121C]">Select a category</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id} className="bg-[#14121C]">{cat.name}</option>
-                    ))}
-                  </select>
-                  {isLoadingCategories && <p className="text-[10px] text-gray-500 mt-1">Loading categories...</p>}
+                    onChange={(v) => setFormData(prev => ({ ...prev, category_id: v }))}
+                  />
+                  {isLoadingCategories && <p className="text-[10px] text-gray-500 mt-1">Đang tải danh mục...</p>}
                 </div>
                 
                 <div>
@@ -319,7 +314,7 @@ export default function CreateProduct() {
                   <div className="mt-4 grid grid-cols-3 gap-2">
                     {imagePreviews.map((src, index) => (
                       <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group">
-                        <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                        <img src={src} alt={`Preview ${index}`} className="w-full h-full object-contain bg-white dark:bg-[#1a1a2e] p-1" />
                         <button
                           type="button"
                           onClick={() => removeImage(index)}

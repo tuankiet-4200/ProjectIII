@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
+import { formatVnd } from "@/lib/currency";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,9 +86,9 @@ const INITIAL_ITEMS: CartItem[] = [
 ];
 
 const PERKS = [
-  { icon: Truck, text: "Free shipping on orders over $200" },
-  { icon: ShieldCheck, text: "Buyer protection on all orders" },
-  { icon: Package, text: "Easy 30-day returns" },
+  { icon: Truck, text: "Miễn phí vận chuyển cho đơn hàng trên 200.000₫" },
+  { icon: ShieldCheck, text: "Bảo vệ người mua trên tất cả đơn hàng" },
+  { icon: Package, text: "Đổi trả dễ dàng trong 30 ngày" },
 ];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -223,9 +224,9 @@ export default function CartPage() {
                       </span>
                     )}
                     <span className="ml-auto text-xs text-gray-500">
-                      Subtotal:{" "}
+                      Tạm tính:{" "}
                       <span className="text-foreground font-medium">
-                        ${shop.items.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2)}
+                        {formatVnd(shop.items.reduce((s, i) => s + i.price * i.qty, 0))}
                       </span>
                     </span>
                   </div>
@@ -255,7 +256,7 @@ export default function CartPage() {
                           <h3 className="text-sm font-semibold text-foreground truncate">{item.name}</h3>
                           <p className="text-xs text-gray-500 mt-0.5">{item.variant}</p>
                           <p className="text-sm font-extrabold text-violet-400 mt-1">
-                            ${item.price.toFixed(2)}
+                            {formatVnd(item.price)}
                           </p>
                         </div>
 
@@ -279,7 +280,7 @@ export default function CartPage() {
                             </button>
                           </div>
                           <div className="text-sm font-bold text-foreground w-16 text-right">
-                            ${(item.price * item.qty).toFixed(2)}
+                            {formatVnd(item.price * item.qty)}
                           </div>
                           <button
                             onClick={() => removeItem(item.id)}
@@ -318,28 +319,28 @@ export default function CartPage() {
 
                 <div className="space-y-2.5 text-sm">
                   <div className="flex justify-between text-gray-400">
-                    <span>Subtotal ({items.reduce((s, i) => s + i.qty, 0)} items)</span>
-                    <span className="text-foreground font-medium">${subtotal.toFixed(2)}</span>
+                    <span>Tạm tính ({items.reduce((s, i) => s + i.qty, 0)} sản phẩm)</span>
+                    <span className="text-foreground font-medium">{formatVnd(subtotal)}</span>
                   </div>
                   {couponApplied && (
                     <div className="flex justify-between text-emerald-400">
-                      <span>Discount (10%)</span>
-                      <span>-${discount.toFixed(2)}</span>
+                      <span>Giảm giá (10%)</span>
+                      <span>-{formatVnd(discount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-gray-400">
-                    <span>Shipping</span>
+                    <span>Vận chuyển</span>
                     <span className={shipping === 0 ? "text-emerald-400 font-semibold" : "text-foreground font-medium"}>
-                      {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? "MIỄN PHÍ" : formatVnd(shipping)}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-400">
-                    <span>Tax (3.5%)</span>
-                    <span className="text-foreground font-medium">${tax.toFixed(2)}</span>
+                    <span>Thuế (3.5%)</span>
+                    <span className="text-foreground font-medium">{formatVnd(tax)}</span>
                   </div>
                   <div className="border-t border-card-border pt-3 flex justify-between">
-                    <span className="font-bold text-foreground text-base">Total Payment</span>
-                    <span className="font-extrabold text-violet-400 text-lg">${total.toFixed(2)}</span>
+                    <span className="font-bold text-foreground text-base">Tổng thanh toán</span>
+                    <span className="font-extrabold text-violet-400 text-lg">{formatVnd(total)}</span>
                   </div>
                 </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { formatVnd } from "@/lib/currency";
 import Link from "next/link";
 import {
   Heart,
@@ -214,7 +215,7 @@ function ProductCard({
     <div className="group relative rounded-2xl overflow-hidden border border-card-border bg-card hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col">
       {/* Image area */}
       <div
-        className="relative aspect-[4/3] flex items-center justify-center overflow-hidden"
+        className="relative aspect-4/3 flex items-center justify-center overflow-hidden"
         style={{
           background: `linear-gradient(135deg, ${product.bgFrom}, ${product.bgTo})`,
         }}
@@ -274,11 +275,11 @@ function ProductCard({
         <div className="mt-auto flex items-end justify-between gap-2">
           <div>
             <div className="text-lg font-extrabold text-violet-400">
-              ${product.price.toLocaleString()}.00
+              {formatVnd(product.price)}
             </div>
             {product.originalPrice && (
               <div className="text-[10px] text-slate-400 dark:text-gray-500 line-through">
-                ${product.originalPrice.toLocaleString()}.00
+                {formatVnd(product.originalPrice)}
               </div>
             )}
           </div>
@@ -365,18 +366,18 @@ function Sidebar({
         <input
           type="range"
           min={0}
-          max={15000}
-          step={50}
+          max={15000000}
+          step={500000}
           value={priceRange}
           onChange={(e) => setPriceRange(Number(e.target.value))}
           className="w-full accent-violet-500 cursor-pointer"
         />
         <div className="flex justify-between text-xs text-slate-500 dark:text-gray-400 mt-2">
-          <span>$0</span>
+          <span>{formatVnd(0)}</span>
           <span className="text-violet-400 font-semibold">
-            Up to ${priceRange.toLocaleString()}
+            Tối đa {formatVnd(priceRange)}
           </span>
-          <span>$15,000+</span>
+          <span>{formatVnd(15000000)}+</span>
         </div>
       </div>
 
@@ -448,7 +449,7 @@ function Sidebar({
 
 export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState("All Products");
-  const [priceRange, setPriceRange] = useState(15000);
+  const [priceRange, setPriceRange] = useState(15000000);
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [sortBy, setSortBy] = useState("Newest Arrivals");
@@ -662,7 +663,7 @@ export default function ProductsPage() {
             )}
 
             {/* Active filters chips */}
-            {(minRating > 0 || priceRange < 15000 || search) && (
+            {(minRating > 0 || priceRange < 15000000 || search) && (
               <div className="flex flex-wrap gap-2 mb-5">
                 {minRating > 0 && (
                   <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs px-3 py-1">
@@ -672,10 +673,10 @@ export default function ProductsPage() {
                     </button>
                   </span>
                 )}
-                {priceRange < 15000 && (
+                {priceRange < 15000000 && (
                   <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs px-3 py-1">
-                    💰 Up to ${priceRange.toLocaleString()}
-                    <button onClick={() => setPriceRange(15000)}>
+                    💰 Tối đa {formatVnd(priceRange)}
+                    <button onClick={() => setPriceRange(15000000)}>
                       <X size={11} />
                     </button>
                   </span>
@@ -753,10 +754,10 @@ export default function ProductsPage() {
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <div className="text-base font-extrabold text-violet-400">
-                            ${product.price.toLocaleString()}.00
+                            {formatVnd(product.price)}
                             {product.originalPrice && (
                               <span className="ml-2 text-xs text-slate-400 dark:text-gray-500 line-through font-normal">
-                                ${product.originalPrice.toLocaleString()}.00
+                                {formatVnd(product.originalPrice)}
                               </span>
                             )}
                           </div>

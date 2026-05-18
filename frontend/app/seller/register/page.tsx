@@ -38,7 +38,7 @@ const STATS = [
   { value: "2M+", label: "Active Buyers" },
   { value: "50K+", label: "Sellers" },
   { value: "98%", label: "Satisfaction" },
-  { value: "$0", label: "Setup Fee" },
+  { value: "0đ", label: "Phí đăng ký" },
 ];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────

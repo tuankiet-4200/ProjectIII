@@ -574,7 +574,7 @@ function OrdersSection() {
               </div>
               <div className="text-right shrink-0">
                 <div className="text-sm font-extrabold text-foreground">
-                  ${Number(order.total_payment).toLocaleString()}
+                  {Number(order.total_payment).toLocaleString('vi-VN')}₫
                 </div>
                 <ChevronRight size={14} className="text-gray-600 group-hover:text-violet-400 mt-1 ml-auto transition-colors" />
               </div>
@@ -627,11 +627,11 @@ function WishlistSection() {
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm font-extrabold text-violet-400">
-                      ${item.price.toLocaleString()}
+                      {item.price.toLocaleString('vi-VN')}₫
                     </span>
                     {item.originalPrice && (
                       <span className="text-xs text-gray-500 line-through">
-                        ${item.originalPrice.toLocaleString()}
+                        {item.originalPrice.toLocaleString('vi-VN')}₫
                       </span>
                     )}
                   </div>

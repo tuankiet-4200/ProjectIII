@@ -73,7 +73,14 @@ export class ProductsService {
       where: { slug },
       include: {
         shop: { select: { id: true, name: true, logo_url: true, rating: true } },
-        category: { select: { id: true, name: true, slug: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            parent: { select: { id: true, name: true, slug: true } },
+          },
+        },
       },
     });
     if (!product) throw new NotFoundException('Product not found');

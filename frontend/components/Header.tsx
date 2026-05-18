@@ -6,7 +6,9 @@ import { Search, ShoppingCart, Grid, Store, ChevronRight, Sparkles } from "lucid
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCartStore } from "@/store/useCartStore";
 import { shopsService } from "@/services/shops.service";
+import { categoriesService } from "@/services/categories.service";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import type { Category } from "@/types";
 
 export function Header() {
   const user = useAuthStore((state) => state.user);
@@ -15,6 +17,8 @@ export function Header() {
   const fetchCart = useCartStore((state) => state.fetchCart);
   const [mounted, setMounted] = useState(false);
   const [hasShop, setHasShop] = useState<boolean | null>(null); // null = loading
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -22,6 +26,24 @@ export function Header() {
       fetchCart();
     }
   }, [isAuthenticated, fetchCart]);
+
+  useEffect(() => {
+    let isActive = true;
+    categoriesService.getAll()
+      .then((data) => {
+        if (!isActive) return;
+        setCategories(data || []);
+        if (data?.length) setActiveCategoryId(data[0].id);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setCategories([]);
+        setActiveCategoryId(null);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   // Check if the logged-in customer already owns a shop
   useEffect(() => {
@@ -40,6 +62,7 @@ export function Header() {
   }, [isAuthenticated, user]);
 
   const showAuthenticatedUI = mounted && isAuthenticated && !!user;
+  const activeCategory = categories.find((cat) => cat.id === activeCategoryId) || categories[0];
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-card-border bg-background/80 backdrop-blur-xl transition-colors duration-300">
@@ -59,10 +82,59 @@ export function Header() {
         {/* Search Bar */}
         <div className="hidden flex-1 items-center justify-center px-8 md:flex max-w-2xl">
           <div className="flex h-10 w-full items-center rounded-full border border-card-border bg-card/65 px-4 text-sm shadow-sm transition-all focus-within:border-purple-400/60 focus-within:ring-2 focus-within:ring-purple-400/20">
-            <button className="flex shrink-0 items-center gap-2 border-r border-card-border pr-4 text-slate-500 dark:text-gray-400 hover:text-foreground">
-              <Grid size={16} />
-              <span>Categories</span>
-            </button>
+            <div className="relative group flex shrink-0 items-center border-r border-card-border pr-4">
+              <button className="flex items-center gap-2 text-slate-500 dark:text-gray-400 hover:text-foreground">
+                <Grid size={16} />
+                <span>Categories</span>
+              </button>
+              <div className="invisible absolute left-0 top-full z-50 mt-3 w-190 rounded-2xl border border-card-border bg-background shadow-2xl opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+                <div className="grid grid-cols-[220px_1fr] gap-4 p-4">
+                  <div className="rounded-xl border border-card-border bg-card/70 p-3">
+                    <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">Danh mục</div>
+                    <ul className="space-y-1.5">
+                      {categories.length ? categories.map((item) => (
+                        <li key={item.id}>
+                          <Link
+                            href={`/categories/${item.slug}`}
+                            onMouseEnter={() => setActiveCategoryId(item.id)}
+                            className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                              activeCategory?.id === item.id
+                                ? "bg-purple-500/10 text-foreground"
+                                : "text-slate-600 dark:text-gray-300 hover:bg-purple-500/10 hover:text-foreground"
+                            }`}
+                          >
+                            <Grid size={15} className="text-purple-500" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </li>
+                      )) : (
+                        <li className="px-2.5 py-2 text-xs text-slate-400 dark:text-gray-500">Chưa có danh mục</li>
+                      )}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-card-border bg-card/60 p-4 min-h-60">
+                    <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-3">
+                      {activeCategory?.name || "Danh mục con"}
+                    </div>
+                    {activeCategory?.children?.length ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {activeCategory.children.map((child) => (
+                          <Link
+                            key={child.id}
+                            href={`/categories/${child.slug}`}
+                            className="rounded-lg border border-card-border px-3 py-2 text-xs font-semibold text-slate-600 dark:text-gray-300 hover:border-purple-500/40 hover:text-foreground transition-colors"
+                          >
+                            {child.name}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400 dark:text-gray-500">Không có danh mục con</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
             <input
               type="text"
               placeholder="Search premium products..."
@@ -103,7 +175,7 @@ export function Header() {
               // Not a vendor yet → "Become a Seller" CTA
               <Link
                 href="/seller/register"
-                className="group hidden sm:flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-orange-500/20 transition-all hover:shadow-orange-500/40 hover:scale-[1.03] active:scale-95"
+                className="group hidden sm:flex items-center gap-2 rounded-full bg-linear-to-r from-orange-500 to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-orange-500/20 transition-all hover:shadow-orange-500/40 hover:scale-[1.03] active:scale-95"
               >
                 <Sparkles size={12} className="shrink-0" />
                 <span>Sell on ProjectIII</span>

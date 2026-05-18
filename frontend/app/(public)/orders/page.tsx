@@ -717,7 +717,7 @@ export default function OrdersPage() {
                     { label: "Weight", value: selected.weight },
                     { label: "Carrier", value: selected.carrier },
                     { label: "Order Date", value: selected.date },
-                    { label: "Order Total", value: `$${selected.total.toLocaleString()}.00` },
+                    { label: "Order Total", value: `${selected.total.toLocaleString('vi-VN')}₫` },
                   ].map((row) => (
                     <div key={row.label} className="flex items-center justify-between gap-4">
                       <span className="text-xs text-gray-500 shrink-0">{row.label}</span>

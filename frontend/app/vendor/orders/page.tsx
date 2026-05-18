@@ -70,6 +70,7 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
 
 import { toast } from "sonner";
 import { ordersService } from "@/services/orders.service";
+import { formatVnd } from "@/lib/currency";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -309,7 +310,7 @@ export default function VendorOrders() {
                           </div>
                           <div className="col-span-2 text-right">
                             <span className="text-xs font-bold text-white">
-                              ${order.totalAmount.toFixed(2)}
+                              {formatVnd(order.totalAmount)}
                             </span>
                           </div>
                           <div className="col-span-1 text-center">
@@ -490,7 +491,7 @@ export default function VendorOrders() {
                           <p className="text-[10px] text-gray-500 mt-0.5">Qty: {item.qty}</p>
                         </div>
                         <span className="text-xs font-bold text-white shrink-0 ml-3">
-                          ${item.price.toFixed(2)}
+                          {formatVnd(item.price)}
                         </span>
                       </div>
                     ))}
@@ -502,17 +503,17 @@ export default function VendorOrders() {
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-500">Subtotal</span>
                     <span className="text-white font-semibold">
-                      ${selectedOrder.totalAmount.toFixed(2)}
+                      {formatVnd(selectedOrder.totalAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-500">Shipping</span>
-                    <span className="text-white font-semibold">$0.00</span>
+                    <span className="text-white font-semibold">{formatVnd(0)}</span>
                   </div>
                   <div className="border-t border-white/5 pt-2 flex justify-between text-sm">
                     <span className="text-gray-400 font-semibold">Total</span>
                     <span className="text-violet-400 font-extrabold">
-                      ${selectedOrder.totalAmount.toFixed(2)}
+                      {formatVnd(selectedOrder.totalAmount)}
                     </span>
                   </div>
                 </div>
