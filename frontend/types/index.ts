@@ -71,6 +71,8 @@ export interface Product {
   name: string;
   slug: string;
   description: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
   price: number;
   stock_quantity: number;
   sales_count: number;
@@ -177,6 +179,8 @@ export interface CreateProductData {
   name: string;
   slug: string;
   description?: string;
+  meta_title?: string;
+  meta_description?: string;
   price: number;
   stock_quantity: number;
   images?: string[];
@@ -187,6 +191,8 @@ export interface UpdateProductData {
   name?: string;
   slug?: string;
   description?: string;
+  meta_title?: string;
+  meta_description?: string;
   price?: number;
   stock_quantity?: number;
   images?: string[];

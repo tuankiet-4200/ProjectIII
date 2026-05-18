@@ -17,6 +17,14 @@ export class CreateProductDto {
   @IsOptional()
   description?: string;
 
+  @IsString()
+  @IsOptional()
+  meta_title?: string;
+
+  @IsString()
+  @IsOptional()
+  meta_description?: string;
+
   @IsNumber()
   @Min(0)
   @Type(() => Number)
@@ -47,6 +55,14 @@ export class UpdateProductDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  meta_title?: string;
+
+  @IsString()
+  @IsOptional()
+  meta_description?: string;
 
   @IsNumber()
   @Min(0)

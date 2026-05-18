@@ -87,6 +87,7 @@ const TAB_ITEMS: { key: ProductTab; label: string }[] = [
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { productsService } from "@/services/products.service";
+import { uploadService } from "@/services/upload.service";
 import { formatVnd } from "@/lib/currency";
 import CategorySelect from "@/components/vendor/CategorySelect";
 
@@ -144,10 +145,19 @@ export default function VendorProducts() {
     price: string;
     stock: string;
     category_id: string;
-  }>({ name: '', description: '', price: '', stock: '', category_id: '' });
+    metaTitle: string;
+    metaDescription: string;
+    images: string[];
+  }>({ name: '', description: '', price: '', stock: '', category_id: '', metaTitle: '', metaDescription: '', images: [] });
+
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
 
   // Sync editForm whenever selectedProduct changes
   const selectProduct = (p: Product) => {
+    newImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setNewImages([]);
+    setNewImagePreviews([]);
     setSelectedProduct(p);
     setEditForm({
       name: p.name,
@@ -155,33 +165,75 @@ export default function VendorProducts() {
       price: String(p.price),
       stock: String(p.stock),
       category_id: String(p.categoryId || ''),
+      metaTitle: p.metaTitle || '',
+      metaDescription: p.metaDescription || '',
+      images: p.images || [],
     });
   };
 
   const handleDiscard = () => {
     if (!selectedProduct) return;
+    newImagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setEditForm({
       name: selectedProduct.name,
       description: selectedProduct.description,
       price: String(selectedProduct.price),
       stock: String(selectedProduct.stock),
       category_id: String(selectedProduct.categoryId || ''),
+      metaTitle: selectedProduct.metaTitle || '',
+      metaDescription: selectedProduct.metaDescription || '',
+      images: selectedProduct.images || [],
     });
+    setNewImages([]);
+    setNewImagePreviews([]);
     toast.info('Changes discarded');
+  };
+
+  const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    setNewImages((prev) => [...prev, ...files]);
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setNewImagePreviews((prev) => [...prev, ...previews]);
+    e.target.value = '';
+  };
+
+  const removeExistingImage = (imgUrl: string) => {
+    setEditForm((prev) => ({ ...prev, images: prev.images.filter((img) => img !== imgUrl) }));
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+    setNewImagePreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSave = async () => {
     if (!selectedProduct) return;
     setIsSaving(true);
     try {
+      let imageUrls = [...editForm.images];
+      if (newImages.length > 0) {
+        const uploaded = await uploadService.uploadMultiple(newImages);
+        imageUrls = [...imageUrls, ...uploaded];
+      }
       await productsService.update(selectedProduct.id, {
         name: editForm.name,
         description: editForm.description,
         price: Number(editForm.price),
         stock_quantity: Number(editForm.stock),
         ...(editForm.category_id ? { category_id: Number(editForm.category_id) } : {}),
+        meta_title: editForm.metaTitle,
+        meta_description: editForm.metaDescription,
+        images: imageUrls,
       });
       toast.success('Product updated successfully');
+      newImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+      setNewImages([]);
+      setNewImagePreviews([]);
       loadProducts();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update product');
@@ -216,8 +268,8 @@ export default function VendorProducts() {
             image: EMOJI_MAP[i % EMOJI_MAP.length],
             imageBg: BG_MAP[i % BG_MAP.length],
             description: p.description || '',
-            metaTitle: p.name || '',
-            metaDescription: p.description || '',
+            metaTitle: p.meta_title || p.name || '',
+            metaDescription: p.meta_description || p.description || '',
             variations: [],
             mediaImages: p.images || [EMOJI_MAP[i % EMOJI_MAP.length]],
             images: p.images || [],
@@ -600,15 +652,23 @@ export default function VendorProducts() {
                     Media
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                      selectedProduct.images.map((img, idx) => (
+                    {editForm.images.length > 0 ? (
+                      editForm.images.map((img, idx) => (
                         <div
-                          key={idx}
-                          className="w-16 h-16 rounded-xl border border-white/5 overflow-hidden relative group cursor-pointer shrink-0"
+                          key={img + idx}
+                          className="w-16 h-16 rounded-xl border border-white/5 overflow-hidden relative group shrink-0"
                         >
                           <img src={getPublicImageUrl(img)} alt={`Media ${idx}`} className="w-full h-full object-contain bg-white dark:bg-[#1a1a2e] p-1" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-between p-1">
                             <Eye size={14} className="text-white" />
+                            <button
+                              type="button"
+                              onClick={() => removeExistingImage(img)}
+                              className="w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white"
+                              aria-label="Remove image"
+                            >
+                              <X size={12} />
+                            </button>
                           </div>
                         </div>
                       ))
@@ -625,10 +685,35 @@ export default function VendorProducts() {
                         </div>
                       ))
                     )}
-                    <button className="w-16 h-16 rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/40 flex flex-col items-center justify-center gap-1 transition-colors group">
+                    {newImagePreviews.map((preview, idx) => (
+                      <div
+                        key={`new-${idx}`}
+                        className="w-16 h-16 rounded-xl border border-white/5 overflow-hidden relative group shrink-0"
+                      >
+                        <img src={preview} alt={`New media ${idx}`} className="w-full h-full object-contain bg-white dark:bg-[#1a1a2e] p-1" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end p-1">
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(idx)}
+                            className="w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white"
+                            aria-label="Remove new image"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <label className="w-16 h-16 rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/40 flex flex-col items-center justify-center gap-1 transition-colors group cursor-pointer">
                       <Upload size={14} className="text-gray-600 group-hover:text-violet-400 transition-colors" />
                       <span className="text-[8px] text-gray-600 group-hover:text-violet-400 transition-colors font-medium">Upload</span>
-                    </button>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleAddImages}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
                 </div>
 
@@ -719,15 +804,21 @@ export default function VendorProducts() {
                   <div className="space-y-3">
                     <div>
                       <label className="text-[10px] text-gray-500 font-medium mb-1 block">Meta Title</label>
-                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-gray-300">
-                        {selectedProduct.metaTitle}
-                      </div>
+                      <input
+                        type="text"
+                        value={editForm.metaTitle}
+                        onChange={(e) => setEditForm((f) => ({ ...f, metaTitle: e.target.value }))}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:border-violet-500/60 focus:outline-none transition-colors"
+                      />
                     </div>
                     <div>
                       <label className="text-[10px] text-gray-500 font-medium mb-1 block">Meta Description</label>
-                      <div className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed min-h-[55px]">
-                        {selectedProduct.metaDescription}
-                      </div>
+                      <textarea
+                        value={editForm.metaDescription}
+                        onChange={(e) => setEditForm((f) => ({ ...f, metaDescription: e.target.value }))}
+                        rows={3}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed focus:border-violet-500/60 focus:outline-none transition-colors resize-none"
+                      />
                     </div>
                   </div>
                 </div>
