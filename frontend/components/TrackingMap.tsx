@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { io } from "socket.io-client";
@@ -21,12 +21,20 @@ const truckIcon = L.divIcon({
   iconAnchor: [16, 16],
 });
 
+const destinationIcon = L.divIcon({
+  html: `<div class="w-8 h-8 rounded-full bg-emerald-600 border-2 border-white shadow-xl flex items-center justify-center text-white"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>`,
+  className: "bg-transparent",
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+
 interface TrackingMapProps {
   shopOrderId: string;
 }
 
 export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null);
+  const [destination, setDestination] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     // Determine backend URL
@@ -46,6 +54,11 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
 
     socket.on("locationUpdated", (data: { lat: number; lng: number }) => {
       setPosition([data.lat, data.lng]);
+      setDestination((prev) => {
+        if (prev) return prev;
+        // Shift destination slightly to show a realistic route
+        return [data.lat + 0.003, data.lng + 0.004];
+      });
     });
 
     return () => {
@@ -54,10 +67,10 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
   }, [shopOrderId]);
 
   return (
-    <div className="relative w-full h-52 rounded-2xl overflow-hidden border border-card-border/50 shadow-sm z-0">
+    <div className="relative w-full h-80 rounded-2xl overflow-hidden border border-card-border/50 shadow-sm z-0">
       <MapContainer
-        center={position || [10.8231, 106.6297]} // Default to Ho Chi Minh City
-        zoom={position ? 15 : 5}
+        center={position || [21.0135, 105.7845]} // Centered on Mễ Trì, Hanoi
+        zoom={position ? 15 : 13}
         scrollWheelZoom={false}
         className="w-full h-full z-0"
         style={{ height: '100%', width: '100%', zIndex: 0 }}
@@ -70,9 +83,25 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
         {position && (
           <Marker position={position} icon={truckIcon}>
             <Popup>
-              <span className="font-semibold text-violet-600">Live Location</span>
+              <span className="font-semibold text-violet-600 text-xs">Tài xế đang di chuyển</span>
             </Popup>
           </Marker>
+        )}
+        {destination && (
+          <Marker position={destination} icon={destinationIcon}>
+            <Popup>
+              <span className="font-semibold text-emerald-600 text-xs">Điểm giao hàng</span>
+            </Popup>
+          </Marker>
+        )}
+        {position && destination && (
+          <Polyline
+            positions={[position, destination]}
+            color="#8b5cf6"
+            weight={4}
+            opacity={0.8}
+            dashArray="10, 10"
+          />
         )}
       </MapContainer>
       <style jsx global>{`
