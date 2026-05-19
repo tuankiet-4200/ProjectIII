@@ -21,10 +21,11 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
+import QRCode from "react-qr-code";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type OrderStatus = "pending" | "preparing" | "shipping" | "delivered" | "cancelled";
+type OrderStatus = "pending" | "preparing" | "ready_for_pickup" | "shipping" | "delivered" | "cancelled";
 
 type OrderItem = {
   name: string;
@@ -55,7 +56,8 @@ type StatusTab = "all" | OrderStatus;
 const STATUS_CONFIG: Record<OrderStatus, { label: string; cls: string; icon: React.FC<{ size?: number; className?: string }> }> = {
   pending: { label: "Pending", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: Clock },
   preparing: { label: "Preparing", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: Loader2 },
-  shipping: { label: "Shipping", cls: "bg-violet-500/10 text-violet-400 border-violet-500/20", icon: Truck },
+  ready_for_pickup: { label: "Wait for Shipper", cls: "bg-violet-500/10 text-violet-400 border-violet-500/20", icon: Clock },
+  shipping: { label: "Shipping", cls: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", icon: Truck },
   delivered: { label: "Delivered", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: CheckCircle2 },
   cancelled: { label: "Cancelled", cls: "bg-red-500/10 text-red-400 border-red-500/20", icon: XCircle },
 };
@@ -64,12 +66,14 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
   { key: "all", label: "All Orders" },
   { key: "pending", label: "Pending" },
   { key: "preparing", label: "Preparing" },
+  { key: "ready_for_pickup", label: "Wait for Shipper" },
   { key: "shipping", label: "Shipping" },
   { key: "delivered", label: "Delivered" },
 ];
 
 import { toast } from "sonner";
 import { ordersService } from "@/services/orders.service";
+import { trackingService } from "@/services/tracking.service";
 import { formatVnd } from "@/lib/currency";
 
 const ITEMS_PER_PAGE = 8;
@@ -83,6 +87,7 @@ export default function VendorOrders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [trackingLocation, setTrackingLocation] = useState("");
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -133,13 +138,17 @@ export default function VendorOrders() {
     loadOrders();
   }, []);
 
-  const handleUpdateStatus = async (orderId: string, status: string) => {
+  const handleTrackingEvent = async (orderId: string, eventType: string) => {
     try {
-      await ordersService.updateShopOrderStatus(orderId, status.toUpperCase() as any);
-      toast.success('Order status updated');
+      await trackingService.createEvent(orderId, {
+        event_type: eventType,
+        location: trackingLocation || "Sorting Facility",
+      });
+      toast.success('Tracking updated and status synced!');
+      setTrackingLocation("");
       loadOrders();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update order status');
+      toast.error(error.response?.data?.message || 'Failed to update tracking');
     }
   };
 
@@ -177,11 +186,11 @@ export default function VendorOrders() {
   const getNextAction = (status: OrderStatus) => {
     switch (status) {
       case "pending":
-        return { label: "Mark as Packing", icon: PackageCheck, action: "preparing" };
+        return { label: "Pack Order", icon: PackageCheck, eventType: "order_packed" };
       case "preparing":
-        return { label: "Handover to Shipper", icon: Truck, action: "shipping" };
+        return { label: "Handover to Shipper", icon: Truck, eventType: "ready_for_pickup" };
       case "shipping":
-        return { label: "Mark as Delivered", icon: CheckCircle2, action: "delivered" };
+        return { label: "Mark as Delivered", icon: CheckCircle2, eventType: "delivered" };
       default:
         return null;
     }
@@ -450,6 +459,24 @@ export default function VendorOrders() {
                   </div>
                 </div>
 
+                {/* QR Code for Shipper */}
+                <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-white/[0.03] border border-white/5">
+                  <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-3">
+                    Mã Vận Đơn (Shipper Scan QR)
+                  </h4>
+                  <div className="bg-white p-2 rounded-lg">
+                    <QRCode
+                      value={selectedOrder.id}
+                      size={140}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                    />
+                  </div>
+                  <p className="text-[9px] text-gray-500 mt-2 text-center font-mono break-all px-2">
+                    {selectedOrder.id}
+                  </p>
+                </div>
+
                 {/* Shipping Address */}
                 <div>
                   <h4 className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-2">
@@ -524,27 +551,45 @@ export default function VendorOrders() {
               </div>
 
               {/* Action buttons */}
-              <div className="px-5 py-4 border-t border-white/5 space-y-2 shrink-0">
+              <div className="px-5 py-4 border-t border-white/5 space-y-3 shrink-0">
                 {(() => {
                   const nextAction = getNextAction(selectedOrder.status);
                   if (!nextAction) return null;
                   return (
-                    <button 
-                      onClick={() => handleUpdateStatus(selectedOrder.id, nextAction.action)}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40"
-                    >
-                      <nextAction.icon size={14} />
-                      {nextAction.label}
-                    </button>
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <MapPin size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                          type="text"
+                          placeholder="Current Location (Optional)"
+                          value={trackingLocation}
+                          onChange={(e) => setTrackingLocation(e.target.value)}
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs outline-none focus:border-violet-500/40 text-white transition-colors"
+                        />
+                      </div>
+                      <button 
+                        onClick={() => handleTrackingEvent(selectedOrder.id, nextAction.eventType)}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40"
+                      >
+                        <nextAction.icon size={14} />
+                        {nextAction.label}
+                      </button>
+                    </div>
                   );
                 })()}
 
                 {selectedOrder.status !== "delivered" &&
                   selectedOrder.status !== "cancelled" && (
                     <button 
-                      onClick={() => {
+                      onClick={async () => {
                         if (confirm('Are you sure you want to cancel this order?')) {
-                          handleUpdateStatus(selectedOrder.id, "cancelled");
+                          try {
+                            await ordersService.updateShopOrderStatus(selectedOrder.id, "CANCELLED");
+                            toast.success('Order cancelled');
+                            loadOrders();
+                          } catch (e: any) {
+                            toast.error(e.response?.data?.message || 'Failed to cancel');
+                          }
                         }
                       }}
                       className="w-full text-center text-xs font-semibold text-red-400 hover:text-red-300 transition-colors py-1.5"

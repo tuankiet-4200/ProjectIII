@@ -42,6 +42,7 @@ enum PaymentMethod {
 enum ShopOrderStatus {
   PENDING
   PREPARING
+  READY_FOR_PICKUP
   SHIPPING
   DELIVERED
   CANCELLED
@@ -217,6 +218,7 @@ model TrackingEvent {
   shipper_id    String?  @db.Uuid
   event_type    String   // order_packed, picked_up, arrived_at_hub, delivering, delivered
   location      String?
+  proof_image   String?  @db.Text
   created_at    DateTime @default(now())
 
   shop_order ShopOrder @relation(fields: [shop_order_id], references: [id])

@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAddressDto, UpdateAddressDto, UpdateProfileDto } from './dto';
+import { CreateAddressDto, UpdateAddressDto, UpdateProfileDto, CreateUserDto } from './dto';
 
 export const USER_SELECT_FIELDS = {
   id: true,
@@ -24,6 +25,35 @@ export class UsersService {
 
     if (!user) throw new NotFoundException('User not found');
     return user;
+  }
+
+  async createUser(dto: CreateUserDto) {
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: dto.email },
+          { phone: dto.phone },
+        ],
+      },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email or phone already exists');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(dto.password, salt);
+
+    return this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password_hash,
+        full_name: dto.full_name,
+        phone: dto.phone,
+        role: dto.role,
+      },
+      select: USER_SELECT_FIELDS,
+    });
   }
 
   async getAllUsers() {

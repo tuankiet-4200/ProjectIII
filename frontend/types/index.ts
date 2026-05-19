@@ -85,6 +85,15 @@ export interface Product {
 
 // ─── Order ───────────────────────────────────────────────────────────────────
 
+export interface TrackingEvent {
+  id: string;
+  shop_order_id: string;
+  shipper_id?: string;
+  event_type: string;
+  location?: string;
+  created_at: string;
+}
+
 export interface OrderItem {
   id: string;
   shop_order_id: string;
@@ -104,6 +113,7 @@ export interface ShopOrder {
   updated_at: string;
   shop?: Shop;
   order_items?: OrderItem[];
+  tracking_events?: TrackingEvent[];
 }
 
 export interface ParentOrder {

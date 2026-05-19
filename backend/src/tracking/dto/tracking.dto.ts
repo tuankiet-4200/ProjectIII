@@ -12,4 +12,8 @@ export class CreateTrackingEventDto {
   @IsString()
   @IsOptional()
   shipper_id?: string;
+
+  @IsString()
+  @IsOptional()
+  proof_image?: string;
 }

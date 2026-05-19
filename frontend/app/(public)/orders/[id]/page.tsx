@@ -3,11 +3,61 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, MapPin, Package, CreditCard } from "lucide-react";
+import {
+  ChevronLeft,
+  MapPin,
+  Package,
+  CreditCard,
+  Clock,
+  Loader2,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  Navigation,
+} from "lucide-react";
 import { ordersService } from "@/services/orders.service";
 import { formatVnd } from "@/lib/currency";
 import { getPublicImageUrl } from "@/lib/images";
-import type { ParentOrder } from "@/types";
+import type { ParentOrder, TrackingEvent } from "@/types";
+
+const TRACKING_EVENT_LABELS: Record<string, string> = {
+  order_packed: "Order Packed",
+  picked_up: "Picked Up by Courier",
+  arrived_at_hub: "Arrived at Sorting Hub",
+  delivering: "Out for Delivery",
+  delivered: "Delivered",
+};
+
+const SHOP_ORDER_STATUS_CONFIG: Record<
+  string,
+  { label: string; cls: string; icon: React.FC<{ size?: number; className?: string }> }
+> = {
+  PENDING: {
+    label: "Pending",
+    cls: "bg-amber-500/10 text-amber-500 dark:text-amber-400 border-amber-500/20",
+    icon: Clock,
+  },
+  PREPARING: {
+    label: "Preparing",
+    cls: "bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/20",
+    icon: Loader2,
+  },
+  SHIPPING: {
+    label: "Shipping",
+    cls: "bg-violet-500/10 text-violet-500 dark:text-violet-400 border-violet-500/20",
+    icon: Truck,
+  },
+  DELIVERED: {
+    label: "Delivered",
+    cls: "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20",
+    icon: CheckCircle2,
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    cls: "bg-red-500/10 text-red-500 dark:text-red-400 border-red-500/20",
+    icon: XCircle,
+  },
+};
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -111,8 +161,27 @@ export default function OrderDetailPage() {
               <div className="space-y-4">
                 {(order.shop_orders || []).map((shop) => (
                   <div key={shop.id} className="rounded-xl border border-card-border bg-foreground/5 p-4">
-                    <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 mb-3">
-                      {shop.shop?.name || "Shop"}
+                    <div className="flex items-center justify-between gap-4 mb-4 border-b border-card-border/50 pb-2">
+                      <div className="text-xs font-bold text-slate-500 dark:text-gray-400">
+                        {shop.shop?.name || "Shop"}
+                      </div>
+                      {(() => {
+                        const status = shop.status || "PENDING";
+                        const config = SHOP_ORDER_STATUS_CONFIG[status] || {
+                          label: status,
+                          cls: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+                          icon: Clock,
+                        };
+                        const StatusIcon = config.icon;
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${config.cls}`}
+                          >
+                            <StatusIcon size={10} className={status === "PREPARING" ? "animate-spin" : ""} />
+                            {config.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="space-y-3">
                       {(shop.order_items || []).map((item) => {
@@ -156,6 +225,60 @@ export default function OrderDetailPage() {
                         );
                       })}
                     </div>
+
+                    {/* Tracking Timeline (Latest Only) */}
+                    {shop.tracking_events && shop.tracking_events.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-card-border/50">
+                        <Link href={`/orders/${order.id}/tracking/${shop.id}`} className="flex items-center gap-2 text-xs font-bold text-foreground mb-3 hover:text-violet-500 transition-colors w-fit">
+                          <Navigation size={12} className="text-violet-500" /> Theo dõi đơn hàng
+                        </Link>
+                        <div className="space-y-0">
+                          {(() => {
+                            const event = shop.tracking_events[0];
+                            const isDelivered = event.event_type === "delivered";
+                            
+                            return (
+                              <div key={event.id} className="flex gap-3">
+                                {/* Dot */}
+                                <div className="flex flex-col items-center">
+                                  <div
+                                    className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 mt-1 ${
+                                      !isDelivered
+                                        ? "border-violet-500 bg-violet-500 shadow-md shadow-violet-500/50"
+                                        : "border-emerald-500 bg-emerald-500"
+                                    }`}
+                                  />
+                                </div>
+                                {/* Content */}
+                                <div className="min-w-0">
+                                  <div
+                                    className={`text-xs font-bold ${
+                                      !isDelivered ? "text-violet-500" : "text-foreground"
+                                    }`}
+                                  >
+                                    {TRACKING_EVENT_LABELS[event.event_type] || event.event_type}
+                                    {!isDelivered && (
+                                      <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-violet-500 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-full">
+                                        CURRENT
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 dark:text-gray-400 mt-0.5 truncate">
+                                    {event.location ? `${event.location} · ` : ""}
+                                    {new Date(event.created_at).toLocaleString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -7,6 +7,11 @@ export const usersService = {
     return response.data;
   },
 
+  create: async (data: any): Promise<User> => {
+    const response = await api.post('/users', data);
+    return response.data;
+  },
+
   toggleBan: async (userId: string): Promise<any> => {
     const response = await api.patch(`/users/${userId}/ban`);
     return response.data;

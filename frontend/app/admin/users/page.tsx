@@ -14,6 +14,8 @@ import {
   Ban,
   ShieldCheck,
   RefreshCw,
+  Plus,
+  X,
 } from "lucide-react";
 import { usersService } from "@/services/users.service";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -92,6 +94,15 @@ export default function AdminUserGovernance() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [banLoading, setBanLoading] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'CUSTOMER'
+  });
+  const [createLoading, setCreateLoading] = useState(false);
   const accessToken = useAuthStore((s) => s.accessToken);
 
   const fetchUsers = async () => {
@@ -146,6 +157,21 @@ export default function AdminUserGovernance() {
     }
   };
 
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateLoading(true);
+    try {
+      await usersService.create(createForm);
+      setIsCreateModalOpen(false);
+      setCreateForm({ full_name: '', email: '', phone: '', password: '', role: 'CUSTOMER' });
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to create user');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Page header */}
@@ -155,10 +181,13 @@ export default function AdminUserGovernance() {
           <p className="text-xs text-gray-500 mt-0.5">Audit user behavior, manage account statuses, and troubleshoot via Safe Mode impersonation.</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-95 shadow shadow-violet-900/40">
+            <Plus size={14} /> Create User
+          </button>
           <button onClick={fetchUsers} disabled={loading} className="flex items-center gap-1.5 rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/10 disabled:opacity-50 transition-all">
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
           </button>
-          <button className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-95 shadow shadow-violet-900/40">
+          <button className="flex items-center gap-1.5 rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all active:scale-95">
             <Download size={12} /> Export Report
           </button>
         </div>
@@ -300,6 +329,50 @@ export default function AdminUserGovernance() {
         </button>
         <div className="absolute -bottom-4 -right-4 opacity-[0.03]"><ShieldCheck size={120} /></div>
       </div>
+
+      {/* Create User Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#14121C] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onClick={() => setIsCreateModalOpen(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+              <X size={20} />
+            </button>
+            <h2 className="text-lg font-bold text-white mb-6">Create New User</h2>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Full Name</label>
+                <input required type="text" value={createForm.full_name} onChange={e => setCreateForm(prev => ({ ...prev, full_name: e.target.value }))} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-violet-500 outline-none transition-colors" placeholder="John Doe" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Email</label>
+                <input required type="email" value={createForm.email} onChange={e => setCreateForm(prev => ({ ...prev, email: e.target.value }))} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-violet-500 outline-none transition-colors" placeholder="john@example.com" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Phone Number</label>
+                <input required type="tel" value={createForm.phone} onChange={e => setCreateForm(prev => ({ ...prev, phone: e.target.value }))} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-violet-500 outline-none transition-colors" placeholder="0987654321" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Password</label>
+                <input required minLength={6} type="password" value={createForm.password} onChange={e => setCreateForm(prev => ({ ...prev, password: e.target.value }))} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-violet-500 outline-none transition-colors" placeholder="••••••••" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Account Role</label>
+                <select value={createForm.role} onChange={e => setCreateForm(prev => ({ ...prev, role: e.target.value }))} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-violet-500 outline-none transition-colors cursor-pointer appearance-none">
+                  <option value="CUSTOMER">Customer</option>
+                  <option value="SHIPPER">Shipper</option>
+                  <option value="MERCHANT">Merchant</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              <div className="pt-4">
+                <button type="submit" disabled={createLoading} className="w-full flex justify-center items-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500 transition-all active:scale-[0.98] shadow-lg shadow-violet-900/40 disabled:opacity-50">
+                  {createLoading ? <RefreshCw size={16} className="animate-spin" /> : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { CreateTrackingEventDto } from './dto';
@@ -10,12 +10,20 @@ export class TrackingService {
     private notifications: NotificationsGateway,
   ) {}
 
-  async createEvent(shopOrderId: string, dto: CreateTrackingEventDto) {
+  async createEvent(shopOrderId: string, user: any, dto: CreateTrackingEventDto) {
     // Verify shop order exists
     const shopOrder = await this.prisma.shopOrder.findUnique({
       where: { id: shopOrderId },
+      include: { shop: true },
     });
     if (!shopOrder) throw new NotFoundException('Shop order not found');
+
+    // Authorization check: User must be ADMIN, SHIPPER, or the Shop Owner
+    if (user.role !== 'ADMIN' && user.role !== 'SHIPPER') {
+      if (shopOrder.shop.owner_id !== user.id) {
+        throw new ForbiddenException('You do not have permission to update tracking for this order');
+      }
+    }
 
     // Create the tracking event
     const event = await this.prisma.trackingEvent.create({
@@ -23,13 +31,15 @@ export class TrackingService {
         shop_order_id: shopOrderId,
         event_type: dto.event_type,
         location: dto.location,
-        shipper_id: dto.shipper_id,
+        proof_image: dto.proof_image,
+        shipper_id: user.role === 'SHIPPER' ? user.id : (dto.shipper_id || null),
       },
     });
 
     // Auto-update shop order status based on event type
     const statusMap: Record<string, string> = {
       order_packed: 'PREPARING',
+      ready_for_pickup: 'READY_FOR_PICKUP',
       picked_up: 'SHIPPING',
       arrived_at_hub: 'SHIPPING',
       delivering: 'SHIPPING',
@@ -78,6 +88,41 @@ export class TrackingService {
         },
       },
       orderBy: { created_at: 'asc' },
+    });
+  }
+
+  async getActiveDeliveries(shipperId: string) {
+    // Find all shop_order_ids this shipper has interacted with
+    const events = await this.prisma.trackingEvent.findMany({
+      where: { shipper_id: shipperId },
+      select: { shop_order_id: true },
+      distinct: ['shop_order_id'],
+    });
+
+    const shopOrderIds = events.map((e) => e.shop_order_id);
+
+    // Fetch those shop orders if they are not delivered or cancelled
+    return this.prisma.shopOrder.findMany({
+      where: {
+        id: { in: shopOrderIds },
+        status: { notIn: ['DELIVERED', 'CANCELLED'] },
+      },
+      include: {
+        shop: {
+          select: { name: true },
+        },
+        parent_order: {
+          select: { shipping_address: true, user: { select: { full_name: true, phone: true } } },
+        },
+        order_items: {
+          include: { product: { select: { name: true, images: true } } },
+        },
+        tracking_events: {
+          orderBy: { created_at: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updated_at: 'desc' },
     });
   }
 }

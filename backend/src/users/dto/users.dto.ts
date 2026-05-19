@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsEmail, MinLength, IsIn } from 'class-validator';
 
 export class CreateAddressDto {
   @IsString()
@@ -52,4 +52,25 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   phone?: string;
+}
+
+export class CreateUserDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(6)
+  password: string;
+
+  @IsString()
+  @IsNotEmpty()
+  full_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsString()
+  @IsIn(['ADMIN', 'CUSTOMER', 'SHIPPER', 'MERCHANT'])
+  role: any;
 }
