@@ -125,8 +125,9 @@ export default function CategoryDetailPage() {
         {!isLoading && products.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((product: any) => (
-              <div
+              <Link
                 key={product.id}
+                href={`/products/${product.slug}`}
                 className="rounded-2xl bg-card border border-card-border overflow-hidden hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.08)] transition-all group"
               >
                 <div className="relative aspect-square bg-white">
@@ -146,17 +147,14 @@ export default function CategoryDetailPage() {
                   <div className="text-[10px] uppercase font-bold text-violet-400 tracking-wide mb-1">
                     {product.shop?.name || "Cửa hàng"}
                   </div>
-                  <Link
-                    href={`/products/${product.slug}`}
-                    className="text-sm font-semibold text-foreground line-clamp-2 hover:text-violet-400 transition-colors"
-                  >
+                  <span className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-violet-400 transition-colors">
                     {product.name}
-                  </Link>
+                  </span>
                   <div className="mt-3 text-base font-bold text-foreground">
                     {formatVnd(Number(product.price))}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

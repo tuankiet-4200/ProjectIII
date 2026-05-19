@@ -212,7 +212,10 @@ function ProductCard({
   onToggleWish: () => void;
 }) {
   return (
-    <div className="group relative rounded-2xl overflow-hidden border border-card-border bg-card hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col">
+    <Link
+      href={`/products/${product.id}`}
+      className="group relative rounded-2xl overflow-hidden border border-card-border bg-card hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col"
+    >
       {/* Image area */}
       <div
         className="relative aspect-4/3 flex items-center justify-center overflow-hidden"
@@ -238,7 +241,10 @@ function ProductCard({
 
         {/* Wish button */}
         <button
-          onClick={onToggleWish}
+          onClick={(event) => {
+            event.preventDefault();
+            onToggleWish();
+          }}
           className={`absolute top-3 right-3 z-10 h-8 w-8 rounded-full backdrop-blur-md flex items-center justify-center transition-all duration-200 ${
             wished
               ? "bg-rose-500 text-white"
@@ -284,21 +290,21 @@ function ProductCard({
             )}
           </div>
           {product.viewOnly ? (
-            <Link
-              href={`/products/${product.id}`}
-              className="flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-2 text-xs font-semibold text-foreground hover:bg-white/10 transition-colors shrink-0"
-            >
+            <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-2 text-xs font-semibold text-foreground shrink-0">
               View Details
-            </Link>
+            </span>
           ) : (
-            <button className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40 shrink-0">
+            <button
+              onClick={(event) => event.preventDefault()}
+              className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40 shrink-0"
+            >
               <ShoppingCart size={13} />
               Add to Cart
             </button>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

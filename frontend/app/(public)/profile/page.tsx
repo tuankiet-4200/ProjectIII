@@ -511,8 +511,12 @@ function AddressSection() {
 // ─── Section: Order History ───────────────────────────────────────────────────
 
 function OrdersSection() {
+  const router = useRouter();
   const [orders, setOrders] = useState<ParentOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<ParentOrder | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     ordersService.getMyOrders().then(res => {
@@ -520,6 +524,20 @@ function OrdersSection() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const handleSelectOrder = async (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setDetailLoading(true);
+    try {
+      const detail = await ordersService.getOrderDetail(orderId);
+      setSelectedOrder(detail);
+      router.push(`/orders/${orderId}`);
+    } catch {
+      setSelectedOrder(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -551,7 +569,10 @@ function OrdersSection() {
           return (
             <div
               key={order.id}
-              className="group rounded-2xl bg-card transition-colors duration-300 border border-card-border hover:border-violet-500/20 p-4 flex items-center gap-4 transition-all cursor-pointer"
+              onClick={() => handleSelectOrder(order.id)}
+              className={`group rounded-2xl bg-card transition-colors duration-300 border border-card-border hover:border-violet-500/20 p-4 flex items-center gap-4 transition-all cursor-pointer ${
+                selectedOrderId === order.id ? "ring-1 ring-violet-500/30" : ""
+              }`}
             >
               <div className="w-12 h-12 rounded-xl bg-[#1C1828] flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
                 📦
@@ -582,6 +603,12 @@ function OrdersSection() {
           );
         })}
       </div>
+
+      {selectedOrderId && detailLoading && (
+        <div className="rounded-2xl bg-card transition-colors duration-300 border border-card-border p-5">
+          <div className="text-sm text-gray-500">Opening order details...</div>
+        </div>
+      )}
     </div>
   );
 }

@@ -169,9 +169,7 @@ export class OrdersService {
               shop: { select: { id: true, name: true } },
               order_items: {
                 include: {
-                  product: {
-                    select: { id: true, name: true, slug: true },
-                  },
+                  product: true,
                 },
               },
             },
@@ -194,7 +192,7 @@ export class OrdersService {
             order_items: {
               include: {
                 product: {
-                  select: { id: true, name: true, slug: true },
+                  select: { id: true, name: true, slug: true, images: true },
                 },
               },
             },

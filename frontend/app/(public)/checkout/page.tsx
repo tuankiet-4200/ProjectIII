@@ -193,7 +193,7 @@ export default function CheckoutPage() {
           <p className="text-xs text-slate-500 dark:text-gray-500 mb-8">You will receive a confirmation email shortly.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/profile"
+              href="/profile?tab=orders"
               className="flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white hover:bg-violet-500 transition-all"
             >
               View Orders

@@ -1,9 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
-import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, Heart, ShoppingCart, CheckCircle2, Star, PackageOpen } from "lucide-react";
+import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, CheckCircle2, PackageOpen } from "lucide-react";
 import { Product } from "@/types";
-import { formatVnd } from "@/lib/currency";
-import { getPublicImageUrl } from "@/lib/images";
+import FeaturedProductCard from "@/components/home/FeaturedProductCard";
 
 const getApiUrl = () => {
   const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -79,52 +77,17 @@ export default async function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.length > 0 ? (
             products.map((product) => (
-              <div key={product.id} className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-black/10 dark:hover:border-white/10 transition-all flex flex-col">
-                <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center">
-                  <button className="absolute top-4 right-4 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-gray-300 hover:text-white hover:bg-black/60 transition-colors z-10">
-                    <Heart size={16} />
-                  </button>
-                  {/* Render actual product image if available, else fallback to placeholder */}
-                  {product.images && product.images.length > 0 ? (
-                    <img src={getPublicImageUrl(product.images[0])} alt={product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-3/4 h-3/4 rounded-2xl bg-white shadow-xl border border-gray-200 dark:border-white/5 dark:bg-black/50 overflow-hidden flex items-center justify-center">
-                      <span className="text-4xl text-slate-300 dark:text-gray-600">P3</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-5 flex flex-col flex-1">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] uppercase font-bold text-primary tracking-wider">{product.shop?.name || 'P3 Verified'}</span>
-                    <span className="text-xs text-yellow-500 font-medium flex items-center gap-1">
-                      <Star size={10} className="fill-current" />
-                      5.0 <span className="text-slate-500 dark:text-gray-500">({product.sales_count})</span>
-                    </span>
-                  </div>
-                  <Link href={`/products/${product.slug}`}>
-                    <h3 className="font-semibold text-foreground mb-4 line-clamp-1 hover:text-primary transition-colors cursor-pointer">{product.name}</h3>
-                  </Link>
-                  <div className="mt-auto flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-bold text-foreground">{formatVnd(Number(product.price))}</div>
-                      <div className="text-[10px] text-slate-500 dark:text-gray-500">Stock: {product.stock_quantity}</div>
-                    </div>
-                    <button className="h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white hover:bg-primary/90 transition-transform active:scale-95 shadow-lg shadow-primary/20">
-                      <ShoppingCart size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <FeaturedProductCard key={product.id} product={product} />
             ))
           ) : (
             <div className="col-span-full w-full flex items-center justify-center p-16 bg-card border border-card-border border-dashed rounded-2xl">
-               <div className="text-center flex flex-col items-center max-w-md">
-                 <PackageOpen size={48} className="text-slate-400 mb-4" />
-                 <h3 className="text-lg font-semibold text-foreground mb-2">Chưa có sản phẩm nào</h3>
-                 <p className="text-sm text-slate-500 dark:text-gray-400">
-                   Sàn giao dịch hiện chưa có sản phẩm nào được đăng bán. Xin vui lòng đăng nhập quyền chủ shop và thêm sản phẩm đầu tiên của bạn!
-                 </p>
-               </div>
+              <div className="text-center flex flex-col items-center max-w-md">
+                <PackageOpen size={48} className="text-slate-400 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Chưa có sản phẩm nào</h3>
+                <p className="text-sm text-slate-500 dark:text-gray-400">
+                  Sàn giao dịch hiện chưa có sản phẩm nào được đăng bán. Xin vui lòng đăng nhập quyền chủ shop và thêm sản phẩm đầu tiên của bạn!
+                </p>
+              </div>
             </div>
           )}
         </div>
