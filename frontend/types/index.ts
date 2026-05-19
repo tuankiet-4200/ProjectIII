@@ -129,6 +129,7 @@ export interface CartItem {
 export interface CartGroup {
   shop: Shop;
   items: CartItem[];
+  subtotal?: number;
 }
 
 export interface Cart {

@@ -1,6 +1,29 @@
 import api from '../lib/axios';
 import type { ParentOrder, ShopOrder, PaginatedResponse, CheckoutData, ShopOrderStatus } from '../types';
 
+const normalizePaginated = <T>(payload: any): PaginatedResponse<T> => {
+  if (payload?.data && payload?.meta) {
+    return payload as PaginatedResponse<T>;
+  }
+
+  if (payload?.orders) {
+    const total = payload.total || 0;
+    const page = payload.page || 1;
+    const limit = payload.limit || 10;
+    return {
+      data: payload.orders as T[],
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
+  return payload as PaginatedResponse<T>;
+};
+
 export const ordersService = {
   // ─── Customer ────────────────────────────────────────────────────────────────
 
@@ -11,7 +34,7 @@ export const ordersService = {
 
   getMyOrders: async (page?: number, limit?: number): Promise<PaginatedResponse<ParentOrder>> => {
     const response = await api.get('/orders', { params: { page, limit } });
-    return response.data;
+    return normalizePaginated<ParentOrder>(response.data);
   },
 
   getOrderDetail: async (orderId: string): Promise<ParentOrder> => {
@@ -23,7 +46,7 @@ export const ordersService = {
 
   getShopOrders: async (shopId: string, page?: number, limit?: number): Promise<PaginatedResponse<ShopOrder>> => {
     const response = await api.get(`/shops/${shopId}/orders`, { params: { page, limit } });
-    return response.data;
+    return normalizePaginated<ShopOrder>(response.data);
   },
 
   updateShopOrderStatus: async (shopOrderId: string, status: ShopOrderStatus): Promise<ShopOrder> => {

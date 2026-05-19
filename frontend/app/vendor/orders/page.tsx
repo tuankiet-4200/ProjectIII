@@ -91,9 +91,10 @@ export default function VendorOrders() {
       const shop = await shopsService.getMyShop();
       if (shop?.id) {
         const result = await ordersService.getShopOrders(shop.id, 1, 50);
-        if (result?.data) {
+        const orderList = result?.data || (result as any)?.orders || [];
+        if (orderList.length > 0) {
           const AVATAR_BGS = ['from-violet-500 to-violet-700', 'from-emerald-500 to-emerald-700', 'from-blue-500 to-blue-700', 'from-rose-500 to-rose-700', 'from-amber-500 to-amber-700'];
-          const mapped: Order[] = result.data.map((o: any, i: number) => ({
+          const mapped: Order[] = orderList.map((o: any, i: number) => ({
             id: o.id,
             displayId: `#ORD-${String(i + 9000).padStart(4, '0')}`,
             customer: o.parent_order?.user?.full_name || `Customer ${i + 1}`,
@@ -115,6 +116,9 @@ export default function VendorOrders() {
           }));
           setOrders(mapped);
           if (mapped.length > 0) setSelectedOrder(mapped[0]);
+        } else {
+          setOrders([]);
+          setSelectedOrder(null);
         }
       }
     } catch (error: any) {

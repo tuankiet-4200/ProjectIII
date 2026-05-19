@@ -40,7 +40,8 @@ export const useCartStore = create<CartState>((set) => ({
 
   addItem: async (productId: string, quantity: number) => {
     try {
-      const cart = await cartService.addItem(productId, quantity);
+      await cartService.addItem(productId, quantity);
+      const cart = await cartService.getCart();
       set({
         groups: cart.groups || [],
         totalItems: cart.total_items || 0,
@@ -54,7 +55,8 @@ export const useCartStore = create<CartState>((set) => ({
 
   updateItem: async (productId: string, quantity: number) => {
     try {
-      const cart = await cartService.updateItem(productId, quantity);
+      await cartService.updateItem(productId, quantity);
+      const cart = await cartService.getCart();
       set({
         groups: cart.groups || [],
         totalItems: cart.total_items || 0,
@@ -67,7 +69,8 @@ export const useCartStore = create<CartState>((set) => ({
 
   removeItem: async (productId: string) => {
     try {
-      const cart = await cartService.removeItem(productId);
+      await cartService.removeItem(productId);
+      const cart = await cartService.getCart();
       set({
         groups: cart.groups || [],
         totalItems: cart.total_items || 0,
