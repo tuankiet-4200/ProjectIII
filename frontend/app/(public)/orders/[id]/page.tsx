@@ -18,7 +18,9 @@ import {
 import { ordersService } from "@/services/orders.service";
 import { formatVnd } from "@/lib/currency";
 import { getPublicImageUrl } from "@/lib/images";
+import { toast } from "sonner";
 import type { ParentOrder, TrackingEvent } from "@/types";
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 const TRACKING_EVENT_LABELS: Record<string, string> = {
   order_packed: "Order Packed",
@@ -26,6 +28,15 @@ const TRACKING_EVENT_LABELS: Record<string, string> = {
   arrived_at_hub: "Arrived at Sorting Hub",
   delivering: "Out for Delivery",
   delivered: "Delivered",
+};
+
+const ORDER_STATUS_LABELS_VI: Record<string, string> = {
+  PENDING: "Chờ xác nhận",
+  PREPARING: "Đang chuẩn bị",
+  READY_FOR_PICKUP: "Chờ shipper lấy hàng",
+  SHIPPING: "Đang vận chuyển",
+  DELIVERED: "Đã giao thành công 🎉",
+  CANCELLED: "Đã huỷ",
 };
 
 const SHOP_ORDER_STATUS_CONFIG: Record<
@@ -67,6 +78,9 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Live status updates from socket (via global store)
+  const orderStatusUpdates = useNotificationStore((s) => s.orderStatusUpdates);
+
   useEffect(() => {
     if (!orderId) return;
     setLoading(true);
@@ -81,6 +95,25 @@ export default function OrderDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [orderId]);
+
+  // When a realtime status update arrives, patch it into the local order state
+  useEffect(() => {
+    if (!order) return;
+    let changed = false;
+    const updatedShopOrders = (order.shop_orders || []).map((so) => {
+      const newStatus = orderStatusUpdates[so.id];
+      if (newStatus && newStatus !== so.status) {
+        changed = true;
+        const label = ORDER_STATUS_LABELS_VI[newStatus] || newStatus;
+        toast.success(`Đơn hàng [${so.shop?.name || "Shop"}]: ${label}`, { duration: 5000 });
+        return { ...so, status: newStatus as typeof so.status };
+      }
+      return so;
+    });
+    if (changed) {
+      setOrder((prev) => prev ? { ...prev, shop_orders: updatedShopOrders } : prev);
+    }
+  }, [orderStatusUpdates]);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">

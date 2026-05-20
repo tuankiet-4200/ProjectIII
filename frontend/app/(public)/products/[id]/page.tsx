@@ -823,7 +823,7 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
                 <Link
-                  href={`/shops/${PRODUCT.shop.id || "1"}`}
+                  href={`/shops/${(PRODUCT.shop as any).id || "1"}`}
                   className="flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 px-3 py-1.5 text-xs font-semibold transition-all shrink-0"
                 >
                   Xem Shop <ChevronRight size={11} />

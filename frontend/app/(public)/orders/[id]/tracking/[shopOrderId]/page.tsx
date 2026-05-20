@@ -143,7 +143,7 @@ export default function TrackingPage() {
       </div>
 
       <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-6 flex-1 min-h-0 space-y-4">
-        <TrackingMap shopOrderId={shopOrderId} />
+        <TrackingMap shopOrderId={shopOrderId} shippingAddress={order?.shipping_address as string} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Tracking Events */}
@@ -214,7 +214,7 @@ export default function TrackingPage() {
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-xs text-slate-500 dark:text-gray-400">Order Total</span>
-                  <span className="text-xs font-black text-violet-500">{formatVnd(shopOrder.totalAmount)}</span>
+                  <span className="text-xs font-black text-violet-500">{formatVnd((shopOrder as any).totalAmount)}</span>
                 </div>
               </div>
             </div>
@@ -227,10 +227,10 @@ export default function TrackingPage() {
                 <h3 className="text-sm font-bold text-foreground">Destination</h3>
               </div>
               <div className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
-                <div className="font-semibold text-foreground mb-1">{order?.shippingAddress?.full_name}</div>
+                <div className="font-semibold text-foreground mb-1">{(order as any)?.shippingAddress?.full_name || (order as any)?.shipping_address}</div>
                 <div className="text-xs text-slate-500 dark:text-gray-400">
-                  {order?.shippingAddress?.phone}<br />
-                  {order?.shippingAddress?.address}
+                  {(order as any)?.shippingAddress?.phone}<br />
+                  {(order as any)?.shippingAddress?.address}
                 </div>
               </div>
             </div>

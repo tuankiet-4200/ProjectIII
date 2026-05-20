@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -12,6 +13,8 @@ import { Prisma, ShopOrder } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private prisma: PrismaService,
     private redis: RedisService,
@@ -362,13 +365,15 @@ export class OrdersService {
       where: { id: shopOrderId },
       data: { status: dto.status },
       include: {
-        parent_order: true, // Needed to find the customer's User ID
+        parent_order: true,
         shop: true,
       },
     });
 
     // Notify the customer about the status change
+    this.logger.log(`Emitting orderStatusChanged: userId=${updatedOrder.parent_order.user_id}, shopOrderId=${updatedOrder.id}, status=${updatedOrder.status}`);
     this.notifications.emitOrderStatusChanged(updatedOrder.parent_order.user_id, {
+      orderId: updatedOrder.parent_order_id,
       shopOrderId: updatedOrder.id,
       shopName: updatedOrder.shop.name,
       status: updatedOrder.status,

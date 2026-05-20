@@ -18,11 +18,15 @@ interface NotificationStore {
   markAllRead: () => void;
   markRead: (id: string) => void;
   clearAll: () => void;
+  // Realtime order status updates: shopOrderId → new status
+  orderStatusUpdates: Record<string, string>;
+  pushOrderStatusUpdate: (shopOrderId: string, status: string) => void;
 }
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
   unreadCount: 0,
+  orderStatusUpdates: {},
 
   addNotification: (n) => {
     const newNote: AppNotification = {
@@ -54,4 +58,10 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   clearAll: () => set({ notifications: [], unreadCount: 0 }),
+
+  pushOrderStatusUpdate: (shopOrderId, status) => {
+    set((state) => ({
+      orderStatusUpdates: { ...state.orderStatusUpdates, [shopOrderId]: status },
+    }));
+  },
 }));

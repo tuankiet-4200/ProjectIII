@@ -25,6 +25,9 @@ import { getPublicImageUrl } from "@/lib/images";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import dynamic from 'next/dynamic';
+
+const AddressMapPicker = dynamic(() => import('@/components/AddressMapPicker').then(mod => mod.AddressMapPicker), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +120,51 @@ export default function CheckoutPage() {
     district: "",
     city: "",
   });
+
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [debouncedAddressInfo, setDebouncedAddressInfo] = useState({ address: "", ward: "", district: "", city: "" });
+  const [showMap, setShowMap] = useState(false);
+
+  useEffect(() => {
+    fetch("https://provinces.open-api.vn/api/?depth=3")
+      .then((res) => res.json())
+      .then((data) => setProvinces(data))
+      .catch((err) => console.error("Failed to load provinces", err));
+  }, []);
+
+  useEffect(() => {
+    if (shipping.address.trim().length > 2 || shipping.city) {
+      const timer = setTimeout(() => {
+        setDebouncedAddressInfo({
+          address: shipping.address,
+          ward: shipping.ward,
+          district: shipping.district,
+          city: shipping.city,
+        });
+        setShowMap(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowMap(false);
+    }
+  }, [shipping.address, shipping.ward, shipping.district, shipping.city]);
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cityName = e.target.value;
+    setShipping((s) => ({ ...s, city: cityName, district: "", ward: "" }));
+    const p = provinces.find((prov) => prov.name === cityName);
+    setDistricts(p ? p.districts : []);
+    setWards([]);
+  };
+
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const districtName = e.target.value;
+    setShipping((s) => ({ ...s, district: districtName, ward: "" }));
+    const d = districts.find((dist) => dist.name === districtName);
+    setWards(d ? d.wards : []);
+  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -372,35 +420,21 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                {/* Address */}
+                {/* City */}
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1.5">
-                    Address Line
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="House number, Street name"
-                    value={shipping.address}
-                    onChange={(e) => setShipping((s) => ({ ...s, address: e.target.value }))}
-                    className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground placeholder:text-slate-400 px-4 py-2.5 outline-none transition-colors"
-                  />
-                </div>
-
-                {/* Ward */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1.5">
-                    Ward
+                    Tỉnh/Thành phố
                   </label>
                   <div className="relative">
                     <select
-                      value={shipping.ward}
-                      onChange={(e) => setShipping((s) => ({ ...s, ward: e.target.value }))}
+                      value={shipping.city}
+                      onChange={handleCityChange}
                       className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground px-4 py-2.5 outline-none appearance-none cursor-pointer transition-colors"
                     >
-                      <option value="" className="bg-card">Select Ward</option>
-                      <option value="ward1" className="bg-card">Ward 1</option>
-                      <option value="ward2" className="bg-card">Ward 2</option>
-                      <option value="ward3" className="bg-card">Ward 3</option>
+                      <option value="" className="bg-card">Chọn Tỉnh/Thành phố</option>
+                      {provinces.map((p) => (
+                        <option key={p.code} value={p.name} className="bg-card">{p.name}</option>
+                      ))}
                     </select>
                     <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                   </div>
@@ -409,40 +443,64 @@ export default function CheckoutPage() {
                 {/* District */}
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1.5">
-                    District
+                    Quận/Huyện
                   </label>
                   <div className="relative">
                     <select
                       value={shipping.district}
-                      onChange={(e) => setShipping((s) => ({ ...s, district: e.target.value }))}
-                      className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground px-4 py-2.5 outline-none appearance-none cursor-pointer transition-colors"
+                      onChange={handleDistrictChange}
+                      disabled={!districts.length}
+                      className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground px-4 py-2.5 outline-none appearance-none cursor-pointer transition-colors disabled:opacity-50"
                     >
-                      <option value="" className="bg-card">Select District</option>
-                      <option value="d1" className="bg-card">District 1</option>
-                      <option value="d2" className="bg-card">District 2</option>
-                      <option value="d3" className="bg-card">District 3</option>
+                      <option value="" className="bg-card">Chọn Quận/Huyện</option>
+                      {districts.map((d) => (
+                        <option key={d.code} value={d.name} className="bg-card">{d.name}</option>
+                      ))}
                     </select>
                     <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                   </div>
                 </div>
 
-                {/* City */}
-                <div className="md:col-span-2">
+                {/* Ward */}
+                <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1.5">
-                    City
+                    Phường/Xã
                   </label>
                   <div className="relative">
                     <select
-                      value={shipping.city}
-                      onChange={(e) => setShipping((s) => ({ ...s, city: e.target.value }))}
-                      className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground px-4 py-2.5 outline-none appearance-none cursor-pointer transition-colors"
+                      value={shipping.ward}
+                      onChange={(e) => setShipping((s) => ({ ...s, ward: e.target.value }))}
+                      disabled={!wards.length}
+                      className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground px-4 py-2.5 outline-none appearance-none cursor-pointer transition-colors disabled:opacity-50"
                     >
-                      <option value="" className="bg-card">Select City</option>
-                      <option value="hcm" className="bg-card">Ho Chi Minh City</option>
-                      <option value="hn" className="bg-card">Ha Noi</option>
-                      <option value="dn" className="bg-card">Da Nang</option>
+                      <option value="" className="bg-card">Chọn Phường/Xã</option>
+                      {wards.map((w) => (
+                        <option key={w.code} value={w.name} className="bg-card">{w.name}</option>
+                      ))}
                     </select>
                     <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1.5">
+                    Ngõ ngách, số nhà
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      placeholder="Số 10 ngõ 123..."
+                      value={shipping.address}
+                      onChange={(e) => setShipping((s) => ({ ...s, address: e.target.value }))}
+                      className="w-full rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-sm text-foreground placeholder:text-slate-400 px-4 py-2.5 outline-none transition-colors"
+                    />
+                    {showMap && (
+                      <AddressMapPicker
+                        addressInfo={debouncedAddressInfo}
+                        onSelectAddress={(address) => setShipping((s) => ({ ...s, address }))}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

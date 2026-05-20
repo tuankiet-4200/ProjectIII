@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { io } from "socket.io-client";
@@ -30,17 +30,69 @@ const destinationIcon = L.divIcon({
 
 interface TrackingMapProps {
   shopOrderId: string;
+  shippingAddress?: string;
 }
 
-export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
+// Auto-pan map when shipper position changes
+function MapAutoCenter({ center }: { center: [number, number] }) {
+  const map = useMap();
+  useEffect(() => {
+    map.panTo(center, { animate: true, duration: 0.5 });
+  }, [center, map]);
+  return null;
+}
+
+async function geocodeAddress(address: string): Promise<[number, number] | null> {
+  if (!address) return null;
+
+  // Clean common Vietnamese prefixes that confuse geocoders
+  const clean = (s: string) =>
+    s.replace(/^(Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã)\s+/gi, "");
+
+  // Parse comma-separated address parts; reverse to start from most-general
+  const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
+
+  // Build queries from most-specific to least-specific
+  const queries: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const slice = parts.slice(i).map(clean).join(", ");
+    if (slice.trim()) queries.push(slice.trim());
+  }
+
+  for (const query of queries) {
+    try {
+      const res = await fetch(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`
+      );
+      const data = await res.json();
+      if (data?.features?.length > 0) {
+        const [lon, lat] = data.features[0].geometry.coordinates;
+        return [lat, lon];
+      }
+    } catch {
+      // Swallow and continue to next fallback
+    }
+  }
+  return null;
+}
+
+export default function TrackingMap({ shopOrderId, shippingAddress }: TrackingMapProps) {
   const [position, setPosition] = useState<[number, number] | null>(null);
   const [destination, setDestination] = useState<[number, number] | null>(null);
 
+  // Geocode the real shipping address once
   useEffect(() => {
-    // Determine backend URL
+    if (!shippingAddress) return;
+    geocodeAddress(shippingAddress).then((coords) => {
+      if (coords) setDestination(coords);
+    });
+  }, [shippingAddress]);
+
+  // Connect to GPS socket for live shipper position
+  useEffect(() => {
     let backendUrl = "http://localhost:3000";
     if (process.env.NEXT_PUBLIC_API_URL) {
-      backendUrl = process.env.NEXT_PUBLIC_API_URL.replace('/api', '');
+      backendUrl = process.env.NEXT_PUBLIC_API_URL.replace("/api", "");
     }
 
     const socket = io(`${backendUrl}/gps-tracking`, {
@@ -48,17 +100,11 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
     });
 
     socket.on("connect", () => {
-      console.log("Connected to GPS Tracking socket");
       socket.emit("joinTrackingRoom", { shopOrderId });
     });
 
     socket.on("locationUpdated", (data: { lat: number; lng: number }) => {
       setPosition([data.lat, data.lng]);
-      setDestination((prev) => {
-        if (prev) return prev;
-        // Shift destination slightly to show a realistic route
-        return [data.lat + 0.003, data.lng + 0.004];
-      });
     });
 
     return () => {
@@ -66,27 +112,37 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
     };
   }, [shopOrderId]);
 
+  const mapCenter: [number, number] =
+    position || destination || [21.0135, 105.7845];
+
   return (
     <div className="relative w-full h-80 rounded-2xl overflow-hidden border border-card-border/50 shadow-sm z-0">
       <MapContainer
-        center={position || [21.0135, 105.7845]} // Centered on Mễ Trì, Hanoi
-        zoom={position ? 15 : 13}
+        center={mapCenter}
+        zoom={position ? 15 : destination ? 15 : 13}
         scrollWheelZoom={false}
         className="w-full h-full z-0"
-        style={{ height: '100%', width: '100%', zIndex: 0 }}
+        style={{ height: "100%", width: "100%", zIndex: 0 }}
       >
         <TileLayer
           attribution='&copy; OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           className="map-tiles"
         />
+
+        {/* Live shipper marker */}
         {position && (
-          <Marker position={position} icon={truckIcon}>
-            <Popup>
-              <span className="font-semibold text-violet-600 text-xs">Tài xế đang di chuyển</span>
-            </Popup>
-          </Marker>
+          <>
+            <MapAutoCenter center={position} />
+            <Marker position={position} icon={truckIcon}>
+              <Popup>
+                <span className="font-semibold text-violet-600 text-xs">Tài xế đang di chuyển</span>
+              </Popup>
+            </Marker>
+          </>
         )}
+
+        {/* Geocoded destination marker */}
         {destination && (
           <Marker position={destination} icon={destinationIcon}>
             <Popup>
@@ -94,6 +150,8 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
             </Popup>
           </Marker>
         )}
+
+        {/* Dashed route line */}
         {position && destination && (
           <Polyline
             positions={[position, destination]}
@@ -104,8 +162,15 @@ export default function TrackingMap({ shopOrderId }: TrackingMapProps) {
           />
         )}
       </MapContainer>
+
+      {/* Show geocoding status when destination is being resolved */}
+      {shippingAddress && !destination && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] bg-card/90 backdrop-blur-md text-xs px-4 py-2 rounded-full border border-card-border text-slate-500 shadow-lg animate-pulse whitespace-nowrap">
+          Đang định vị điểm đến...
+        </div>
+      )}
+
       <style jsx global>{`
-        /* Make leaflet dark mode compatible */
         .dark .map-tiles {
           filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
         }

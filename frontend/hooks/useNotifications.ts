@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { toast } from "sonner";
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3000";
@@ -13,7 +14,7 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   PREPARING: "Đang chuẩn bị",
   READY_FOR_PICKUP: "Chờ shipper lấy hàng",
   SHIPPING: "Đang vận chuyển",
-  DELIVERED: "Đã giao thành công",
+  DELIVERED: "Đã giao thành công 🎉",
   CANCELLED: "Đã huỷ",
 };
 
@@ -26,9 +27,10 @@ const TRACKING_EVENT_LABELS: Record<string, string> = {
 };
 
 export function useNotifications() {
-  const token = useAuthStore((s) => s.token);
+  const token = useAuthStore((s) => s.accessToken);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const addNotification = useNotificationStore((s) => s.addNotification);
+  const pushOrderStatusUpdate = useNotificationStore((s) => s.pushOrderStatusUpdate);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -38,69 +40,129 @@ export function useNotifications() {
       return;
     }
 
-    // Avoid duplicate connections
-    if (socketRef.current?.connected) return;
+    // Disconnect old socket if token changed
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
+    console.log("[Notifications] Connecting to socket:", SOCKET_URL);
 
     const socket = io(SOCKET_URL, {
-      auth: { token },
-      transports: ["websocket"],
+      // Use a callback so each reconnect attempt fetches the latest token from the store
+      auth: (cb) => {
+        const freshToken = useAuthStore.getState().accessToken;
+        cb({ token: freshToken });
+      },
+      transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionDelay: 3000,
+      reconnectionDelay: 2000,
+      reconnectionAttempts: Infinity,
     });
 
     socket.on("connect", () => {
-      console.log("[Notifications] Socket connected:", socket.id);
+      console.log("[Notifications] ✅ Socket connected:", socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("[Notifications] ❌ Connection error:", err.message);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("[Notifications] Socket disconnected, reason:", reason);
     });
 
     // Lắng nghe thay đổi trạng thái đơn hàng
-    socket.on("orderStatusChanged", (data: { orderId: string; shopOrderId: string; status: string; shopName?: string }) => {
+    socket.on("orderStatusChanged", (data: {
+      orderId: string;
+      shopOrderId: string;
+      status: string;
+      shopName?: string;
+    }) => {
+      console.log("[Notifications] 📦 orderStatusChanged received:", data);
+
       const label = ORDER_STATUS_LABELS[data.status] || data.status;
+      const shopLabel = data.shopName ? `[${data.shopName}] ` : "";
+
+      // Show toast immediately
+      toast.success(`${shopLabel}Đơn hàng: ${label}`, {
+        duration: 6000,
+        description: "Nhấn để xem chi tiết đơn hàng",
+        action: data.orderId ? {
+          label: "Xem",
+          onClick: () => {
+            window.location.href = `/orders/${data.orderId}`;
+          },
+        } : undefined,
+      });
+
+      // Save to notification bell
       addNotification({
         type: "order",
         title: "Cập nhật đơn hàng",
-        message: `${data.shopName ? `[${data.shopName}] ` : ""}Đơn hàng của bạn: ${label}`,
+        message: `${shopLabel}Đơn hàng của bạn: ${label}`,
         orderId: data.orderId,
         shopOrderId: data.shopOrderId,
       });
 
-      // Browser push notification (nếu được cấp quyền)
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      // Push to global status store so order pages update instantly
+      if (data.shopOrderId) {
+        pushOrderStatusUpdate(data.shopOrderId, data.status);
+      }
+
+      // Browser push notification
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
         new Notification("Cập nhật đơn hàng 📦", {
-          body: `${data.shopName ? `[${data.shopName}] ` : ""}Trạng thái: ${label}`,
+          body: `${shopLabel}Trạng thái: ${label}`,
           icon: "/favicon.ico",
         });
       }
     });
 
     // Lắng nghe sự kiện tracking
-    socket.on("trackingEvent", (data: { shopOrderId: string; event_type: string; location?: string }) => {
+    socket.on("trackingEvent", (data: {
+      shopOrderId: string;
+      event_type: string;
+      location?: string;
+    }) => {
+      console.log("[Notifications] 🚚 trackingEvent received:", data);
+
       const label = TRACKING_EVENT_LABELS[data.event_type] || data.event_type;
+      const message = data.location ? `${label} — ${data.location}` : label;
+
+      toast.info(message, { duration: 5000 });
+
       addNotification({
         type: "tracking",
         title: "Cập nhật vận chuyển",
-        message: data.location ? `${label} — ${data.location}` : label,
+        message,
         shopOrderId: data.shopOrderId,
       });
 
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
         new Notification("Cập nhật vận chuyển 🚚", {
-          body: data.location ? `${label} — ${data.location}` : label,
+          body: message,
           icon: "/favicon.ico",
         });
       }
     });
 
-    socket.on("disconnect", () => {
-      console.log("[Notifications] Socket disconnected");
-    });
-
     socketRef.current = socket;
 
     return () => {
+      console.log("[Notifications] Cleaning up socket");
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [isAuthenticated, token, addNotification]);
+  }, [isAuthenticated, token]);
 
   // Yêu cầu quyền browser notification lần đầu đăng nhập
   useEffect(() => {

@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import type { User, UserAddress, CreateAddressData } from '../types';
+import type { User, UserAddress } from '../types';
 
 export const usersService = {
   getAll: async (): Promise<{ users: any[]; total: number }> => {
@@ -32,12 +32,12 @@ export const usersService = {
     return response.data;
   },
 
-  createAddress: async (data: CreateAddressData): Promise<UserAddress> => {
+  createAddress: async (data: any): Promise<UserAddress> => {
     const response = await api.post('/users/me/addresses', data);
     return response.data;
   },
 
-  updateAddress: async (addressId: string, data: Partial<CreateAddressData>): Promise<UserAddress> => {
+  updateAddress: async (addressId: string, data: Partial<any>): Promise<UserAddress> => {
     const response = await api.patch(`/users/me/addresses/${addressId}`, data);
     return response.data;
   },

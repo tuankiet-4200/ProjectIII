@@ -22,6 +22,14 @@ function isTokenValid(token: string | null) {
 }
 
 export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </React.Suspense>
+  );
+}
+
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
