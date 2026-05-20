@@ -4,7 +4,7 @@ export type UserRole = 'CUSTOMER' | 'ADMIN' | 'SHIPPER';
 export type ShopStatus = 'PENDING' | 'ACTIVE' | 'REJECTED' | 'BANNED';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
 export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO';
-export type ShopOrderStatus = 'PENDING' | 'PREPARING' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
+export type ShopOrderStatus = 'PENDING' | 'PREPARING' | 'READY_FOR_PICKUP' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
 
 // ─── User ────────────────────────────────────────────────────────────────────
 
@@ -128,6 +128,12 @@ export interface ParentOrder {
   shop_orders?: ShopOrder[];
 }
 
+export interface CheckoutData {
+  shipping_address: string;
+  payment_method: PaymentMethod;
+  coupon_code?: string;
+}
+
 // ─── Cart ────────────────────────────────────────────────────────────────────
 
 export interface CartItem {
@@ -224,15 +230,3 @@ export interface CreateCategoryData {
   parent_id?: number;
 }
 
-export interface CheckoutData {
-  shipping_address: string;
-  payment_method: PaymentMethod;
-}
-
-export interface CreateAddressData {
-  address_line: string;
-  ward: string;
-  district: string;
-  city: string;
-  is_default?: boolean;
-}

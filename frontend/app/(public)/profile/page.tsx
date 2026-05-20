@@ -7,6 +7,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { usersService } from "@/services/users.service";
 import { ordersService } from "@/services/orders.service";
 import type { UserAddress, ParentOrder } from "@/types";
+import { wishlistService, WishlistProduct } from "@/services/wishlist.service";
+import { useCartStore } from "@/store/useCartStore";
+import { getPublicImageUrl } from "@/lib/images";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   User,
   MapPin,
@@ -616,21 +621,67 @@ function OrdersSection() {
 // ─── Section: Wishlist ────────────────────────────────────────────────────────
 
 function WishlistSection() {
-  const [items, setItems] = useState<WishlistItem[]>(WISHLIST);
-  const remove = (id: number) => setItems((prev) => prev.filter((i) => i.id !== id));
+  const [items, setItems] = useState<WishlistProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const addItemToCart = useCartStore((s) => s.addItem);
+
+  const fetchWishlist = async () => {
+    try {
+      setLoading(true);
+      const data = await wishlistService.getWishlist();
+      setItems(data);
+    } catch (err) {
+      console.error("Failed to load wishlist", err);
+      toast.error("Không thể tải danh sách yêu thích");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWishlist();
+  }, []);
+
+  const handleRemove = async (productId: string) => {
+    try {
+      await wishlistService.toggleWishlist(productId);
+      setItems((prev) => prev.filter((i) => i.id !== productId));
+      toast.success("Đã xóa khỏi danh sách yêu thích");
+    } catch (err) {
+      toast.error("Không thể xóa sản phẩm");
+    }
+  };
+
+  const handleAddToCart = async (product: WishlistProduct) => {
+    try {
+      await addItemToCart(product.id, 1);
+      toast.success(`Đã thêm ${product.name} vào giỏ hàng!`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Không thể thêm vào giỏ hàng");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 size={32} className="animate-spin text-violet-500 mb-2" />
+        <span className="text-xs text-gray-400">Đang tải danh sách yêu thích...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-foreground">Wishlist</h2>
-        <span className="text-xs text-gray-500">{items.length} items saved</span>
+        <h2 className="text-lg font-bold text-foreground">Sản phẩm yêu thích</h2>
+        <span className="text-xs text-gray-500">{items.length} sản phẩm</span>
       </div>
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl bg-card transition-colors duration-300 border border-card-border">
           <Heart size={40} className="text-gray-700 mb-4" />
-          <div className="text-sm font-semibold text-gray-400">Your wishlist is empty</div>
-          <div className="text-xs text-gray-600 mt-1">Save items you love to buy later</div>
+          <div className="text-sm font-semibold text-gray-400">Danh sách yêu thích trống</div>
+          <div className="text-xs text-gray-600 mt-1">Hãy lưu sản phẩm bạn thích để mua sau</div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -639,44 +690,51 @@ function WishlistSection() {
               key={item.id}
               className="group flex gap-4 rounded-2xl bg-card transition-colors duration-300 border border-card-border hover:border-violet-500/20 p-4 transition-all"
             >
-              <div
-                className="w-20 h-20 rounded-xl shrink-0 flex items-center justify-center text-3xl"
-                style={{
-                  background: `linear-gradient(135deg, ${item.bgFrom}, ${item.bgTo})`,
-                }}
+              <Link
+                href={`/products/${item.slug}`}
+                className="w-20 h-20 rounded-xl shrink-0 flex items-center justify-center bg-white border border-card-border overflow-hidden"
               >
-                {item.emoji}
-              </div>
+                {item.images?.[0] ? (
+                  <img
+                    src={getPublicImageUrl(item.images[0])}
+                    alt={item.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-3xl">📦</span>
+                )}
+              </Link>
               <div className="flex-1 min-w-0 flex flex-col justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-foreground line-clamp-2 group-hover:text-violet-100 transition-colors leading-snug">
+                  <Link
+                    href={`/products/${item.slug}`}
+                    className="text-sm font-semibold text-foreground line-clamp-2 hover:text-violet-500 transition-colors leading-snug"
+                  >
                     {item.name}
-                  </div>
+                  </Link>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm font-extrabold text-violet-400">
-                      {item.price.toLocaleString('vi-VN')}₫
+                      {Number(item.price).toLocaleString('vi-VN')}₫
                     </span>
-                    {item.originalPrice && (
-                      <span className="text-xs text-gray-500 line-through">
-                        {item.originalPrice.toLocaleString('vi-VN')}₫
-                      </span>
-                    )}
                   </div>
-                  {!item.inStock && (
+                  {item.stock_quantity <= 0 && (
                     <span className="mt-1 inline-block text-[10px] text-red-400 font-semibold">
-                      Out of Stock
+                      Hết hàng
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-3">
-                  {item.inStock && (
-                    <button className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-1.5 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all">
-                      <ShoppingBag size={12} /> Add to Cart
+                  {item.stock_quantity > 0 && (
+                    <button
+                      onClick={() => handleAddToCart(item)}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 active:scale-95 transition-all"
+                    >
+                      <ShoppingBag size={12} /> Thêm vào giỏ
                     </button>
                   )}
                   <button
-                    onClick={() => remove(item.id)}
-                    className="h-7 w-7 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:border-red-400/30 transition-all"
+                    onClick={() => handleRemove(item.id)}
+                    className="h-7 w-7 rounded-lg border border-card-border flex items-center justify-center text-gray-500 hover:text-red-400 hover:border-red-400/30 transition-all"
                   >
                     <Trash2 size={12} />
                   </button>

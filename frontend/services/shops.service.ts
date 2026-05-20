@@ -17,6 +17,11 @@ export const shopsService = {
     return response.data;
   },
 
+  getAnalytics: async (): Promise<any> => {
+    const response = await api.get('/shops/my/analytics');
+    return response.data;
+  },
+
   create: async (data: CreateShopData): Promise<Shop> => {
     const response = await api.post('/shops', data);
     return response.data;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { formatVnd } from "@/lib/currency";
 import Link from "next/link";
 import {
@@ -50,7 +50,7 @@ const ALL_PRODUCTS: Product[] = [
     originalPrice: 1549,
     rating: 4.9,
     sold: 124,
-    badge: "LUXE PICK",
+    badge: "GỢI Ý SANG XỊN",
     badgeColor: "bg-violet-500",
     discount: -11,
     bgFrom: "#1a1a2e",
@@ -65,7 +65,7 @@ const ALL_PRODUCTS: Product[] = [
     price: 2850,
     rating: 5.0,
     sold: 56,
-    badge: "NEW ARRIVAL",
+    badge: "HÀNG MỚI VỀ",
     badgeColor: "bg-emerald-500",
     bgFrom: "#2d1b0e",
     bgTo: "#4a2c0a",
@@ -80,7 +80,7 @@ const ALL_PRODUCTS: Product[] = [
     price: 4200,
     rating: 4.8,
     sold: 96,
-    badge: "LIMITED STOCK",
+    badge: "SỐ LƯỢNG CÓ HẠN",
     badgeColor: "bg-red-500",
     bgFrom: "#f8f8f5",
     bgTo: "#e8e8e0",
@@ -106,7 +106,7 @@ const ALL_PRODUCTS: Product[] = [
     price: 349,
     rating: 4.9,
     sold: 5400,
-    badge: "BESTSELLER",
+    badge: "BÁN CHẠY NHẤT",
     badgeColor: "bg-amber-500",
     bgFrom: "#f5f0e8",
     bgTo: "#e8dcc8",
@@ -120,7 +120,7 @@ const ALL_PRODUCTS: Product[] = [
     price: 12500,
     rating: 5.0,
     sold: 12,
-    badge: "EXPERT CHOICE",
+    badge: "KHUYÊN DÙNG",
     badgeColor: "bg-yellow-600",
     bgFrom: "#1c1209",
     bgTo: "#2d1a08",
@@ -147,7 +147,7 @@ const ALL_PRODUCTS: Product[] = [
     price: 420,
     rating: 4.8,
     sold: 3200,
-    badge: "TOP RATED",
+    badge: "ĐÁNH GIÁ CAO",
     badgeColor: "bg-purple-500",
     bgFrom: "#120824",
     bgTo: "#1e0f3c",
@@ -168,18 +168,18 @@ const ALL_PRODUCTS: Product[] = [
 ];
 
 const CATEGORIES = [
-  { name: "All Products", count: 1246 },
-  { name: "High-End Audio", count: 412 },
-  { name: "Timepieces", count: 324 },
-  { name: "Accessories", count: 512 },
+  { name: "Tất cả sản phẩm", count: 1246 },
+  { name: "Âm thanh cao cấp", count: 412 },
+  { name: "Đồng hồ cao cấp", count: 324 },
+  { name: "Phụ kiện luxury", count: 512 },
 ];
 
 const SORT_OPTIONS = [
-  "Newest Arrivals",
-  "Price: Low to High",
-  "Price: High to Low",
-  "Best Rated",
-  "Most Sold",
+  "Mới nhất",
+  "Giá: Thấp đến Cao",
+  "Giá: Cao đến Thấp",
+  "Đánh giá tốt nhất",
+  "Bán chạy nhất",
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ function ProductCard({
         {/* Discount */}
         {product.discount && (
           <span className="absolute top-3 left-3 z-10 text-[10px] font-bold bg-green-500 text-white px-2 py-0.5 rounded-sm mt-6">
-            {product.discount}% OFF
+            GIẢM {Math.abs(product.discount)}%
           </span>
         )}
 
@@ -274,7 +274,7 @@ function ProductCard({
         <div className="flex items-center gap-2 mb-3">
           <StarRating rating={product.rating} />
           <span className="text-[10px] text-yellow-400 font-bold">{product.rating.toFixed(1)}</span>
-          <span className="text-[10px] text-slate-400 dark:text-gray-500">{product.sold.toLocaleString()} sold</span>
+          <span className="text-[10px] text-slate-400 dark:text-gray-500">Đã bán {product.sold.toLocaleString()}</span>
         </div>
 
         {/* Price + CTA */}
@@ -291,7 +291,7 @@ function ProductCard({
           </div>
           {product.viewOnly ? (
             <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-2 text-xs font-semibold text-foreground shrink-0">
-              View Details
+              Xem chi tiết
             </span>
           ) : (
             <button
@@ -299,7 +299,7 @@ function ProductCard({
               className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40 shrink-0"
             >
               <ShoppingCart size={13} />
-              Add to Cart
+              Thêm vào giỏ
             </button>
           )}
         </div>
@@ -334,8 +334,8 @@ function Sidebar({
       {/* Categories */}
       <div className="rounded-2xl bg-card border border-card-border p-5">
         <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4 flex items-center gap-2">
-          <LayoutGrid size={13} />
-          Categories
+          <SlidersHorizontal size={13} />
+          Danh mục sản phẩm
         </h3>
         <ul className="space-y-1">
           {CATEGORIES.map((cat) => (
@@ -367,7 +367,7 @@ function Sidebar({
       {/* Price Range */}
       <div className="rounded-2xl bg-card border border-card-border p-5">
         <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4">
-          💰 Price Range
+          💰 Khoảng giá
         </h3>
         <input
           type="range"
@@ -390,7 +390,7 @@ function Sidebar({
       {/* Rating */}
       <div className="rounded-2xl bg-card border border-card-border p-5">
         <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4">
-          ⭐ Customer Rating
+          ⭐ Đánh giá khách hàng
         </h3>
         <div className="space-y-2">
           {[4, 3, 2, 1].map((r) => (
@@ -419,7 +419,7 @@ function Sidebar({
                 ))}
               </div>
               <span className="text-xs text-slate-500 dark:text-gray-400 group-hover:text-foreground transition-colors">
-                & Up
+                Trở lên
               </span>
             </label>
           ))}
@@ -429,7 +429,7 @@ function Sidebar({
       {/* Shop Type */}
       <div className="rounded-2xl bg-card border border-card-border p-5">
         <h3 className="text-xs uppercase font-bold text-slate-500 dark:text-gray-400 tracking-widest mb-4">
-          🏪 Shop Type
+          🏪 Loại cửa hàng
         </h3>
         <label className="flex items-center gap-3 cursor-pointer mb-3">
           <div
@@ -440,11 +440,11 @@ function Sidebar({
           >
             {verifiedOnly && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
           </div>
-          <span className="text-sm text-slate-600 dark:text-gray-300">Verified Boutiques</span>
+          <span className="text-sm text-slate-600 dark:text-gray-300">Shop đã xác minh</span>
         </label>
         <label className="flex items-center gap-3 cursor-pointer">
           <div className="w-4 h-4 rounded-full border-2 border-gray-600" />
-          <span className="text-sm text-slate-600 dark:text-gray-300">Direct from Brand</span>
+          <span className="text-sm text-slate-600 dark:text-gray-300">Chính hãng từ thương hiệu</span>
         </label>
       </div>
     </aside>
@@ -454,11 +454,11 @@ function Sidebar({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProductsPage() {
-  const [activeCategory, setActiveCategory] = useState("All Products");
+  const [activeCategory, setActiveCategory] = useState("Tất cả sản phẩm");
   const [priceRange, setPriceRange] = useState(15000000);
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(true);
-  const [sortBy, setSortBy] = useState("Newest Arrivals");
+  const [sortBy, setSortBy] = useState("Mới nhất");
   const [sortOpen, setSortOpen] = useState(false);
   const [wished, setWished] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -531,17 +531,17 @@ export default function ProductsPage() {
         <div className="mb-8">
           <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-gray-500 mb-3">
             <Link href="/" className="hover:text-violet-400 transition-colors">
-              Home
+              Trang chủ
             </Link>
             <span>/</span>
-            <span className="text-slate-600 dark:text-gray-300">Marketplace</span>
+            <span className="text-slate-600 dark:text-gray-300">Cửa hàng</span>
             <span>/</span>
             <span className="text-violet-400">{activeCategory}</span>
           </div>
           <h1 className="text-3xl font-extrabold text-foreground">{activeCategory}</h1>
           <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-            Showing 1–{filteredProducts.length} of{" "}
-            <span className="text-foreground font-medium">1,246</span> results
+            Hiển thị 1–{filteredProducts.length} trong số{" "}
+            <span className="text-foreground font-medium">1,246</span> kết quả
           </p>
         </div>
 
@@ -569,7 +569,7 @@ export default function ProductsPage() {
                 <Search size={14} className="text-slate-400 dark:text-gray-500 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder="Tìm sản phẩm..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="flex-1 bg-transparent text-sm text-foreground placeholder:text-slate-400 dark:text-gray-600 focus:outline-none"
@@ -587,7 +587,7 @@ export default function ProductsPage() {
                 className="lg:hidden flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-card-border px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 hover:text-foreground transition-colors"
               >
                 <SlidersHorizontal size={14} />
-                Filters
+                Bộ lọc
               </button>
 
               {/* Sort */}
@@ -597,7 +597,7 @@ export default function ProductsPage() {
                   className="flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-card-border px-4 py-2.5 text-sm text-slate-600 dark:text-gray-300 hover:text-foreground transition-colors"
                 >
                   <span className="font-medium text-xs text-slate-400 dark:text-gray-500 uppercase tracking-wide">
-                    Sort by
+                    Sắp xếp
                   </span>
                   <span className="text-foreground font-semibold">{sortBy}</span>
                   <ChevronDown
@@ -673,7 +673,7 @@ export default function ProductsPage() {
               <div className="flex flex-wrap gap-2 mb-5">
                 {minRating > 0 && (
                   <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs px-3 py-1">
-                    ⭐ {minRating}+ stars
+                    ⭐ {minRating}+ sao
                     <button onClick={() => setMinRating(0)}>
                       <X size={11} />
                     </button>
@@ -703,10 +703,10 @@ export default function ProductsPage() {
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <span className="text-5xl mb-4">🔍</span>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  No products found
+                  Không tìm thấy sản phẩm nào
                 </h3>
                 <p className="text-sm text-slate-400 dark:text-gray-500">
-                  Try adjusting your filters or search term.
+                  Hãy thử điều chỉnh lại bộ lọc hoặc từ khóa tìm kiếm của bạn.
                 </p>
               </div>
             ) : (
@@ -754,7 +754,7 @@ export default function ProductsPage() {
                               {product.rating.toFixed(1)}
                             </span>
                             <span className="text-[10px] text-slate-400 dark:text-gray-500">
-                              {product.sold.toLocaleString()} sold
+                              Đã bán {product.sold.toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -786,11 +786,11 @@ export default function ProductsPage() {
                                 href={`/products/${product.id}`}
                                 className="text-xs rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-1.5 font-semibold hover:bg-white/10 transition-colors"
                               >
-                                View Details
+                                Xem chi tiết
                               </Link>
                             ) : (
                               <button className="flex items-center gap-1 text-xs rounded-lg bg-violet-600 px-3 py-1.5 font-semibold hover:bg-violet-500 transition-colors">
-                                <ShoppingCart size={12} /> Add to Cart
+                                <ShoppingCart size={12} /> Thêm vào giỏ
                               </button>
                             )}
                           </div>

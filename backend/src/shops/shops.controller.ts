@@ -33,6 +33,12 @@ export class ShopsController {
     return this.shopsService.findMyShop(userId);
   }
 
+  @Get('my/analytics')
+  @UseGuards(JwtAuthGuard)
+  getMyShopAnalytics(@CurrentUser('id') userId: string) {
+    return this.shopsService.getAnalytics(userId);
+  }
+
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.shopsService.findById(id);

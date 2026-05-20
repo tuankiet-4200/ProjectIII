@@ -17,6 +17,8 @@ import {
   ChevronDown,
   BadgeCheck,
   Package,
+  Tag,
+  X,
 } from "lucide-react";
 import { formatVnd } from "@/lib/currency";
 import { getPublicImageUrl } from "@/lib/images";
@@ -93,6 +95,9 @@ export default function CheckoutPage() {
   const [placed, setPlaced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount_amount: number; description: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
   const router = useRouter();
 
   const groups = useCartStore((s) => s.groups);
@@ -150,13 +155,33 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/coupons/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim().toUpperCase(), order_amount: subtotal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Mã không hợp lệ');
+      setCouponApplied({ code: data.code, discount_amount: data.discount_amount, description: data.description });
+      toast.success(`Áp dụng mã thành công! Giảm ${data.discount_amount.toLocaleString('vi-VN')}₫`);
+    } catch (e: any) {
+      toast.error(e.message || 'Mã giảm giá không hợp lệ');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     if (allItems.length === 0) {
-      toast.error("Your cart is empty");
+      toast.error('Giỏ hàng của bạn đang trống');
       return;
     }
     if (!shipping.fullName || !shipping.phone || !shipping.address || !shipping.city) {
-      toast.error("Please complete shipping information");
+      toast.error('Vui lòng điền đầy đủ thông tin giao hàng');
       return;
     }
     setIsSubmitting(true);
@@ -167,11 +192,12 @@ export default function CheckoutPage() {
       await ordersService.checkout({
         shipping_address: address,
         payment_method: paymentMap[payment],
+        coupon_code: couponApplied?.code,
       });
       setPlaced(true);
       await fetchCart();
-    } catch {
-      toast.error("Checkout failed. Please try again.");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Đặt hàng thất bại. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
@@ -460,7 +486,43 @@ export default function CheckoutPage() {
           {/* ─── Order Summary sidebar ─── */}
           <div className="lg:w-80 shrink-0">
             <div className="rounded-2xl bg-card border border-card-border p-5 space-y-4 sticky top-24">
-              <h2 className="text-base font-bold text-foreground">Order Summary</h2>
+              <h2 className="text-base font-bold text-foreground">Tóm tắt đơn hàng</h2>
+
+              {/* Coupon input */}
+              <div className="space-y-2">
+                {couponApplied ? (
+                  <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Tag size={13} className="text-emerald-400" />
+                      <div>
+                        <div className="text-xs font-bold text-emerald-400">{couponApplied.code}</div>
+                        <div className="text-[10px] text-emerald-500/70">{couponApplied.description}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => { setCouponApplied(null); setCouponCode(''); }} className="text-slate-400 hover:text-red-400 transition-colors">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nhập mã giảm giá"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                      className="flex-1 rounded-xl bg-input-bg border border-card-border focus:border-violet-500/60 text-xs text-foreground placeholder:text-slate-400 px-3 py-2 outline-none transition-colors"
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 transition-all"
+                    >
+                      {couponLoading ? '...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between text-slate-500 dark:text-gray-400">
@@ -471,26 +533,20 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-slate-500 dark:text-gray-400">
                   <span>Vận chuyển</span>
-                  <span
-                    className={
-                      shippingFee === 0
-                        ? "text-emerald-500 font-bold"
-                        : "text-foreground font-medium"
-                    }
-                  >
-                    {shippingFee === 0 ? "MIỄN PHÍ" : formatVnd(shippingFee)}
+                  <span className={shippingFee === 0 ? "text-emerald-500 font-bold" : "text-foreground font-medium"}>
+                    {shippingFee === 0 ? 'MIỄN PHÍ' : formatVnd(shippingFee)}
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-500 dark:text-gray-400">
-                  <span>Thuế</span>
-                  <span className="text-foreground font-medium text-right tabular-nums whitespace-nowrap">
-                    {formatVnd(tax)}
-                  </span>
-                </div>
+                {couponApplied && (
+                  <div className="flex justify-between text-emerald-400">
+                    <span className="flex items-center gap-1"><Tag size={11} /> Giảm giá</span>
+                    <span className="font-bold">-{formatVnd(couponApplied.discount_amount)}</span>
+                  </div>
+                )}
                 <div className="border-t border-card-border pt-3 flex justify-between items-baseline gap-3">
                   <span className="font-bold text-foreground">Tổng thanh toán</span>
                   <span className="font-extrabold text-violet-500 text-xl tabular-nums whitespace-nowrap">
-                    {formatVnd(total)}
+                    {formatVnd(Math.max(0, subtotal + shippingFee - (couponApplied?.discount_amount ?? 0)))}
                   </span>
                 </div>
               </div>

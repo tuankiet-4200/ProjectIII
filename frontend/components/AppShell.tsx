@@ -3,9 +3,11 @@
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  useNotifications(); // Khởi động socket lắng nghe thông báo toàn app
 
   const hideGlobalChrome =
     pathname.startsWith('/login') ||

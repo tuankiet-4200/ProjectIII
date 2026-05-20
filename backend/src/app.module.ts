@@ -15,6 +15,9 @@ import { TrackingModule } from './tracking/tracking.module';
 import { ChatModule } from './chat/chat.module';
 import { RedisModule } from './redis/redis.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { ReviewsModule } from './reviews/reviews.module';
+import { CouponsModule } from './coupons/coupons.module';
+import { WishlistModule } from './wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -31,7 +34,10 @@ import { UploadsModule } from './uploads/uploads.module';
     TrackingModule, 
     ChatModule, 
     RedisModule,
-    UploadsModule
+    UploadsModule,
+    ReviewsModule,
+    CouponsModule,
+    WishlistModule
   ],
   controllers: [AppController],
   providers: [AppService],

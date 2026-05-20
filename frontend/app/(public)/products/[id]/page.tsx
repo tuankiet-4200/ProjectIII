@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import {
   ThumbsUp,
   MessageSquare,
   Package,
+  Loader2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -293,22 +294,61 @@ function SpecificationsTab() {
   );
 }
 
-function ReviewsTab() {
-  const ratingDist = [
-    { stars: 5, pct: 80 },
-    { stars: 4, pct: 12 },
-    { stars: 3, pct: 5 },
-    { stars: 2, pct: 2 },
-    { stars: 1, pct: 1 },
-  ];
+function ReviewsTab({ productId }: { productId: string }) {
+  const { isAuthenticated } = useAuthStore();
+  const [data, setData] = useState<{ reviews: any[]; total: number; avgRating: number } | null>(null);
+  const [perm, setPerm] = useState<{ canReview: boolean; hasPurchased: boolean; hasReviewed: boolean } | null>(null);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [myRating, setMyRating] = useState(0);
+  const [myComment, setMyComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadAll = useCallback(async () => {
+    if (!productId) return;
+    setLoadingReviews(true);
+    try {
+      const { reviewsService } = await import('@/services/reviews.service');
+      const reviewData = await reviewsService.getProductReviews(productId);
+      setData(reviewData);
+      if (isAuthenticated) {
+        const permData = await reviewsService.canReview(productId);
+        setPerm(permData);
+      }
+    } catch { /* ignore */ } finally {
+      setLoadingReviews(false);
+    }
+  }, [productId, isAuthenticated]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const handleSubmit = async () => {
+    if (myRating === 0) { alert('Vui lòng chọn số sao.'); return; }
+    setSubmitting(true);
+    try {
+      const { reviewsService } = await import('@/services/reviews.service');
+      await reviewsService.createReview(productId, myRating, myComment);
+      setMyRating(0); setMyComment('');
+      await loadAll();
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Gửi đánh giá thất bại.');
+    } finally { setSubmitting(false); }
+  };
+
+  const avgRating = data?.avgRating ?? 0;
+  const total = data?.total ?? 0;
+  const ratingDist = [5, 4, 3, 2, 1].map((s) => ({
+    stars: s,
+    pct: total > 0 ? Math.round(((data?.reviews.filter((r) => r.rating === s).length ?? 0) / total) * 100) : 0,
+  }));
+
   return (
     <div className="space-y-6">
-      {/* Summary */}
+      {/* Summary header */}
       <div className="flex flex-col md:flex-row gap-6 rounded-2xl bg-card border border-card-border p-5">
         <div className="flex flex-col items-center justify-center text-center md:w-36 shrink-0">
-          <div className="text-5xl font-black text-foreground mb-1">{PRODUCT.rating}</div>
-          <StarRating rating={PRODUCT.rating} size={16} />
-          <div className="text-xs text-slate-400 dark:text-gray-500 mt-2">{PRODUCT.reviewCount.toLocaleString()} reviews</div>
+          <div className="text-5xl font-black text-foreground mb-1">{avgRating || '—'}</div>
+          <StarRating rating={avgRating} size={16} />
+          <div className="text-xs text-slate-400 dark:text-gray-500 mt-2">{total.toLocaleString()} đánh giá</div>
         </div>
         <div className="flex-1 space-y-2">
           {ratingDist.map(({ stars, pct }) => (
@@ -322,40 +362,84 @@ function ReviewsTab() {
             </div>
           ))}
         </div>
-        <div className="flex flex-col items-center justify-center gap-2 md:w-40 shrink-0">
-          <button className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-foreground hover:bg-violet-500 active:scale-95 transition-all">
-            <MessageSquare size={12} /> Write a Review
+      </div>
+
+      {/* Write review area */}
+      {!isAuthenticated && (
+        <div className="rounded-2xl bg-card border border-card-border p-5 text-center">
+          <p className="text-sm text-slate-500 mb-3">Đăng nhập để viết đánh giá</p>
+          <a href="/login" className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-violet-500 transition-all">Đăng nhập</a>
+        </div>
+      )}
+      {isAuthenticated && perm && !perm.hasPurchased && (
+        <div className="rounded-2xl bg-card border border-amber-500/20 p-5 text-center">
+          <p className="text-sm text-amber-400 font-medium">Chỉ khách hàng đã mua và nhận hàng mới có thể viết đánh giá.</p>
+        </div>
+      )}
+      {isAuthenticated && perm?.hasReviewed && (
+        <div className="rounded-2xl bg-emerald-500/5 border border-emerald-500/20 p-5 text-center">
+          <p className="text-sm text-emerald-400 font-medium">✅ Bạn đã đánh giá sản phẩm này rồi!</p>
+        </div>
+      )}
+      {isAuthenticated && perm?.canReview && (
+        <div className="rounded-2xl bg-card border border-card-border p-5 space-y-4">
+          <h4 className="text-sm font-bold text-foreground">✍️ Viết đánh giá của bạn</h4>
+          {/* Star picker */}
+          <div className="flex items-center gap-2">
+            {[1,2,3,4,5].map((s) => (
+              <button key={s} onClick={() => setMyRating(s)} className="transition-transform hover:scale-110">
+                <Star size={28} className={s <= myRating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-300 dark:text-gray-600'} />
+              </button>
+            ))}
+            {myRating > 0 && <span className="text-xs text-slate-400 ml-2">{['','Rất tệ','Tệ','Bình thường','Tốt','Xuất sắc'][myRating]}</span>}
+          </div>
+          <textarea
+            value={myComment}
+            onChange={(e) => setMyComment(e.target.value)}
+            placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+            rows={4}
+            className="w-full rounded-xl border border-card-border bg-background text-sm text-foreground px-4 py-3 resize-none outline-none focus:border-violet-500/50 transition-colors"
+          />
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-violet-500 disabled:opacity-50 transition-all active:scale-95"
+          >
+            <MessageSquare size={12} />{submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
           </button>
         </div>
-      </div>
-      {/* Reviews */}
-      <div className="space-y-4">
-        {REVIEWS.map((review) => (
-          <div key={review.id} className="rounded-2xl bg-card border border-card-border p-5">
-            <div className="flex items-start gap-3 mb-3">
-              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${review.avatarBg} flex items-center justify-center text-xs font-bold text-foreground shrink-0`}>
-                {review.avatar}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-foreground">{review.name}</span>
-                  {review.verified && (
+      )}
+
+      {/* Reviews list */}
+      {loadingReviews ? (
+        <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-violet-500" /></div>
+      ) : (
+        <div className="space-y-4">
+          {data?.reviews.length === 0 && <div className="text-sm text-slate-500 text-center py-8">Chưa có đánh giá nào. Hãy là người đầu tiên!</div>}
+          {data?.reviews.map((review) => (
+            <div key={review.id} className="rounded-2xl bg-card border border-card-border p-5">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                  {review.user.full_name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-foreground">{review.user.full_name}</span>
                     <span className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
                       <BadgeCheck size={9} /> VERIFIED
                     </span>
-                  )}
-                  <span className="ml-auto text-xs text-slate-400 dark:text-gray-500">{review.date}</span>
+                    <span className="ml-auto text-xs text-slate-400 dark:text-gray-500">
+                      {new Date(review.created_at).toLocaleDateString('vi-VN')}
+                    </span>
+                  </div>
+                  <StarRating rating={review.rating} />
                 </div>
-                <StarRating rating={review.rating} />
               </div>
+              {review.comment && <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">{review.comment}</p>}
             </div>
-            <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed mb-3">{review.comment}</p>
-            <button className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-gray-500 hover:text-violet-400 transition-colors">
-              <ThumbsUp size={11} /> Helpful ({review.helpful})
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -410,6 +494,7 @@ export default function ProductDetailPage() {
   const [wished, setWished] = useState(false);
   const [tab, setTab] = useState<DetailTab>("details");
   const [addedToCart, setAddedToCart] = useState(false);
+  const [productRealId, setProductRealId] = useState<string>('');
   const [productData, setProductData] = useState({
     ...PRODUCT,
     parentCategory: '' as string,
@@ -439,6 +524,12 @@ export default function ProductDetailPage() {
             shopSlug: p.shop?.id || '',
             images: p.images || [],
           });
+          setProductRealId(p.id);
+          // Auto-open reviews tab if ?tab=reviews in URL
+          if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'reviews') {
+            setTab('reviews');
+            setTimeout(() => document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' }), 300);
+          }
         }
       } catch {
         // Keep mock data
@@ -446,6 +537,46 @@ export default function ProductDetailPage() {
     };
     loadProduct();
   }, [params?.id]);
+
+  // Load wishlist status for logged-in user
+  useEffect(() => {
+    if (!productRealId) return;
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) return;
+
+    const checkWishlistStatus = async () => {
+      try {
+        const { wishlistService } = await import('@/services/wishlist.service');
+        const res = await wishlistService.checkWishlist(productRealId);
+        setWished(res.wishlisted);
+      } catch (err) {
+        console.error("Failed to check wishlist status", err);
+      }
+    };
+    checkWishlistStatus();
+  }, [productRealId]);
+
+  const handleToggleWishlist = async () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    try {
+      const { wishlistService } = await import('@/services/wishlist.service');
+      const res = await wishlistService.toggleWishlist(productRealId);
+      setWished(res.added);
+      if (res.added) {
+        toast.success("Đã thêm vào danh sách yêu thích");
+      } else {
+        toast.success("Đã xóa khỏi danh sách yêu thích");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Không thể cập nhật danh sách yêu thích");
+    }
+  };
 
   const handleAddToCart = async () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -532,7 +663,7 @@ export default function ProductDetailPage() {
               {/* Wish + Share */}
               <div className="absolute top-4 right-4 flex flex-col gap-2">
                 <button
-                  onClick={() => setWished(!wished)}
+                  onClick={handleToggleWishlist}
                   className={`w-9 h-9 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
                     wished ? "bg-rose-500 text-white" : "bg-black/40 text-slate-600 dark:text-gray-300 hover:text-white"
                   }`}
@@ -589,125 +720,125 @@ export default function ProductDetailPage() {
                 <div className="flex items-center gap-1">
                   <StarRating rating={productData.rating} size={12} />
                   <span className="text-xs text-yellow-400 font-bold">{productData.rating}</span>
-                  <span className="text-xs text-slate-400 dark:text-gray-500">({productData.reviewCount.toLocaleString()} reviews)</span>
+                  <span className="text-xs text-slate-400 dark:text-gray-500">({productData.reviewCount.toLocaleString()} đánh giá)</span>
                 </div>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight mb-3">
                 {productData.name}
               </h1>
-              <p className="text-sm text-slate-500 dark:text-gray-400 leading-relaxed">{productData.description}</p>
-            </div>
+              <p className="text-sm text-slate-500 dark:text-gray-400 leading-relaxed mb-4">{productData.description}</p>
 
-            {/* Price */}
-            <div className="flex items-end gap-3">
-              <span className="text-4xl font-black text-foreground">{formatVnd(Number(productData.price))}</span>
-              <span className="text-lg text-slate-400 dark:text-gray-500 line-through mb-1">{formatVnd(Number(productData.originalPrice))}</span>
-              <span className="mb-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1">
-                Save {productData.discount}%
-              </span>
-            </div>
-
-            {/* Color */}
-            <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">
-                Color — <span className="text-foreground">{PRODUCT.colors[selectedColor].name}</span>
+              {/* Price */}
+              <div className="flex items-end gap-3 my-4">
+                <span className="text-4xl font-black text-foreground">{formatVnd(Number(productData.price))}</span>
+                <span className="text-lg text-slate-400 dark:text-gray-500 line-through mb-1">{formatVnd(Number(productData.originalPrice))}</span>
+                <span className="mb-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-2.5 py-1">
+                  Tiết kiệm {productData.discount}%
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                {PRODUCT.colors.map((color, idx) => (
-                  <button
-                    key={color.name}
-                    onClick={() => setSelectedColor(idx)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center text-[8px] font-bold text-foreground ${
-                      selectedColor === idx ? "border-violet-400 scale-110 ring-2 ring-violet-400/30" : "border-transparent hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
-                  >
-                    {color.name.startsWith("+") ? color.name : ""}
-                  </button>
+
+              {/* Color */}
+              <div className="my-4">
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">
+                  Màu sắc — <span className="text-foreground">{PRODUCT.colors[selectedColor].name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {PRODUCT.colors.map((color, idx) => (
+                    <button
+                      key={color.name}
+                      onClick={() => setSelectedColor(idx)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center text-[8px] font-bold text-foreground ${
+                        selectedColor === idx ? "border-violet-400 scale-110 ring-2 ring-violet-400/30" : "border-transparent hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: color.hex }}
+                      title={color.name}
+                    >
+                      {color.name.startsWith("+") ? color.name : ""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Qty */}
+              <div className="my-4">
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">Số lượng</div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center rounded-xl border border-border dark:border-white/10 bg-slate-100 dark:bg-white/5">
+                    <button
+                      onClick={() => setQty(Math.max(1, qty - 1))}
+                      className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className="w-10 text-center text-sm font-bold text-foreground select-none">{qty}</span>
+                    <button
+                      onClick={() => setQty(qty + 1)}
+                      className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Còn hàng · Còn {productData.stockCount} sản phẩm
+                  </div>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col gap-3 my-4">
+                <button
+                  onClick={handleAddToCart}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-all active:scale-95 ${
+                    addedToCart
+                      ? "bg-emerald-600 text-white"
+                      : "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-900/40"
+                  }`}
+                >
+                  {addedToCart ? (
+                    <><Check size={15} /> Đã thêm vào giỏ!</>
+                  ) : (
+                    <><ShoppingCart size={15} /> Thêm vào giỏ hàng</>
+                  )}
+                </button>
+                <button className="flex items-center justify-center gap-2 rounded-xl border border-border dark:border-white/10 bg-slate-100 dark:bg-white/5 py-3.5 text-sm font-bold text-foreground hover:bg-white/10 transition-all active:scale-95">
+                  <Zap size={15} className="text-yellow-400" /> Mua ngay
+                </button>
+              </div>
+
+              {/* Shop card */}
+              <div className="flex items-center gap-3 rounded-2xl bg-card border border-card-border p-4 my-4">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-lg shrink-0">
+                  🎧
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Store size={11} className="text-violet-400" />
+                    <span className="text-sm font-bold text-foreground">{PRODUCT.shop.name}</span>
+                    {PRODUCT.shop.verified && <BadgeCheck size={13} className="text-violet-400" />}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
+                    <Star size={9} className="fill-yellow-400 text-yellow-400" />
+                    {PRODUCT.shop.rating} · {PRODUCT.shop.followers} người theo dõi
+                  </div>
+                </div>
+                <Link
+                  href={`/shops/${PRODUCT.shop.id || "1"}`}
+                  className="flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 px-3 py-1.5 text-xs font-semibold transition-all shrink-0"
+                >
+                  Xem Shop <ChevronRight size={11} />
+                </Link>
+              </div>
+
+              {/* Perks */}
+              <div className="grid grid-cols-2 gap-2 my-4">
+                {PRODUCT.perks.map((perk) => (
+                  <div key={perk.label} className="flex items-center gap-2 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-card-border px-3 py-2">
+                    <perk.icon size={13} className="text-violet-400 shrink-0" />
+                    <span className="text-[11px] text-slate-500 dark:text-gray-400">{perk.label}</span>
+                  </div>
                 ))}
               </div>
-            </div>
-
-            {/* Qty */}
-            <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-2">Quantity</div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center rounded-xl border border-border dark:border-white/10 bg-slate-100 dark:bg-white/5">
-                  <button
-                    onClick={() => setQty(Math.max(1, qty - 1))}
-                    className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span className="w-10 text-center text-sm font-bold text-foreground select-none">{qty}</span>
-                  <button
-                    onClick={() => setQty(qty + 1)}
-                    className="w-10 h-10 flex items-center justify-center text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  In stock · {productData.stockCount} remaining
-                </div>
-              </div>
-            </div>
-
-            {/* CTAs */}
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleAddToCart}
-                className={`flex items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition-all active:scale-95 ${
-                  addedToCart
-                    ? "bg-emerald-600 text-white"
-                    : "bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-900/40"
-                }`}
-              >
-                {addedToCart ? (
-                  <><Check size={15} /> Added to Cart!</>
-                ) : (
-                  <><ShoppingCart size={15} /> Add to Cart</>
-                )}
-              </button>
-              <button className="flex items-center justify-center gap-2 rounded-xl border border-border dark:border-white/10 bg-slate-100 dark:bg-white/5 py-3.5 text-sm font-bold text-foreground hover:bg-white/10 transition-all active:scale-95">
-                <Zap size={15} className="text-yellow-400" /> Buy It Now
-              </button>
-            </div>
-
-            {/* Shop card */}
-            <div className="flex items-center gap-3 rounded-2xl bg-card border border-card-border p-4">
-              <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-lg shrink-0">
-                🎧
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <Store size={11} className="text-violet-400" />
-                  <span className="text-sm font-bold text-foreground">{PRODUCT.shop.name}</span>
-                  {PRODUCT.shop.verified && <BadgeCheck size={13} className="text-violet-400" />}
-                </div>
-                <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
-                  <Star size={9} className="fill-yellow-400 text-yellow-400" />
-                  {PRODUCT.shop.rating} · {PRODUCT.shop.followers} followers
-                </div>
-              </div>
-              <Link
-                href="/shops/1"
-                className="flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 px-3 py-1.5 text-xs font-semibold transition-all shrink-0"
-              >
-                Visit Shop <ChevronRight size={11} />
-              </Link>
-            </div>
-
-            {/* Perks */}
-            <div className="grid grid-cols-2 gap-2">
-              {PRODUCT.perks.map((perk) => (
-                <div key={perk.label} className="flex items-center gap-2 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-card-border px-3 py-2">
-                  <perk.icon size={13} className="text-violet-400 shrink-0" />
-                  <span className="text-[11px] text-slate-500 dark:text-gray-400">{perk.label}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -733,7 +864,7 @@ export default function ProductDetailPage() {
 
           {tab === "details" && <DetailsTab />}
           {tab === "specifications" && <SpecificationsTab />}
-          {tab === "reviews" && <ReviewsTab />}
+          {tab === "reviews" && <ReviewsTab productId={productRealId} />}
           {tab === "shipping" && <ShippingTab />}
         </div>
 

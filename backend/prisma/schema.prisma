@@ -83,8 +83,10 @@ model User {
   shops           Shop[]
   parent_orders   ParentOrder[]
   tracking_events TrackingEvent[]
+  reviews         Review[]
   chat_sessions   ChatSession[]
   interactions    UserInteraction[]
+  wishlist        Wishlist[]
 
   @@map("users")
 }
@@ -158,6 +160,8 @@ model Product {
   category     Category          @relation(fields: [category_id], references: [id])
   order_items  OrderItem[]
   interactions UserInteraction[]
+  reviews      Review[]
+  wishlist     Wishlist[]
 
   @@map("products")
 }
@@ -225,6 +229,61 @@ model TrackingEvent {
   shipper    User?     @relation(fields: [shipper_id], references: [id])
 
   @@map("tracking_events")
+}
+
+// ==================== 6. REVIEWS ====================
+
+model Review {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  rating     Int
+  comment    String?  @db.Text
+  created_at DateTime @default(now())
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id])
+  @@map("reviews")
+}
+
+// ==================== 7. COUPON ====================
+
+enum CouponType {
+  PERCENTAGE   // Giảm theo %
+  FIXED_AMOUNT // Giảm số tiền cố định
+}
+
+model Coupon {
+  id               String     @id @default(uuid()) @db.Uuid
+  code             String     @unique
+  type             CouponType @default(PERCENTAGE)
+  value            Decimal    @db.Decimal(12, 2)  // % hoặc số tiền giảm
+  min_order_amount Decimal?   @db.Decimal(12, 2)  // Điều kiện đơn tối thiểu
+  max_discount     Decimal?   @db.Decimal(12, 2)  // Trần giảm giá (cho loại %)
+  usage_limit      Int?                            // Số lần dùng tối đa
+  used_count       Int        @default(0)          // Số lần đã dùng
+  expires_at       DateTime?                       // Hạn sử dụng
+  is_active        Boolean    @default(true)
+  created_at       DateTime   @default(now())
+
+  @@map("coupons")
+}
+
+// ==================== 8. WISHLIST ====================
+
+model Wishlist {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  created_at DateTime @default(now())
+
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id])
+  @@map("wishlists")
 }
 
 // ==================== 6. AI CHATBOT & RECOMMENDATION ====================

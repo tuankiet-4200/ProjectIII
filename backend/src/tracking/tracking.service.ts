@@ -63,12 +63,23 @@ export class TrackingService {
     });
 
     if (fullOrder) {
-      this.notifications.emitTrackingEvent(fullOrder.parent_order.user_id, {
+      const customerId = fullOrder.parent_order.user_id;
+
+      // Phát tracking event (chuỗi snake_case để khớp frontend)
+      this.notifications.emitTrackingEvent(customerId, {
         shopOrderId: fullOrder.id,
-        eventType: dto.event_type,
+        event_type: dto.event_type,
         location: dto.location,
-        newStatus: newStatus || fullOrder.status,
       });
+
+      // Phát order status changed nếu trạng thái có thay đổi
+      if (newStatus) {
+        this.notifications.emitOrderStatusChanged(customerId, {
+          orderId: fullOrder.parent_order_id,
+          shopOrderId: fullOrder.id,
+          status: newStatus,
+        });
+      }
     }
 
     return event;

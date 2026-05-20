@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { shopsService } from "@/services/shops.service";
+import { Loader2 } from "lucide-react";
 import { formatVnd } from "@/lib/currency";
 import Link from "next/link";
 import {
@@ -268,7 +271,7 @@ function ProductCard({ product }: { product: FeaturedProduct }) {
 
 // ─── Tab Content ──────────────────────────────────────────────────────────────
 
-function HomeTab() {
+function HomeTab({ shop }: { shop: any }) {
   return (
     <div className="space-y-10">
       {/* Featured Items */}
@@ -313,10 +316,10 @@ function HomeTab() {
       {/* Shop stats */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: Package, label: "Products", value: SHOP.products + "+" },
-          { icon: TrendingUp, label: "Items Shipped", value: SHOP.shipped },
-          { icon: Star, label: "Avg Rating", value: SHOP.rating.toFixed(1) },
-          { icon: Award, label: "Total Reviews", value: SHOP.totalReviews.toLocaleString() },
+          { icon: Package, label: "Sản phẩm", value: (shop?._count?.products || 0) + " sản phẩm" },
+          { icon: TrendingUp, label: "Đơn hàng đã giao", value: shop?._count?.shop_orders || 0 },
+          { icon: Star, label: "Đánh giá trung bình", value: Number(shop?.rating || 0).toFixed(1) },
+          { icon: Award, label: "Tham gia từ", value: new Date(shop?.created_at).toLocaleDateString('vi-VN') },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -386,8 +389,8 @@ function CategoriesTab() {
   );
 }
 
-function ReviewsTab() {
-  const avgRating = SHOP.rating;
+function ReviewsTab({ shop }: { shop: any }) {
+  const avgRating = Number(shop?.rating || 0);
   const ratingDist = [
     { stars: 5, pct: 78 },
     { stars: 4, pct: 14 },
@@ -401,9 +404,9 @@ function ReviewsTab() {
       {/* Summary */}
       <div className="flex flex-col md:flex-row gap-8 rounded-2xl bg-[#14121C] border border-white/5 p-6">
         <div className="flex flex-col items-center justify-center text-center md:w-40 shrink-0">
-          <div className="text-6xl font-black text-white mb-1">{avgRating}</div>
+          <div className="text-6xl font-black text-white mb-1">{avgRating.toFixed(1)}</div>
           <StarRating rating={avgRating} size={16} />
-          <div className="text-xs text-gray-500 mt-2">{SHOP.totalReviews.toLocaleString()} reviews</div>
+          <div className="text-xs text-gray-500 mt-2">Đánh giá cửa hàng</div>
         </div>
         <div className="flex-1 space-y-2">
           {ratingDist.map(({ stars, pct }) => (
@@ -460,20 +463,20 @@ function ReviewsTab() {
   );
 }
 
-function AboutTab() {
+function AboutTab({ shop }: { shop: any }) {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl bg-[#14121C] border border-white/5 p-6">
-        <h3 className="text-base font-bold text-white mb-3">About the Shop</h3>
-        <p className="text-sm text-gray-300 leading-relaxed">{SHOP.description}</p>
+        <h3 className="text-base font-bold text-white mb-3">Về Cửa Hàng</h3>
+        <p className="text-sm text-gray-300 leading-relaxed">{shop?.description || "Chưa có mô tả."}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          { icon: MapPin, label: "Location", value: SHOP.location },
-          { icon: Package, label: "Member Since", value: SHOP.joined },
-          { icon: MessageSquare, label: "Response Time", value: SHOP.responseTime },
-          { icon: TrendingUp, label: "Orders Fulfilled", value: SHOP.shipped },
+          { icon: MapPin, label: "Địa điểm", value: "Việt Nam" },
+          { icon: Package, label: "Thành viên từ", value: new Date(shop?.created_at).toLocaleDateString('vi-VN') },
+          { icon: MessageSquare, label: "Phản hồi", value: "< 2 giờ" },
+          { icon: TrendingUp, label: "Đơn hàng", value: `${shop?._count?.shop_orders || 0} đơn hàng` },
         ].map((item) => (
           <div
             key={item.label}
@@ -522,16 +525,54 @@ function AboutTab() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ShopProfilePage() {
+  const params = useParams();
+  const [shop, setShop] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [followed, setFollowed] = useState(false);
 
+  useEffect(() => {
+    const fetchShop = async () => {
+      try {
+        setLoading(true);
+        const shopId = params?.id as string;
+        if (!shopId) return;
+        const data = await shopsService.getById(shopId);
+        setShop(data);
+      } catch (err) {
+        console.error("Failed to load shop", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchShop();
+  }, [params?.id]);
+
   const TABS: { id: Tab; label: string }[] = [
-    { id: "home", label: "Home" },
-    { id: "products", label: "All Products" },
-    { id: "categories", label: "Categories" },
-    { id: "reviews", label: "Reviews" },
-    { id: "about", label: "About" },
+    { id: "home", label: "Cửa hàng" },
+    { id: "products", label: "Tất cả sản phẩm" },
+    { id: "categories", label: "Danh mục" },
+    { id: "reviews", label: "Đánh giá" },
+    { id: "about", label: "Giới thiệu" },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0B0A10] flex flex-col items-center justify-center text-white">
+        <Loader2 className="animate-spin text-violet-500 mb-2" size={32} />
+        <span className="text-sm text-gray-400">Đang tải thông tin cửa hàng...</span>
+      </div>
+    );
+  }
+
+  if (!shop) {
+    return (
+      <div className="min-h-screen bg-[#0B0A10] flex flex-col items-center justify-center text-white p-6">
+        <span className="text-sm text-gray-400">Không tìm thấy thông tin cửa hàng.</span>
+        <Link href="/" className="mt-4 text-xs font-bold text-violet-400 hover:underline">Về Trang chủ</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0B0A10] text-white">
@@ -563,7 +604,7 @@ export default function ShopProfilePage() {
             {/* Logo */}
             <div className="relative shrink-0">
               <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-violet-700 to-violet-900 border-2 border-white/10 shadow-2xl flex items-center justify-center text-3xl">
-                {SHOP.logoEmoji}
+                {shop.logo_url ? <img src={shop.logo_url} className="w-full h-full object-cover rounded-2xl" alt={shop.name} /> : "🏪"}
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-violet-500 border-2 border-[#0F0D1A] flex items-center justify-center">
                 <BadgeCheck size={11} className="text-white" />
@@ -573,21 +614,21 @@ export default function ShopProfilePage() {
             {/* Name & meta */}
             <div className="flex-1 min-w-0 pb-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-extrabold text-white">{SHOP.name}</h1>
+                <h1 className="text-xl font-extrabold text-white">{shop.name}</h1>
                 <BadgeCheck size={16} className="text-violet-400" />
               </div>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <div className="flex items-center gap-1 text-yellow-400 text-xs font-bold">
                   <Star size={11} className="fill-yellow-400" />
-                  {SHOP.rating} Rating
+                  {Number(shop.rating || 0).toFixed(1)} Điểm đánh giá
                 </div>
                 <span className="text-gray-600 text-xs">•</span>
                 <div className="flex items-center gap-1 text-xs text-gray-400">
                   <Users size={11} />
-                  {SHOP.followers} Followers
+                  1.2k Theo dõi
                 </div>
                 <span className="text-gray-600 text-xs">•</span>
-                <span className="text-xs text-violet-400 font-semibold">{SHOP.badge}</span>
+                <span className="text-xs text-violet-400 font-semibold">Đối tác chính thức</span>
               </div>
             </div>
 
@@ -602,7 +643,7 @@ export default function ShopProfilePage() {
                 }`}
               >
                 <Users size={14} />
-                {followed ? "Following" : "Follow Shop"}
+                {followed ? "Đang theo dõi" : "Theo dõi"}
               </button>
               <button className="h-9 w-9 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/10 transition-all">
                 <MessageSquare size={14} />
@@ -631,11 +672,11 @@ export default function ShopProfilePage() {
 
       {/* ─── Tab Content ─── */}
       <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-8">
-        {activeTab === "home" && <HomeTab />}
+        {activeTab === "home" && <HomeTab shop={shop} />}
         {activeTab === "products" && <ProductsTab />}
         {activeTab === "categories" && <CategoriesTab />}
-        {activeTab === "reviews" && <ReviewsTab />}
-        {activeTab === "about" && <AboutTab />}
+        {activeTab === "reviews" && <ReviewsTab shop={shop} />}
+        {activeTab === "about" && <AboutTab shop={shop} />}
       </div>
     </div>
   );

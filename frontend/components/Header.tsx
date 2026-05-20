@@ -8,6 +8,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { shopsService } from "@/services/shops.service";
 import { categoriesService } from "@/services/categories.service";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 import type { Category } from "@/types";
 
 export function Header() {
@@ -149,6 +150,8 @@ export function Header() {
         {/* Right Actions */}
         <div className="flex items-center gap-3 sm:gap-4">
           <ThemeToggle />
+
+          <NotificationBell />
 
           <Link href="/cart" className="relative text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors">
             <ShoppingCart size={22} />

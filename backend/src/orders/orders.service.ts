@@ -31,6 +31,7 @@ export class OrdersService {
    * All wrapped in a Prisma transaction for ACID compliance
    */
   async checkout(userId: string, dto: CheckoutDto) {
+    const couponCode = dto.coupon_code?.trim();
     // 1. Get cart from Redis
     const cartKey = `cart:${userId}`;
     const cartData = await this.redis.hgetall(cartKey);
@@ -91,13 +92,85 @@ export class OrdersService {
       }
     }
 
-    // 5-8. Execute everything in a transaction
+    // 5-8. Execute everything in a transaction (ACID)
     const result = await this.prisma.$transaction(async (tx) => {
+      let discountAmount = 0;
+      let appliedCouponCode: string | null = null;
+
+      if (couponCode) {
+        const coupon = await tx.coupon.findUnique({
+          where: { code: couponCode.toUpperCase() },
+        });
+
+        if (!coupon || !coupon.is_active) {
+          throw new BadRequestException('Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa');
+        }
+
+        if (coupon.expires_at && coupon.expires_at < new Date()) {
+          throw new BadRequestException('Mã giảm giá đã hết hạn');
+        }
+
+        if (coupon.usage_limit && coupon.used_count >= coupon.usage_limit) {
+          throw new BadRequestException('Mã giảm giá đã được sử dụng hết');
+        }
+
+        if (coupon.min_order_amount && totalPayment.toNumber() < Number(coupon.min_order_amount)) {
+          throw new BadRequestException(
+            `Đơn hàng tối thiểu ${Number(coupon.min_order_amount).toLocaleString('vi-VN')}₫ để sử dụng mã này`,
+          );
+        }
+
+        discountAmount = this.calcDiscount(coupon, totalPayment.toNumber());
+        appliedCouponCode = coupon.code;
+
+        if (coupon.usage_limit) {
+          const updated = await tx.coupon.updateMany({
+            where: {
+              code: coupon.code,
+              used_count: { lt: coupon.usage_limit },
+            },
+            data: { used_count: { increment: 1 } },
+          });
+
+          if (updated.count === 0) {
+            throw new BadRequestException('Mã giảm giá đã được sử dụng hết');
+          }
+        } else {
+          await tx.coupon.update({
+            where: { code: coupon.code },
+            data: { used_count: { increment: 1 } },
+          });
+        }
+      }
+
+      const finalTotalPayment = new Prisma.Decimal(
+        Math.max(0, totalPayment.toNumber() - discountAmount),
+      );
+
+      // Re-validate stock INSIDE transaction to prevent race conditions (overselling)
+      const freshProducts = await tx.product.findMany({
+        where: { id: { in: productIds } },
+      });
+
+      for (const fresh of freshProducts) {
+        const requestedQty = parseInt(cartData[fresh.id], 10);
+        if (fresh.stock_quantity < requestedQty) {
+          throw new BadRequestException(
+            `Sản phẩm "${fresh.name}" không đủ hàng trong kho. Còn lại: ${fresh.stock_quantity}`,
+          );
+        }
+        if (!fresh.stock_quantity || fresh.stock_quantity <= 0) {
+          throw new BadRequestException(
+            `Sản phẩm "${fresh.name}" đã hết hàng.`,
+          );
+        }
+      }
+
       // Create parent order
       const parentOrder = await tx.parentOrder.create({
         data: {
           user_id: userId,
-          total_payment: totalPayment,
+          total_payment: finalTotalPayment,
           payment_method: dto.payment_method,
           shipping_address: dto.shipping_address,
         },
@@ -126,35 +199,60 @@ export class OrdersService {
             },
           });
 
-          // Decrement stock and increment sales count
-          await tx.product.update({
-            where: { id: item.product.id },
+          // Decrement stock and increment sales count atomically
+          // Use updateMany with where condition as extra guard against race condition
+          const updated = await tx.product.updateMany({
+            where: {
+              id: item.product.id,
+              stock_quantity: { gte: item.quantity }, // only update if still enough stock
+            },
             data: {
               stock_quantity: { decrement: item.quantity },
               sales_count: { increment: item.quantity },
             },
           });
+
+          // If 0 rows updated, another transaction beat us to it
+          if (updated.count === 0) {
+            throw new BadRequestException(
+              `Sản phẩm "${item.product.name}" vừa hết hàng. Vui lòng cập nhật giỏ hàng.`,
+            );
+          }
         }
 
         shopOrders.push(shopOrder);
       }
 
-      return { parentOrder, shopOrders };
+      return { parentOrder, shopOrders, appliedCouponCode, discountAmount };
     });
 
     // Clear cart from Redis after successful transaction
     await this.redis.del(cartKey);
 
     return {
-      message: 'Order placed successfully',
+      message: 'Đặt hàng thành công',
       parent_order_id: result.parentOrder.id,
       total_payment: result.parentOrder.total_payment,
       shop_orders_count: result.shopOrders.length,
       shop_order_ids: result.shopOrders.map((so) => so.id),
+      coupon_code: result.appliedCouponCode,
+      discount_amount: result.discountAmount,
     };
   }
 
+  private calcDiscount(coupon: any, orderAmount: number): number {
+    if (coupon.type === 'PERCENTAGE') {
+      let discount = (orderAmount * Number(coupon.value)) / 100;
+      if (coupon.max_discount) {
+        discount = Math.min(discount, Number(coupon.max_discount));
+      }
+      return Math.round(discount);
+    }
+    return Math.min(Number(coupon.value), orderAmount);
+  }
+
   async getMyOrders(userId: string, page = 1, limit = 10) {
+
     const skip = (page - 1) * limit;
 
     const [orders, total] = await Promise.all([

@@ -8,6 +8,10 @@ export class CheckoutDto {
 
   @IsEnum(PaymentMethod)
   payment_method: PaymentMethod;
+
+  @IsOptional()
+  @IsString()
+  coupon_code?: string;
 }
 
 export class UpdateShopOrderStatusDto {
