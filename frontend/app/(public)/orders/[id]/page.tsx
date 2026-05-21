@@ -80,6 +80,8 @@ export default function OrderDetailPage() {
 
   // Live status updates from socket (via global store)
   const orderStatusUpdates = useNotificationStore((s) => s.orderStatusUpdates);
+  // Live tracking events from socket (via global store)
+  const trackingUpdates = useNotificationStore((s) => s.trackingUpdates);
 
   useEffect(() => {
     if (!orderId) return;
@@ -260,58 +262,64 @@ export default function OrderDetailPage() {
                     </div>
 
                     {/* Tracking Timeline (Latest Only) */}
-                    {shop.tracking_events && shop.tracking_events.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-card-border/50">
-                        <Link href={`/orders/${order.id}/tracking/${shop.id}`} className="flex items-center gap-2 text-xs font-bold text-foreground mb-3 hover:text-violet-500 transition-colors w-fit">
-                          <Navigation size={12} className="text-violet-500" /> Theo dõi đơn hàng
-                        </Link>
-                        <div className="space-y-0">
-                          {(() => {
-                            const event = shop.tracking_events[0];
-                            const isDelivered = event.event_type === "delivered";
-                            
-                            return (
-                              <div key={event.id} className="flex gap-3">
-                                {/* Dot */}
-                                <div className="flex flex-col items-center">
-                                  <div
-                                    className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 mt-1 ${
-                                      !isDelivered
-                                        ? "border-violet-500 bg-violet-500 shadow-md shadow-violet-500/50"
-                                        : "border-emerald-500 bg-emerald-500"
-                                    }`}
-                                  />
+                    {(() => {
+                      // Merge realtime events with loaded ones for this shop order
+                      const base = shop.tracking_events || [];
+                      const realtime = trackingUpdates[shop.id] || [];
+                      const baseIds = new Set(base.map((e) => e.id));
+                      const merged = [
+                        ...realtime.filter((e) => !baseIds.has(e.id)),
+                        ...base,
+                      ];
+                      if (merged.length === 0) return null;
+                      const event = merged[0];
+                      const isDelivered = event.event_type === "delivered";
+                      return (
+                        <div className="mt-4 pt-4 border-t border-card-border/50">
+                          <Link href={`/orders/${order.id}/tracking/${shop.id}`} className="flex items-center gap-2 text-xs font-bold text-foreground mb-3 hover:text-violet-500 transition-colors w-fit">
+                            <Navigation size={12} className="text-violet-500" /> Theo dõi đơn hàng
+                          </Link>
+                          <div className="space-y-0">
+                            <div key={event.id} className="flex gap-3">
+                              {/* Dot */}
+                              <div className="flex flex-col items-center">
+                                <div
+                                  className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 mt-1 ${
+                                    !isDelivered
+                                      ? "border-violet-500 bg-violet-500 shadow-md shadow-violet-500/50 animate-pulse"
+                                      : "border-emerald-500 bg-emerald-500"
+                                  }`}
+                                />
+                              </div>
+                              {/* Content */}
+                              <div className="min-w-0">
+                                <div
+                                  className={`text-xs font-bold ${
+                                    !isDelivered ? "text-violet-500" : "text-foreground"
+                                  }`}
+                                >
+                                  {TRACKING_EVENT_LABELS[event.event_type] || event.event_type}
+                                  {!isDelivered && (
+                                    <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-violet-500 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-full">
+                                      CURRENT
+                                    </span>
+                                  )}
                                 </div>
-                                {/* Content */}
-                                <div className="min-w-0">
-                                  <div
-                                    className={`text-xs font-bold ${
-                                      !isDelivered ? "text-violet-500" : "text-foreground"
-                                    }`}
-                                  >
-                                    {TRACKING_EVENT_LABELS[event.event_type] || event.event_type}
-                                    {!isDelivered && (
-                                      <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-violet-500 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-full">
-                                        CURRENT
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-[10px] text-slate-500 dark:text-gray-400 mt-0.5 truncate">
-                                    {event.location ? `${event.location} · ` : ""}
-                                    {new Date(event.created_at).toLocaleString("en-US", {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                    })}
-                                  </div>
+                                <div className="text-[10px] text-slate-500 dark:text-gray-400 mt-0.5 truncate">
+                                  {event.location ? `${event.location} · ` : ""}
+                                  {new Date(event.created_at).toLocaleString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "2-digit",
+                                  })}
                                 </div>
                               </div>
-                            );
-                          })()}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

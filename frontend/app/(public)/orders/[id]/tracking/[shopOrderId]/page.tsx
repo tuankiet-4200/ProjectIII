@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, Navigation, Loader2, Clock, MapPin } from "lucide-react";
 import { ordersService } from "@/services/orders.service";
 import { formatVnd } from "@/lib/currency";
 import type { ParentOrder, ShopOrder } from "@/types";
 import dynamic from 'next/dynamic';
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 const TrackingMap = dynamic(() => import('@/components/TrackingMap'), { ssr: false });
 
@@ -29,6 +30,19 @@ export default function TrackingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDeliveredModal, setShowDeliveredModal] = useState(false);
+
+  // Realtime tracking events from global store
+  const realtimeTrackingEvents = useNotificationStore(
+    (s) => s.trackingUpdates[shopOrderId] || []
+  );
+
+  // Merge realtime events on top of loaded events (deduplicate by id)
+  const mergedTrackingEvents = useMemo(() => {
+    const base = shopOrder?.tracking_events || [];
+    const baseIds = new Set(base.map((e) => e.id));
+    const newEvents = realtimeTrackingEvents.filter((e) => !baseIds.has(e.id));
+    return [...newEvents, ...base];
+  }, [shopOrder?.tracking_events, realtimeTrackingEvents]);
 
   useEffect(() => {
     if (!orderId || !shopOrderId) return;
@@ -155,10 +169,10 @@ export default function TrackingPage() {
               <h3 className="text-sm font-bold text-foreground">Tracking Events</h3>
             </div>
             <div className="space-y-0">
-              {!shopOrder.tracking_events?.length ? (
+              {!mergedTrackingEvents?.length ? (
                 <div className="text-sm text-slate-500 py-4 text-center">No tracking events recorded yet.</div>
               ) : (
-                shopOrder.tracking_events.map((event, idx) => {
+                mergedTrackingEvents.map((event, idx) => {
                   const isCurrent = idx === 0;
                   const isDelivered = event.event_type === "delivered";
                   return (
@@ -166,10 +180,10 @@ export default function TrackingPage() {
                       <div className="flex flex-col items-center">
                         <div className={`w-3 h-3 rounded-full border-2 shrink-0 mt-0.5 ${
                           isCurrent && !isDelivered
-                            ? "border-violet-500 bg-violet-500 shadow-md shadow-violet-500/50"
+                            ? "border-violet-500 bg-violet-500 shadow-md shadow-violet-500/50 animate-pulse"
                             : "border-emerald-500 bg-emerald-500"
                         }`} />
-                        {idx < shopOrder.tracking_events!.length - 1 && (
+                        {idx < mergedTrackingEvents!.length - 1 && (
                           <div className="w-px flex-1 bg-card-border my-1 min-h-[32px]" />
                         )}
                       </div>

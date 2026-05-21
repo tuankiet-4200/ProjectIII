@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { TrackingEvent } from '@/types';
 
 export interface AppNotification {
   id: string;
@@ -21,12 +22,16 @@ interface NotificationStore {
   // Realtime order status updates: shopOrderId → new status
   orderStatusUpdates: Record<string, string>;
   pushOrderStatusUpdate: (shopOrderId: string, status: string) => void;
+  // Realtime tracking events: shopOrderId → TrackingEvent[] (newest first)
+  trackingUpdates: Record<string, TrackingEvent[]>;
+  pushTrackingEvent: (shopOrderId: string, event: TrackingEvent) => void;
 }
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   orderStatusUpdates: {},
+  trackingUpdates: {},
 
   addNotification: (n) => {
     const newNote: AppNotification = {
@@ -63,5 +68,19 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set((state) => ({
       orderStatusUpdates: { ...state.orderStatusUpdates, [shopOrderId]: status },
     }));
+  },
+
+  pushTrackingEvent: (shopOrderId, event) => {
+    set((state) => {
+      const existing = state.trackingUpdates[shopOrderId] || [];
+      // Avoid duplicates by id
+      if (existing.some((e) => e.id === event.id)) return {};
+      return {
+        trackingUpdates: {
+          ...state.trackingUpdates,
+          [shopOrderId]: [event, ...existing],
+        },
+      };
+    });
   },
 }));

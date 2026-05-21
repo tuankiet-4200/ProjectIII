@@ -67,9 +67,11 @@ export class TrackingService {
 
       // Phát tracking event (chuỗi snake_case để khớp frontend)
       this.notifications.emitTrackingEvent(customerId, {
+        id: event.id,
         shopOrderId: fullOrder.id,
         event_type: dto.event_type,
         location: dto.location,
+        created_at: event.created_at,
       });
 
       // Phát order status changed nếu trạng thái có thay đổi

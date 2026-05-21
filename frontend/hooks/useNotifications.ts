@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { toast } from "sonner";
+import type { TrackingEvent } from "@/types";
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:3000";
@@ -31,6 +32,7 @@ export function useNotifications() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const addNotification = useNotificationStore((s) => s.addNotification);
   const pushOrderStatusUpdate = useNotificationStore((s) => s.pushOrderStatusUpdate);
+  const pushTrackingEvent = useNotificationStore((s) => s.pushTrackingEvent);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -128,6 +130,8 @@ export function useNotifications() {
       shopOrderId: string;
       event_type: string;
       location?: string;
+      id?: string;
+      created_at?: string;
     }) => {
       console.log("[Notifications] 🚚 trackingEvent received:", data);
 
@@ -142,6 +146,16 @@ export function useNotifications() {
         message,
         shopOrderId: data.shopOrderId,
       });
+
+      // Push vào store để các trang tracking cập nhật realtime
+      const trackingEvent: TrackingEvent = {
+        id: data.id || crypto.randomUUID(),
+        shop_order_id: data.shopOrderId,
+        event_type: data.event_type,
+        location: data.location,
+        created_at: data.created_at || new Date().toISOString(),
+      };
+      pushTrackingEvent(data.shopOrderId, trackingEvent);
 
       if (
         typeof window !== "undefined" &&
