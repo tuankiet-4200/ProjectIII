@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   LogOut,
   Home,
+  MessageCircle,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { shopsService } from "@/services/shops.service";
@@ -34,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "orders",    label: "Orders",    icon: ShoppingBag,    href: "/vendor/orders"    },
   { id: "products",  label: "Products",  icon: Package,        href: "/vendor/products"  },
   { id: "customers", label: "Customers", icon: Users,          href: "/vendor/customers" },
+  { id: "chat",      label: "Chat Inbox",icon: MessageCircle,  href: "/vendor/chat"      },
   { id: "analytics", label: "Analytics", icon: BarChart2,      href: "/vendor/analytics" },
 ];
 
@@ -41,6 +43,7 @@ function getActiveNavId(pathname: string) {
   if (pathname.startsWith("/vendor/orders"))    return "orders";
   if (pathname.startsWith("/vendor/products"))  return "products";
   if (pathname.startsWith("/vendor/customers")) return "customers";
+  if (pathname.startsWith("/vendor/chat"))      return "chat";
   if (pathname.startsWith("/vendor/analytics")) return "analytics";
   return "dashboard";
 }
@@ -49,6 +52,7 @@ function getBreadcrumbLabel(pathname: string) {
   if (pathname.startsWith("/vendor/orders"))    return "Orders";
   if (pathname.startsWith("/vendor/products"))  return "Products";
   if (pathname.startsWith("/vendor/customers")) return "Customers";
+  if (pathname.startsWith("/vendor/chat"))      return "Chat Inbox";
   if (pathname.startsWith("/vendor/analytics")) return "Analytics";
   return "Dashboard";
 }

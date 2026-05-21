@@ -28,6 +28,8 @@ import {
   Tag,
 } from "lucide-react";
 
+import { ChatWidget } from "@/components/ChatWidget";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tab = "home" | "products" | "reviews" | "about";
@@ -570,12 +572,13 @@ export default function ShopProfilePage() {
       </div>
 
       {/* ─── Tab Content ─── */}
-      <div className="container mx-auto max-w-7xl px-4 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === "home" && <HomeTab shop={shop} />}
         {activeTab === "products" && <ProductsTab shop={shop} />}
         {activeTab === "reviews" && <ReviewsTab shopId={shop.id} />}
         {activeTab === "about" && <AboutTab shop={shop} />}
       </div>
+      <ChatWidget shopId={shop.id} shopName={shop.name} />
     </div>
   );
 }

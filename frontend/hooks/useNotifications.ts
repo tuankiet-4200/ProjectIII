@@ -169,6 +169,22 @@ export function useNotifications() {
       }
     });
 
+    // Lắng nghe sự kiện tin nhắn mới
+    socket.on("newChatMessage", (data: { session_id: string; message: any }) => {
+      console.log("[Notifications] 💬 newChatMessage received:", data);
+      
+      const pushChatMessage = useNotificationStore.getState().pushChatMessage;
+      pushChatMessage(data.session_id, data.message);
+      
+      // Optionally notify user if not on chat page
+      if (data.message.sender_type !== "USER") {
+        toast("Tin nhắn mới", {
+          description: data.message.message_text,
+          duration: 4000,
+        });
+      }
+    });
+
     socketRef.current = socket;
 
     return () => {

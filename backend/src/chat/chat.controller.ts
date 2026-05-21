@@ -28,6 +28,15 @@ export class ChatController {
     return this.chatService.createSession(userId);
   }
 
+  @Post('chat/shop/:shopId')
+  @UseGuards(JwtAuthGuard)
+  createShopSession(
+    @CurrentUser('id') userId: string,
+    @Param('shopId') shopId: string,
+  ) {
+    return this.chatService.createSession(userId, shopId);
+  }
+
   @Post('chat/sessions/:id/messages')
   sendMessage(
     @Param('id') sessionId: string,
@@ -51,6 +60,21 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   getUserSessions(@CurrentUser('id') userId: string) {
     return this.chatService.getUserSessions(userId);
+  }
+
+  @Get('chat/vendor/sessions')
+  @UseGuards(JwtAuthGuard)
+  getVendorSessions(@CurrentUser('id') ownerId: string) {
+    return this.chatService.getVendorSessions(ownerId);
+  }
+
+  @Post('chat/vendor/sessions/:id/messages')
+  @UseGuards(JwtAuthGuard)
+  sendVendorMessage(
+    @Param('id') sessionId: string,
+    @Body() dto: SendMessageDto,
+  ) {
+    return this.chatService.sendMessage(sessionId, dto, 'SHOP');
   }
 
   // ==================== Interaction Logging ====================

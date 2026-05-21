@@ -95,4 +95,12 @@ export class NotificationsGateway
     this.server.to(`user_${userId}`).emit('trackingEvent', payload);
     this.logger.debug(`Emitted trackingEvent to user_${userId}`);
   }
+
+  /**
+   * Send a real-time chat message to a specific user
+   */
+  emitChatMessage(userId: string, payload: any) {
+    this.server.to(`user_${userId}`).emit('newChatMessage', payload);
+    this.logger.debug(`Emitted newChatMessage to user_${userId}`);
+  }
 }

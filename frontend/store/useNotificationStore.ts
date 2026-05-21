@@ -25,6 +25,9 @@ interface NotificationStore {
   // Realtime tracking events: shopOrderId → TrackingEvent[] (newest first)
   trackingUpdates: Record<string, TrackingEvent[]>;
   pushTrackingEvent: (shopOrderId: string, event: TrackingEvent) => void;
+  // Realtime chat messages
+  chatMessages: Record<string, any[]>;
+  pushChatMessage: (sessionId: string, message: any) => void;
 }
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
@@ -73,12 +76,26 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   pushTrackingEvent: (shopOrderId, event) => {
     set((state) => {
       const existing = state.trackingUpdates[shopOrderId] || [];
-      // Avoid duplicates by id
       if (existing.some((e) => e.id === event.id)) return {};
       return {
         trackingUpdates: {
           ...state.trackingUpdates,
           [shopOrderId]: [event, ...existing],
+        },
+      };
+    });
+  },
+
+  // Realtime chat
+  chatMessages: {},
+  pushChatMessage: (sessionId, message) => {
+    set((state) => {
+      const existing = state.chatMessages[sessionId] || [];
+      if (existing.some((m) => m.id === message.id)) return state;
+      return {
+        chatMessages: {
+          ...state.chatMessages,
+          [sessionId]: [...existing, message],
         },
       };
     });

@@ -57,6 +57,7 @@ enum ChatSessionStatus {
 enum SenderType {
   USER
   BOT
+  SHOP
 }
 
 enum InteractionType {
@@ -118,9 +119,10 @@ model Shop {
   created_at  DateTime   @default(now())
   updated_at  DateTime   @updatedAt
 
-  owner       User        @relation(fields: [owner_id], references: [id])
+  owner       User          @relation(fields: [owner_id], references: [id])
   products    Product[]
   shop_orders ShopOrder[]
+  chat_sessions ChatSession[]
 
   @@map("shops")
 }
@@ -291,11 +293,13 @@ model Wishlist {
 model ChatSession {
   id         String            @id @default(uuid()) @db.Uuid
   user_id    String?           @db.Uuid
+  shop_id    String?           @db.Uuid
   status     ChatSessionStatus @default(ACTIVE)
   created_at DateTime          @default(now())
   updated_at DateTime          @updatedAt
 
   user     User?         @relation(fields: [user_id], references: [id])
+  shop     Shop?         @relation(fields: [shop_id], references: [id])
   messages ChatMessage[]
 
   @@map("chat_sessions")
