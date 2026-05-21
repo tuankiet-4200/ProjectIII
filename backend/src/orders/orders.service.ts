@@ -117,13 +117,31 @@ export class OrdersService {
           throw new BadRequestException('Mã giảm giá đã được sử dụng hết');
         }
 
-        if (coupon.min_order_amount && totalPayment.toNumber() < Number(coupon.min_order_amount)) {
+        // --- 1 per user check ---
+        const usage = await tx.couponUsage.findUnique({
+          where: { coupon_id_user_id: { coupon_id: coupon.id, user_id: userId } }
+        });
+        if (usage) {
+          throw new BadRequestException('Bạn đã sử dụng mã giảm giá này rồi. Mỗi người chỉ được dùng 1 lần.');
+        }
+
+        // --- Shop specific amount check ---
+        let applicableAmount = totalPayment.toNumber();
+        if (coupon.shop_id) {
+          const shopGroup = shopGroups.get(coupon.shop_id);
+          if (!shopGroup) {
+            throw new BadRequestException('Giỏ hàng không có sản phẩm nào thuộc Shop phát hành mã này');
+          }
+          applicableAmount = shopGroup.items.reduce((s, item) => s + Number(item.product.price) * item.quantity, 0);
+        }
+
+        if (coupon.min_order_amount && applicableAmount < Number(coupon.min_order_amount)) {
           throw new BadRequestException(
             `Đơn hàng tối thiểu ${Number(coupon.min_order_amount).toLocaleString('vi-VN')}₫ để sử dụng mã này`,
           );
         }
 
-        discountAmount = this.calcDiscount(coupon, totalPayment.toNumber());
+        discountAmount = this.calcDiscount(coupon, applicableAmount);
         appliedCouponCode = coupon.code;
 
         if (coupon.usage_limit) {
@@ -144,6 +162,14 @@ export class OrdersService {
             data: { used_count: { increment: 1 } },
           });
         }
+
+        // Record usage
+        await tx.couponUsage.create({
+          data: {
+            coupon_id: coupon.id,
+            user_id: userId,
+          }
+        });
       }
 
       const finalTotalPayment = new Prisma.Decimal(

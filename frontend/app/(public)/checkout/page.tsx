@@ -207,10 +207,19 @@ export default function CheckoutPage() {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
     try {
+      const shop_amounts = groups.map(g => ({
+        shop_id: g.shop?.id || "",
+        amount: g.subtotal ?? g.items.reduce((s, i) => s + Number(i.product?.price || 0) * i.quantity, 0)
+      })).filter(s => s.shop_id !== "");
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode.trim().toUpperCase(), order_amount: subtotal }),
+        body: JSON.stringify({ 
+          code: couponCode.trim().toUpperCase(), 
+          order_amount: subtotal,
+          shop_amounts
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Mã không hợp lệ');

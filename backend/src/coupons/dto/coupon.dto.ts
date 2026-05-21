@@ -30,6 +30,19 @@ export class CreateCouponDto {
   @IsOptional()
   @IsDateString()
   expires_at?: string;
+
+  @IsOptional()
+  @IsString()
+  shop_id?: string;
+}
+
+export class ShopAmountDto {
+  @IsString()
+  shop_id: string;
+
+  @IsNumber()
+  @Min(0)
+  amount: number;
 }
 
 export class ApplyCouponDto {
@@ -38,5 +51,8 @@ export class ApplyCouponDto {
 
   @IsNumber()
   @Min(0)
-  order_amount: number;
+  order_amount: number; // For platform-wide coupons
+
+  @IsOptional()
+  shop_amounts?: ShopAmountDto[]; // For shop-specific coupons
 }

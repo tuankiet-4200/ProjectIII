@@ -3,24 +3,24 @@ import { CouponsService } from './coupons.service';
 import { CreateCouponDto, ApplyCouponDto } from './dto/coupon.dto';
 import { JwtAuthGuard } from '../auth/guards';
 import { RolesGuard } from '../common/guards';
-import { Roles } from '../common/decorators';
+import { Roles, CurrentUser } from '../common/decorators';
 
 @Controller('coupons')
 export class CouponsController {
   constructor(private couponsService: CouponsService) {}
 
-  /** Public: Validate và preview giảm giá */
+  /** Validate và preview giảm giá (Cần đăng nhập) */
   @Post('validate')
-  validate(@Body() dto: ApplyCouponDto) {
-    return this.couponsService.validate(dto);
+  @UseGuards(JwtAuthGuard)
+  validate(@CurrentUser('id') userId: string, @Body() dto: ApplyCouponDto) {
+    return this.couponsService.validate(dto, userId);
   }
 
-  /** Admin only: Tạo mã giảm giá */
+  /** Admin/Vendor: Tạo mã giảm giá */
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  create(@Body() dto: CreateCouponDto) {
-    return this.couponsService.create(dto);
+  @UseGuards(JwtAuthGuard)
+  create(@CurrentUser('id') userId: string, @CurrentUser('role') role: string, @Body() dto: CreateCouponDto) {
+    return this.couponsService.create(dto, userId, role);
   }
 
   /** Admin only: Xem tất cả mã */
@@ -31,11 +31,17 @@ export class CouponsController {
     return this.couponsService.findAll();
   }
 
-  /** Admin only: Xóa mã */
+  /** Vendor only: Xem mã giảm giá do shop tạo */
+  @Get('vendor')
+  @UseGuards(JwtAuthGuard)
+  findVendorCoupons(@CurrentUser('id') userId: string) {
+    return this.couponsService.findVendorCoupons(userId);
+  }
+
+  /** Admin/Vendor: Xóa mã */
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN')
-  delete(@Param('id') id: string) {
-    return this.couponsService.delete(id);
+  @UseGuards(JwtAuthGuard)
+  delete(@Param('id') id: string, @CurrentUser('id') userId: string, @CurrentUser('role') role: string) {
+    return this.couponsService.delete(id, userId, role);
   }
 }
