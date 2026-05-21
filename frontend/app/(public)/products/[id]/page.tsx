@@ -294,7 +294,7 @@ function SpecificationsTab() {
   );
 }
 
-function ReviewsTab({ productId }: { productId: string }) {
+function ReviewsTab({ productId, onStatsLoaded }: { productId: string; onStatsLoaded?: (stats: { total: number; avgRating: number }) => void }) {
   const { isAuthenticated } = useAuthStore();
   const [data, setData] = useState<{ reviews: any[]; total: number; avgRating: number } | null>(null);
   const [perm, setPerm] = useState<{ canReview: boolean; hasPurchased: boolean; hasReviewed: boolean } | null>(null);
@@ -310,6 +310,7 @@ function ReviewsTab({ productId }: { productId: string }) {
       const { reviewsService } = await import('@/services/reviews.service');
       const reviewData = await reviewsService.getProductReviews(productId);
       setData(reviewData);
+      onStatsLoaded?.({ total: reviewData.total, avgRating: reviewData.avgRating });
       if (isAuthenticated) {
         const permData = await reviewsService.canReview(productId);
         setPerm(permData);
@@ -317,7 +318,7 @@ function ReviewsTab({ productId }: { productId: string }) {
     } catch { /* ignore */ } finally {
       setLoadingReviews(false);
     }
-  }, [productId, isAuthenticated]);
+  }, [productId, isAuthenticated, onStatsLoaded]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -495,10 +496,12 @@ export default function ProductDetailPage() {
   const [tab, setTab] = useState<DetailTab>("details");
   const [addedToCart, setAddedToCart] = useState(false);
   const [productRealId, setProductRealId] = useState<string>('');
+  const [reviewStats, setReviewStats] = useState<{ total: number; avgRating: number }>({ total: 0, avgRating: 0 });
   const [productData, setProductData] = useState({
     ...PRODUCT,
     parentCategory: '' as string,
     shopSlug: '' as string,
+    shop: { ...PRODUCT.shop, id: '' as string },
   });
 
   // Try to load product from API
@@ -523,6 +526,13 @@ export default function ProductDetailPage() {
             parentCategory: p.category?.parent?.name || '',
             shopSlug: p.shop?.id || '',
             images: p.images || [],
+            shop: {
+              id: p.shop?.id || '',
+              name: p.shop?.name || PRODUCT.shop.name,
+              rating: Number(p.shop?.rating ?? PRODUCT.shop.rating),
+              followers: PRODUCT.shop.followers,
+              verified: PRODUCT.shop.verified,
+            },
           });
           setProductRealId(p.id);
           // Auto-open reviews tab if ?tab=reviews in URL
@@ -554,6 +564,19 @@ export default function ProductDetailPage() {
       }
     };
     checkWishlistStatus();
+  }, [productRealId]);
+
+  // Preload review stats so tab label + header show correct count/rating
+  useEffect(() => {
+    if (!productRealId) return;
+    const preloadStats = async () => {
+      try {
+        const { reviewsService } = await import('@/services/reviews.service');
+        const reviewData = await reviewsService.getProductReviews(productRealId);
+        setReviewStats({ total: reviewData.total, avgRating: reviewData.avgRating });
+      } catch { /* ignore */ }
+    };
+    preloadStats();
   }, [productRealId]);
 
   const handleToggleWishlist = async () => {
@@ -611,7 +634,7 @@ export default function ProductDetailPage() {
   const TABS: { id: DetailTab; label: string }[] = [
     { id: "details", label: "Details" },
     { id: "specifications", label: "Specifications" },
-    { id: "reviews", label: `Reviews (${PRODUCT.reviewCount.toLocaleString()})` },
+    { id: "reviews", label: `Reviews${reviewStats.total > 0 ? ` (${reviewStats.total.toLocaleString()})` : ''}` },
     { id: "shipping", label: "Shipping" },
   ];
 
@@ -718,9 +741,9 @@ export default function ProductDetailPage() {
                 </span>
                 <span className="text-slate-400 dark:text-gray-600">·</span>
                 <div className="flex items-center gap-1">
-                  <StarRating rating={productData.rating} size={12} />
-                  <span className="text-xs text-yellow-400 font-bold">{productData.rating}</span>
-                  <span className="text-xs text-slate-400 dark:text-gray-500">({productData.reviewCount.toLocaleString()} đánh giá)</span>
+                  <StarRating rating={reviewStats.avgRating || productData.rating} size={12} />
+                  <span className="text-xs text-yellow-400 font-bold">{reviewStats.avgRating || productData.rating}</span>
+                  <span className="text-xs text-slate-400 dark:text-gray-500">({reviewStats.total > 0 ? reviewStats.total.toLocaleString() : '—'} đánh giá)</span>
                 </div>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight mb-3">
@@ -809,21 +832,23 @@ export default function ProductDetailPage() {
               {/* Shop card */}
               <div className="flex items-center gap-3 rounded-2xl bg-card border border-card-border p-4 my-4">
                 <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-lg shrink-0">
-                  🎧
+                  <Store size={18} className="text-violet-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <Store size={11} className="text-violet-400" />
-                    <span className="text-sm font-bold text-foreground">{PRODUCT.shop.name}</span>
-                    {PRODUCT.shop.verified && <BadgeCheck size={13} className="text-violet-400" />}
+                    <span className="text-sm font-bold text-foreground">{productData.shop.name}</span>
+                    {productData.shop.verified && <BadgeCheck size={13} className="text-violet-400" />}
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-gray-500 mt-0.5">
                     <Star size={9} className="fill-yellow-400 text-yellow-400" />
-                    {PRODUCT.shop.rating} · {PRODUCT.shop.followers} người theo dõi
+                    {Number(productData.shop.rating) > 0
+                      ? Number(productData.shop.rating).toFixed(1)
+                      : '—'} · {productData.shop.followers} người theo dõi
                   </div>
                 </div>
                 <Link
-                  href={`/shops/${(PRODUCT.shop as any).id || "1"}`}
+                  href={`/shops/${productData.shop.id || productData.shopSlug || '1'}`}
                   className="flex items-center gap-1 rounded-lg border border-violet-500/40 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 px-3 py-1.5 text-xs font-semibold transition-all shrink-0"
                 >
                   Xem Shop <ChevronRight size={11} />
@@ -864,7 +889,7 @@ export default function ProductDetailPage() {
 
           {tab === "details" && <DetailsTab />}
           {tab === "specifications" && <SpecificationsTab />}
-          {tab === "reviews" && <ReviewsTab productId={productRealId} />}
+          {tab === "reviews" && <ReviewsTab productId={productRealId} onStatsLoaded={setReviewStats} />}
           {tab === "shipping" && <ShippingTab />}
         </div>
 
@@ -924,7 +949,7 @@ export default function ProductDetailPage() {
               onClick={() => { setTab("reviews"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className="text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors"
             >
-              View all {PRODUCT.reviewCount.toLocaleString()} reviews →
+              View all {reviewStats.total > 0 ? reviewStats.total.toLocaleString() : ''} reviews →
             </button>
           </div>
         </section>

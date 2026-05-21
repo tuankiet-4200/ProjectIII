@@ -36,6 +36,21 @@ export class ShopsService {
           select: { id: true, full_name: true, email: true },
         },
         _count: { select: { products: true } },
+        products: {
+          where: { stock_quantity: { gt: 0 } },
+          orderBy: { sales_count: 'desc' },
+          take: 20,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            price: true,
+            images: true,
+            sales_count: true,
+            stock_quantity: true,
+            category: { select: { id: true, name: true, slug: true } },
+          },
+        },
       },
     });
     if (!shop) throw new NotFoundException('Shop not found');

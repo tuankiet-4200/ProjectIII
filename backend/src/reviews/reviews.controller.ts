@@ -21,6 +21,12 @@ export class ReviewsController {
     return this.reviewsService.getProductReviews(productId);
   }
 
+  /** Public: Get all reviews for a shop */
+  @Get('shop/:shopId')
+  getShopReviews(@Param('shopId') shopId: string) {
+    return this.reviewsService.getShopReviews(shopId);
+  }
+
   /** Authenticated: Check if current user can review a product */
   @Get('check/:productId')
   @UseGuards(JwtAuthGuard)

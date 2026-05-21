@@ -159,5 +159,39 @@ export class ReviewsService implements OnModuleInit {
       avgRating: Math.round(avgRating * 10) / 10,
     };
   }
+
+  async getShopReviews(shopId: string) {
+    // Get all product IDs for this shop
+    const products = await this.prisma.product.findMany({
+      where: { shop_id: shopId },
+      select: { id: true },
+    });
+    const productIds = products.map((p) => p.id);
+
+    if (productIds.length === 0) {
+      return { reviews: [], total: 0, avgRating: 0 };
+    }
+
+    const reviews = await this.prisma.review.findMany({
+      where: { product_id: { in: productIds } },
+      include: {
+        user: { select: { id: true, full_name: true } },
+        product: { select: { id: true, name: true, slug: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const total = reviews.length;
+    const avgRating =
+      total > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / total
+        : 0;
+
+    return {
+      reviews,
+      total,
+      avgRating: Math.round(avgRating * 10) / 10,
+    };
+  }
 }
 
