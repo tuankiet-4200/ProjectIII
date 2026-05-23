@@ -4,7 +4,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
 } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -19,253 +21,47 @@ export class OrdersService {
     private prisma: PrismaService,
     private redis: RedisService,
     private notifications: NotificationsGateway,
+    @Inject('RMQ_SERVICE') private readonly rmqClient: ClientProxy,
   ) {}
 
   /**
-   * Core Checkout Logic with Order Splitting
-   * 1. Get cart items from Redis
-   * 2. Validate stock & fetch current prices
-   * 3. Group items by shop_id
-   * 4. Create parent_order (total payment)
-   * 5. Create shop_orders for each shop
-   * 6. Create order_items with price snapshot
-   * 7. Decrement stock, increment sales_count
-   * 8. Clear cart from Redis
-   * All wrapped in a Prisma transaction for ACID compliance
+   * Async Checkout Logic via RabbitMQ
    */
   async checkout(userId: string, dto: CheckoutDto) {
-    const couponCode = dto.coupon_code?.trim();
-    // 1. Get cart from Redis
+    // 1. Get cart from Redis to ensure it's not empty
     const cartKey = `cart:${userId}`;
     const cartData = await this.redis.hgetall(cartKey);
 
     if (!cartData || Object.keys(cartData).length === 0) {
-      throw new BadRequestException('Cart is empty');
+      throw new BadRequestException('Giỏ hàng của bạn đang trống');
     }
 
-    const productIds = Object.keys(cartData);
-
-    // 2. Fetch all products with their shops
-    const products = await this.prisma.product.findMany({
-      where: { id: { in: productIds } },
-      include: { shop: true },
+    // 2. Create a pending parent order immediately
+    // Calculate an approximate total or just keep it 0 until processor finishes
+    const parentOrder = await this.prisma.parentOrder.create({
+      data: {
+        user_id: userId,
+        total_payment: new Prisma.Decimal(0), // Will be updated by processor
+        payment_method: dto.payment_method,
+        shipping_address: dto.shipping_address,
+      },
     });
 
-    // Validate all products exist
-    if (products.length !== productIds.length) {
-      throw new BadRequestException(
-        'Some products in your cart no longer exist',
-      );
-    }
-
-    // Validate stock for each product
-    for (const product of products) {
-      const requestedQty = parseInt(cartData[product.id], 10);
-      if (product.stock_quantity < requestedQty) {
-        throw new BadRequestException(
-          `Not enough stock for "${product.name}". Available: ${product.stock_quantity}`,
-        );
-      }
-    }
-
-    // 3. Group items by shop_id
-    const shopGroups = new Map<
-      string,
-      { shopId: string; items: { product: (typeof products)[0]; quantity: number }[] }
-    >();
-
-    for (const product of products) {
-      const quantity = parseInt(cartData[product.id], 10);
-      if (!shopGroups.has(product.shop_id)) {
-        shopGroups.set(product.shop_id, {
-          shopId: product.shop_id,
-          items: [],
-        });
-      }
-      shopGroups.get(product.shop_id)!.items.push({ product, quantity });
-    }
-
-    // 4. Calculate total payment
-    let totalPayment = new Prisma.Decimal(0);
-    for (const group of shopGroups.values()) {
-      for (const item of group.items) {
-        totalPayment = totalPayment.add(
-          new Prisma.Decimal(item.product.price.toString()).mul(item.quantity),
-        );
-      }
-    }
-
-    // 5-8. Execute everything in a transaction (ACID)
-    const result = await this.prisma.$transaction(async (tx) => {
-      let discountAmount = 0;
-      let appliedCouponCode: string | null = null;
-
-      if (couponCode) {
-        const coupon = await tx.coupon.findUnique({
-          where: { code: couponCode.toUpperCase() },
-        });
-
-        if (!coupon || !coupon.is_active) {
-          throw new BadRequestException('Mã giảm giá không tồn tại hoặc đã bị vô hiệu hóa');
-        }
-
-        if (coupon.expires_at && coupon.expires_at < new Date()) {
-          throw new BadRequestException('Mã giảm giá đã hết hạn');
-        }
-
-        if (coupon.usage_limit && coupon.used_count >= coupon.usage_limit) {
-          throw new BadRequestException('Mã giảm giá đã được sử dụng hết');
-        }
-
-        // --- 1 per user check ---
-        const usage = await tx.couponUsage.findUnique({
-          where: { coupon_id_user_id: { coupon_id: coupon.id, user_id: userId } }
-        });
-        if (usage) {
-          throw new BadRequestException('Bạn đã sử dụng mã giảm giá này rồi. Mỗi người chỉ được dùng 1 lần.');
-        }
-
-        // --- Shop specific amount check ---
-        let applicableAmount = totalPayment.toNumber();
-        if (coupon.shop_id) {
-          const shopGroup = shopGroups.get(coupon.shop_id);
-          if (!shopGroup) {
-            throw new BadRequestException('Giỏ hàng không có sản phẩm nào thuộc Shop phát hành mã này');
-          }
-          applicableAmount = shopGroup.items.reduce((s, item) => s + Number(item.product.price) * item.quantity, 0);
-        }
-
-        if (coupon.min_order_amount && applicableAmount < Number(coupon.min_order_amount)) {
-          throw new BadRequestException(
-            `Đơn hàng tối thiểu ${Number(coupon.min_order_amount).toLocaleString('vi-VN')}₫ để sử dụng mã này`,
-          );
-        }
-
-        discountAmount = this.calcDiscount(coupon, applicableAmount);
-        appliedCouponCode = coupon.code;
-
-        if (coupon.usage_limit) {
-          const updated = await tx.coupon.updateMany({
-            where: {
-              code: coupon.code,
-              used_count: { lt: coupon.usage_limit },
-            },
-            data: { used_count: { increment: 1 } },
-          });
-
-          if (updated.count === 0) {
-            throw new BadRequestException('Mã giảm giá đã được sử dụng hết');
-          }
-        } else {
-          await tx.coupon.update({
-            where: { code: coupon.code },
-            data: { used_count: { increment: 1 } },
-          });
-        }
-
-        // Record usage
-        await tx.couponUsage.create({
-          data: {
-            coupon_id: coupon.id,
-            user_id: userId,
-          }
-        });
-      }
-
-      const finalTotalPayment = new Prisma.Decimal(
-        Math.max(0, totalPayment.toNumber() - discountAmount),
-      );
-
-      // Re-validate stock INSIDE transaction to prevent race conditions (overselling)
-      const freshProducts = await tx.product.findMany({
-        where: { id: { in: productIds } },
-      });
-
-      for (const fresh of freshProducts) {
-        const requestedQty = parseInt(cartData[fresh.id], 10);
-        if (fresh.stock_quantity < requestedQty) {
-          throw new BadRequestException(
-            `Sản phẩm "${fresh.name}" không đủ hàng trong kho. Còn lại: ${fresh.stock_quantity}`,
-          );
-        }
-        if (!fresh.stock_quantity || fresh.stock_quantity <= 0) {
-          throw new BadRequestException(
-            `Sản phẩm "${fresh.name}" đã hết hàng.`,
-          );
-        }
-      }
-
-      // Create parent order
-      const parentOrder = await tx.parentOrder.create({
-        data: {
-          user_id: userId,
-          total_payment: finalTotalPayment,
-          payment_method: dto.payment_method,
-          shipping_address: dto.shipping_address,
-        },
-      });
-
-      const shopOrders: ShopOrder[] = [];
-
-      // Create shop orders and order items
-      for (const group of shopGroups.values()) {
-        const shopOrder = await tx.shopOrder.create({
-          data: {
-            parent_order_id: parentOrder.id,
-            shop_id: group.shopId,
-            shipping_fee: 0,
-          },
-        });
-
-        // Create order items for this shop order
-        for (const item of group.items) {
-          await tx.orderItem.create({
-            data: {
-              shop_order_id: shopOrder.id,
-              product_id: item.product.id,
-              quantity: item.quantity,
-              price_at_purchase: item.product.price,
-            },
-          });
-
-          // Decrement stock and increment sales count atomically
-          // Use updateMany with where condition as extra guard against race condition
-          const updated = await tx.product.updateMany({
-            where: {
-              id: item.product.id,
-              stock_quantity: { gte: item.quantity }, // only update if still enough stock
-            },
-            data: {
-              stock_quantity: { decrement: item.quantity },
-              sales_count: { increment: item.quantity },
-            },
-          });
-
-          // If 0 rows updated, another transaction beat us to it
-          if (updated.count === 0) {
-            throw new BadRequestException(
-              `Sản phẩm "${item.product.name}" vừa hết hàng. Vui lòng cập nhật giỏ hàng.`,
-            );
-          }
-        }
-
-        shopOrders.push(shopOrder);
-      }
-
-      return { parentOrder, shopOrders, appliedCouponCode, discountAmount };
+    // 3. Emit message to RabbitMQ
+    this.rmqClient.emit('order.create', {
+      userId,
+      parentOrderId: parentOrder.id,
+      dto,
+      cartData,
     });
 
-    // Clear cart from Redis after successful transaction
+    // Clear cart proactively from Redis (or processor can do it)
     await this.redis.del(cartKey);
 
     return {
-      message: 'Đặt hàng thành công',
-      parent_order_id: result.parentOrder.id,
-      total_payment: result.parentOrder.total_payment,
-      shop_orders_count: result.shopOrders.length,
-      shop_order_ids: result.shopOrders.map((so) => so.id),
-      coupon_code: result.appliedCouponCode,
-      discount_amount: result.discountAmount,
+      message: 'Đơn hàng đang được xử lý',
+      parent_order_id: parentOrder.id,
+      status: 'PROCESSING'
     };
   }
 

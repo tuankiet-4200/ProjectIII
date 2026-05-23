@@ -107,12 +107,14 @@ export class ProductsService {
       throw new ForbiddenException('Not your shop');
     }
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         shop_id: shopId,
         ...dto,
       },
     });
+    this.syncVectorDB();
+    return product;
   }
 
   async update(productId: string, ownerId: string, dto: UpdateProductDto) {
@@ -125,10 +127,12 @@ export class ProductsService {
       throw new ForbiddenException('Not your product');
     }
 
-    return this.prisma.product.update({
+    const updated = await this.prisma.product.update({
       where: { id: productId },
       data: dto,
     });
+    this.syncVectorDB();
+    return updated;
   }
 
   async delete(productId: string, ownerId: string) {
@@ -141,6 +145,17 @@ export class ProductsService {
       throw new ForbiddenException('Not your product');
     }
 
-    return this.prisma.product.delete({ where: { id: productId } });
+    const deleted = await this.prisma.product.delete({ where: { id: productId } });
+    this.syncVectorDB();
+    return deleted;
+  }
+
+  private syncVectorDB() {
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    // Gọi sync background, không đợi
+    fetch(`${aiServiceUrl}/sync`, { method: 'POST' })
+      .then(res => res.json())
+      .then(data => console.log('[ProductSync] Vector DB synced:', data))
+      .catch(err => console.error('[ProductSync] Error syncing vector DB:', err.message));
   }
 }

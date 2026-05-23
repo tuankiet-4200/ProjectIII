@@ -50,22 +50,68 @@ export class ChatService {
         this.notificationsGateway.emitChatMessage(session.shop.owner_id, { session_id: sessionId, message: savedMessage });
       } else if (senderType === 'SHOP' && session.user_id) {
         this.notificationsGateway.emitChatMessage(session.user_id, { session_id: sessionId, message: savedMessage });
+        // If shop owner manually replies, no AI needed
+        return { message: savedMessage };
       }
-      return { message: savedMessage };
     } 
     
-    // Fallback: AI Chatbot Logic
-    const botMessage = await this.prisma.chatMessage.create({
-      data: {
-        session_id: sessionId,
-        sender_type: 'BOT',
-        message_text:
-          'Cảm ơn bạn đã nhắn tin. Tính năng AI Chatbot đang được phát triển. Vui lòng liên hệ hotline để được hỗ trợ.',
-        intent_detected: 'placeholder',
-      },
-    });
+    // Xử lý AI chạy ngầm để không block UI của người dùng
+    (async () => {
+      try {
+        const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://ai-service:8000';
+        
+        // Lấy 10 tin nhắn gần nhất làm lịch sử
+        const recentMessages = await this.prisma.chatMessage.findMany({
+          where: { session_id: sessionId },
+          orderBy: { created_at: 'desc' },
+          take: 10,
+        });
+        
+        // genai expects: [{role: 'user'/'model', parts: ['text']}]
+        const history = recentMessages
+          .reverse()
+          .slice(0, -1) // Bỏ tin nhắn vừa gửi
+          .map(m => ({
+            role: m.sender_type === 'USER' ? 'user' : 'model',
+            parts: [m.message_text],
+          }));
 
-    return { user_message: savedMessage, bot_response: botMessage };
+        const response = await fetch(`${aiServiceUrl}/chat/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: dto.message_text,
+            session_id: sessionId,
+            history: history,
+            shop_id: session.shop_id,
+            shop_name: session.shop?.name,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.reply) {
+          const botMessage = await this.prisma.chatMessage.create({
+            data: {
+              session_id: sessionId,
+              sender_type: 'BOT',
+              message_text: data.reply,
+            },
+          });
+          
+          if (session.shop_id && session.shop?.owner_id) {
+            this.notificationsGateway.emitChatMessage(session.shop.owner_id, { session_id: sessionId, message: botMessage });
+          }
+          if (session.user_id) {
+            this.notificationsGateway.emitChatMessage(session.user_id, { session_id: sessionId, message: botMessage });
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi gọi AI Service:", error);
+      }
+    })();
+
+    return { message: savedMessage };
   }
 
   async getMessages(sessionId: string) {

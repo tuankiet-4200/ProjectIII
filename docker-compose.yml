@@ -19,6 +19,16 @@ services:
     ports:
       - "6379:6379"
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: projectiii_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
   backend:
     build:
       context: ./backend
@@ -41,9 +51,27 @@ services:
       - GOOGLE_CLIENT_SECRET=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
       - GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
       - FRONTEND_URL=http://localhost:3001
+      - AI_SERVICE_URL=http://ai-service:8000
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
     depends_on:
       - postgres
       - redis
+      - rabbitmq
+      - ai-service
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: projectiii_ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ai-service:/app
+      - ai_vector_store:/app/vector_store_data
+    env_file:
+      - ./ai-service/.env
+    depends_on:
+      - postgres
 
   frontend:
     build:
@@ -62,3 +90,4 @@ services:
 
 volumes:
   postgres_data:
+  ai_vector_store:

@@ -92,10 +92,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set((state) => {
       const existing = state.chatMessages[sessionId] || [];
       if (existing.some((m) => m.id === message.id)) return state;
+      const newMessages = [...existing, message].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
       return {
         chatMessages: {
           ...state.chatMessages,
-          [sessionId]: [...existing, message],
+          [sessionId]: newMessages,
         },
       };
     });

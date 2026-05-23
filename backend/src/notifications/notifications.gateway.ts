@@ -81,6 +81,14 @@ export class NotificationsGateway
   }
 
   /**
+   * Check if a specific user is currently connected via socket.
+   */
+  isUserOnline(userId: string): boolean {
+    const sockets = this.userSockets.get(userId);
+    return !!sockets && sockets.length > 0;
+  }
+
+  /**
    * Send a real-time order status update to a specific user (customer or shop owner)
    */
   emitOrderStatusChanged(userId: string, payload: any) {

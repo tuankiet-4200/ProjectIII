@@ -18,7 +18,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { WishlistModule } from './wishlist/wishlist.module';
-
+import { RecommendationsModule } from './recommendations/recommendations.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -37,7 +37,8 @@ import { WishlistModule } from './wishlist/wishlist.module';
     UploadsModule,
     ReviewsModule,
     CouponsModule,
-    WishlistModule
+    WishlistModule,
+    RecommendationsModule
   ],
   controllers: [AppController],
   providers: [AppService],

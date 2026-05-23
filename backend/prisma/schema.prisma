@@ -112,13 +112,14 @@ model UserAddress {
 model Shop {
   id          String     @id @default(uuid()) @db.Uuid
   owner_id    String     @db.Uuid
-  name        String
-  description String?    @db.Text
-  logo_url    String?
-  rating      Decimal    @default(0) @db.Decimal(3, 2)
-  status      ShopStatus @default(PENDING)
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
+  name            String
+  description     String?    @db.Text
+  logo_url        String?
+  rating          Decimal    @default(0) @db.Decimal(3, 2)
+  status          ShopStatus @default(PENDING)
+  ai_auto_respond Boolean    @default(false)
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
 
   owner         User          @relation(fields: [owner_id], references: [id])
   products      Product[]
