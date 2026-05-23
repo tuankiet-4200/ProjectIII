@@ -154,7 +154,9 @@ export default function VendorChatPage() {
                 </div>
               ) : (
                 currentMessages.map((msg: any) => {
-                  const isMine = msg.sender_type === "SHOP";
+                  const isShop = msg.sender_type === "SHOP";
+                  const isBot = msg.sender_type === "BOT";
+                  const isMine = isShop || isBot;
                   return (
                     <div
                       key={msg.id}
@@ -162,11 +164,14 @@ export default function VendorChatPage() {
                     >
                       <div
                         className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm shadow-md ${
-                          isMine
+                          isShop
                             ? "bg-violet-600 text-white rounded-br-sm"
+                            : isBot
+                            ? "bg-indigo-600 text-white rounded-br-sm border border-indigo-400"
                             : "bg-[#242133] text-gray-100 rounded-bl-sm"
                         }`}
                       >
+                        {isBot && <div className="text-[10px] text-indigo-200 mb-1 font-semibold flex items-center gap-1">🤖 AI Trả lời tự động</div>}
                         {msg.message_text}
                       </div>
                     </div>
