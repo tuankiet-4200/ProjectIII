@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, CheckCircle2, PackageOpen } from "lucide-react";
 import { Product } from "@/types";
 import FeaturedProductCard from "@/components/home/FeaturedProductCard";
+import RecommendedProducts from "@/components/home/RecommendedProducts";
 
 const getApiUrl = () => {
   const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
@@ -62,36 +63,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Featured Drops Section */}
-      <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-12">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Featured Drops</h2>
-            <p className="text-sm text-slate-500 dark:text-gray-400">Hand-picked premium selections</p>
-          </div>
-          <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-card-border">
-            <Link href="/products" className="px-4 py-1.5 text-xs font-medium rounded-md bg-primary text-white">All Products</Link>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.length > 0 ? (
-            products.map((product) => (
-              <FeaturedProductCard key={product.id} product={product} />
-            ))
-          ) : (
-            <div className="col-span-full w-full flex items-center justify-center p-16 bg-card border border-card-border border-dashed rounded-2xl">
-              <div className="text-center flex flex-col items-center max-w-md">
-                <PackageOpen size={48} className="text-slate-400 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Chưa có sản phẩm nào</h3>
-                <p className="text-sm text-slate-500 dark:text-gray-400">
-                  Sàn giao dịch hiện chưa có sản phẩm nào được đăng bán. Xin vui lòng đăng nhập quyền chủ shop và thêm sản phẩm đầu tiên của bạn!
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Recommended Products Section */}
+      <RecommendedProducts />
 
       {/* VIP Banner Section */}
       <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-16 mb-12">

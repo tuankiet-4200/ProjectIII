@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
+from services.vector_store import search_products
 
 load_dotenv()
 router = APIRouter()
@@ -9,39 +10,142 @@ router = APIRouter()
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL) if DATABASE_URL else None
 
+def get_trending_products(conn, limit=5, exclude_ids=None):
+    if exclude_ids is None:
+        exclude_ids = []
+    
+    query_str = """
+        SELECT id, name, price, sales_count, images, stock_quantity, slug 
+        FROM products 
+    """
+    if exclude_ids:
+        query_str += " WHERE id NOT IN :exclude_ids "
+        
+    query_str += " ORDER BY sales_count DESC, created_at DESC LIMIT :limit"
+    
+    params = {"limit": limit}
+    if exclude_ids:
+        params["exclude_ids"] = tuple(exclude_ids)
+        
+    result = conn.execute(text(query_str), params).fetchall()
+    return format_products(result)
+
+def format_products(result_rows):
+    products = []
+    for row in result_rows:
+        images = row[4] if row[4] else []
+        products.append({
+            "id": str(row[0]),
+            "name": row[1],
+            "price": float(row[2]),
+            "sales_count": row[3],
+            "images": images,
+            "stock_quantity": row[5] if len(row) > 5 else 0,
+            "slug": row[6] if len(row) > 6 else str(row[0])
+        })
+    return products
+
 @router.get("/{user_id}")
 async def get_recommendations(user_id: str):
     """
-    Hệ thống gợi ý sản phẩm (Mock-up hoặc Rule-based)
-    Trong thực tế, có thể dùng dữ liệu user_interactions để filter hoặc dùng ML.
-    Phiên bản hiện tại: Lấy top 5 sản phẩm bán chạy nhất.
+    Hệ thống gợi ý lai (Hybrid Recommendation System):
+    1. Lọc cộng tác (Collaborative Filtering)
+    2. Gợi ý theo nội dung (Content-based Vector Search)
+    3. Fallback về Trending
     """
     if not engine:
         return {"recommendations": []}
 
     try:
         with engine.connect() as conn:
-            # Thuật toán khởi điểm: Trending (bán chạy nhất) hoặc mới nhất
-            query = text("""
-                SELECT id, name, price, sales_count, images 
-                FROM products 
-                ORDER BY sales_count DESC, created_at DESC 
-                LIMIT 5
+            # 1. Nếu là guest, trả về trending
+            if not user_id or user_id == 'guest':
+                return {"recommendations": get_trending_products(conn)}
+
+            recommended_product_ids = []
+
+            # 2. Lọc cộng tác (Collaborative Filtering)
+            # Tìm người dùng tương tự và lấy sản phẩm họ quan tâm
+            cf_query = text("""
+                SELECT product_id, SUM(
+                    CASE interaction_type 
+                        WHEN 'PURCHASE' THEN 5 
+                        WHEN 'ADD_TO_CART' THEN 3 
+                        WHEN 'VIEW' THEN 1 
+                        ELSE 0 
+                    END
+                ) as score
+                FROM user_interactions
+                WHERE user_id IN (
+                    SELECT DISTINCT user_id 
+                    FROM user_interactions 
+                    WHERE product_id IN (
+                        SELECT product_id FROM user_interactions WHERE user_id = :user_id
+                    ) AND user_id != :user_id
+                )
+                AND product_id NOT IN (
+                    SELECT product_id FROM user_interactions WHERE user_id = :user_id
+                )
+                GROUP BY product_id
+                ORDER BY score DESC
+                LIMIT 8
             """)
-            result = conn.execute(query).fetchall()
+            cf_results = conn.execute(cf_query, {"user_id": user_id}).fetchall()
+            for row in cf_results:
+                recommended_product_ids.append(str(row[0]))
 
-            products = []
-            for row in result:
-                images = row[4] if row[4] else []
-                products.append({
-                    "id": str(row[0]),
-                    "name": row[1],
-                    "price": float(row[2]),
-                    "sales_count": row[3],
-                    "image": images[0] if len(images) > 0 else None
-                })
+            # 3. Content-Based (RAG / Vector Search)
+            # Lấy sản phẩm yêu thích nhất của user
+            top_product_query = text("""
+                SELECT p.name, p.description, p.id
+                FROM products p
+                JOIN user_interactions ui ON p.id = ui.product_id
+                WHERE ui.user_id = :user_id
+                GROUP BY p.id, p.name, p.description
+                ORDER BY SUM(CASE ui.interaction_type WHEN 'PURCHASE' THEN 5 WHEN 'ADD_TO_CART' THEN 3 ELSE 1 END) DESC
+                LIMIT 1
+            """)
+            top_product = conn.execute(top_product_query, {"user_id": user_id}).fetchone()
 
-            return {"recommendations": products}
+            if top_product:
+                name = top_product[0]
+                desc = top_product[1] or ""
+                top_id = str(top_product[2])
+                
+                # Gọi Vector Search
+                search_res = search_products(f"{name} {desc}", top_k=15)
+                if search_res and search_res.get('ids') and len(search_res['ids']) > 0:
+                    for pid in search_res['ids'][0]:
+                        if pid != top_id and pid not in recommended_product_ids:
+                            recommended_product_ids.append(pid)
+
+            # 4. Lấy chi tiết sản phẩm cho các ID đã tìm được
+            final_products = []
+            if recommended_product_ids:
+                # Lấy ngẫu nhiên hoặc top 8 từ danh sách lai
+                selected_ids = recommended_product_ids[:8]
+                
+                prod_query = text("""
+                    SELECT id, name, price, sales_count, images, stock_quantity, slug 
+                    FROM products 
+                    WHERE id IN :ids
+                """)
+                prod_results = conn.execute(prod_query, {"ids": tuple(selected_ids)}).fetchall()
+                final_products = format_products(prod_results)
+
+            # 5. Fallback nếu không đủ 8 sản phẩm
+            if len(final_products) < 8:
+                exclude_ids = [p['id'] for p in final_products]
+                # Lấy những sản phẩm user đã tương tác để loại trừ
+                user_interacted = conn.execute(text("SELECT DISTINCT product_id FROM user_interactions WHERE user_id = :user_id"), {"user_id": user_id}).fetchall()
+                exclude_ids.extend([str(row[0]) for row in user_interacted])
+                
+                needed = 8 - len(final_products)
+                trending = get_trending_products(conn, limit=needed, exclude_ids=exclude_ids)
+                final_products.extend(trending)
+
+            return {"recommendations": final_products[:8]}
+
     except Exception as e:
         print(f"Error fetching recommendations: {e}")
         return {"recommendations": []}

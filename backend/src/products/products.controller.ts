@@ -56,4 +56,14 @@ export class ProductsController {
   ) {
     return this.productsService.delete(productId, userId);
   }
+
+  @Post('products/:id/interact')
+  @UseGuards(JwtAuthGuard)
+  recordInteraction(
+    @Param('id') productId: string,
+    @CurrentUser('id') userId: string,
+    @Body('interaction_type') type: 'VIEW' | 'ADD_TO_CART' | 'PURCHASE',
+  ) {
+    return this.productsService.recordInteraction(productId, userId, type);
+  }
 }

@@ -150,6 +150,16 @@ export class ProductsService {
     return deleted;
   }
 
+  async recordInteraction(productId: string, userId: string, type: 'VIEW' | 'ADD_TO_CART' | 'PURCHASE') {
+    return this.prisma.userInteraction.create({
+      data: {
+        product_id: productId,
+        user_id: userId,
+        interaction_type: type,
+      },
+    });
+  }
+
   private syncVectorDB() {
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     // Gọi sync background, không đợi

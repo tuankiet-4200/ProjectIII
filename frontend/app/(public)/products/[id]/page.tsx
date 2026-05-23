@@ -489,6 +489,7 @@ function ShippingTab() {
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const [activeThumb, setActiveThumb] = useState(0);
   const [selectedColor, setSelectedColor] = useState(0);
   const [qty, setQty] = useState(1);
@@ -566,6 +567,24 @@ export default function ProductDetailPage() {
     checkWishlistStatus();
   }, [productRealId]);
 
+  // Record product view interaction
+  useEffect(() => {
+    if (!productRealId || !isAuthenticated) return;
+    
+    const recordView = async () => {
+      try {
+        const { default: api } = await import('@/lib/axios');
+        await api.post(`/products/${productRealId}/interact`, {
+          interaction_type: 'VIEW'
+        });
+      } catch (err) {
+        console.error("Failed to record view interaction", err);
+      }
+    };
+    recordView();
+  }, [productRealId, isAuthenticated]);
+
+
   // Preload review stats so tab label + header show correct count/rating
   useEffect(() => {
     if (!productRealId) return;
@@ -617,6 +636,14 @@ export default function ProductDetailPage() {
         return;
       }
       await addItem(productId, qty);
+
+      try {
+        const { default: api } = await import('@/lib/axios');
+        await api.post(`/products/${productRealId}/interact`, {
+          interaction_type: 'ADD_TO_CART'
+        });
+      } catch (e) {}
+
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2000);
       toast.success("Added to cart successfully!");
