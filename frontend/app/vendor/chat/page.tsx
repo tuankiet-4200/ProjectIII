@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Send, User, MessageCircle } from "lucide-react";
+import { Search, Send, User, MessageCircle, Bot } from "lucide-react";
 import api from "@/lib/axios";
 import { useNotificationStore } from "@/store/useNotificationStore";
 
@@ -10,6 +10,9 @@ export default function VendorChatPage() {
   const [activeSession, setActiveSession] = useState<any | null>(null);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [autoReply, setAutoReply] = useState<boolean>(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const chatMessagesStore = useNotificationStore((s) => s.chatMessages);
   const pushChatMessage = useNotificationStore((s) => s.pushChatMessage);
@@ -34,6 +37,17 @@ export default function VendorChatPage() {
       }
     };
     loadSessions();
+
+    const fetchShopInfo = async () => {
+      try {
+        const res = await api.get("/shops/my");
+        setShopId(res.data.id);
+        setAutoReply(res.data.ai_auto_respond);
+      } catch (error) {
+        console.error("Failed to load shop info", error);
+      }
+    };
+    fetchShopInfo();
   }, []);
 
   // Lấy chi tiết tin nhắn khi chọn 1 session
@@ -70,6 +84,20 @@ export default function VendorChatPage() {
     }
   };
 
+  const toggleAutoReply = async () => {
+    if (!shopId || isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const newStatus = !autoReply;
+      await api.patch(`/shops/${shopId}`, { ai_auto_respond: newStatus });
+      setAutoReply(newStatus);
+    } catch (error) {
+      console.error("Failed to toggle auto reply", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const currentMessages = activeSession ? chatMessagesStore[activeSession.id] || [] : [];
 
   return (
@@ -77,7 +105,21 @@ export default function VendorChatPage() {
       {/* Sidebar: Danh sách chat */}
       <div className="w-1/3 border-r border-white/10 bg-[#181622] flex flex-col">
         <div className="p-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-4">Tin nhắn từ khách hàng</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">Tin nhắn từ khách hàng</h2>
+            {/* Auto Reply Toggle */}
+            <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1.5 rounded-full border border-white/10">
+              <Bot size={14} className={autoReply ? "text-violet-400" : "text-gray-500"} />
+              <span className="text-xs font-medium text-gray-300 mr-1">AI Trả lời</span>
+              <button
+                onClick={toggleAutoReply}
+                disabled={isUpdating}
+                className={`w-8 h-4 rounded-full relative transition-colors ${autoReply ? 'bg-violet-600' : 'bg-gray-600'} disabled:opacity-50`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${autoReply ? 'translate-x-4' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -94,8 +136,19 @@ export default function VendorChatPage() {
           ) : sessions.length === 0 ? (
             <div className="p-4 text-center text-sm text-gray-500">Chưa có tin nhắn nào</div>
           ) : (
-            sessions.map((session) => {
-              const lastMsg = session.messages?.[0];
+            [...sessions]
+              .sort((a, b) => {
+                const liveA = chatMessagesStore[a.id];
+                const liveB = chatMessagesStore[b.id];
+                const lastMsgA = liveA && liveA.length > 0 ? liveA[liveA.length - 1] : a.messages?.[0];
+                const lastMsgB = liveB && liveB.length > 0 ? liveB[liveB.length - 1] : b.messages?.[0];
+                const timeA = lastMsgA ? new Date(lastMsgA.created_at).getTime() : new Date(a.created_at).getTime();
+                const timeB = lastMsgB ? new Date(lastMsgB.created_at).getTime() : new Date(b.created_at).getTime();
+                return timeB - timeA;
+              })
+              .map((session) => {
+                const liveMsgs = chatMessagesStore[session.id];
+                const lastMsg = liveMsgs && liveMsgs.length > 0 ? liveMsgs[liveMsgs.length - 1] : session.messages?.[0];
               const isActive = activeSession?.id === session.id;
               
               return (

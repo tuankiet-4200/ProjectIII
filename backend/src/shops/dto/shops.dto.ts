@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean } from 'class-validator';
 import { ShopStatus } from '@prisma/client';
 
 export class CreateShopDto {
@@ -27,6 +27,10 @@ export class UpdateShopDto {
   @IsString()
   @IsOptional()
   logo_url?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  ai_auto_respond?: boolean;
 }
 
 export class UpdateShopStatusDto {
