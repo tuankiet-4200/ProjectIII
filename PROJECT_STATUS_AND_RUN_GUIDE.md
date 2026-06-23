@@ -13,7 +13,92 @@ Tai lieu nay phan anh trang thai code hien tai cua repo gom `backend`, `frontend
 
 ## 2) Cach chay du an
 
-### 2.1 Chay bang Docker Compose
+### 2.1 Clone repo lan dau tren may khac
+
+Phan nay danh cho truong hop day source len GitHub, sau do clone ve mot may moi.
+
+**Yeu cau cai san tren may:**
+
+- Git
+- Docker Desktop hoac Docker Engine co Docker Compose V2
+- Toi thieu khoang 8GB RAM trong luc build vi `ai-service` cai `torch`, `transformers`, `sentence-transformers`
+- Neu muon chay mobile app: Node.js va Expo/Expo Go
+
+Clone source:
+
+```bash
+git clone <REPO_URL>
+cd ProjectIII
+```
+
+Tao file moi truong tu file mau:
+
+```bash
+cp .env.example .env
+cp ai-service/.env.example ai-service/.env
+```
+
+Mo `.env` va `ai-service/.env` de kiem tra/cap nhat credential:
+
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: nen doi sang chuoi bi mat manh khi dung that.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: chi can dien neu dung Google OAuth.
+- `DEEPSEEK_API_KEY`: can dien trong `ai-service/.env` neu muon chatbot AI tra loi bang DeepSeek.
+- `DATABASE_URL` trong `ai-service/.env` khi chay Docker nen la:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@postgres:5432/projectiii?schema=public
+```
+
+Neu chua co DeepSeek key, semantic search va recommendation van co the chay bang local embedding; rieng chatbot DeepSeek se khong goi duoc model that.
+
+Build va chay toan bo he thong:
+
+```bash
+docker compose up -d --build
+```
+
+Sau khi container len, tao schema database bang Prisma migration:
+
+```bash
+docker compose exec backend npx prisma migrate deploy
+```
+
+Neu database moi hoan toan va can du lieu mau de xem san pham/category:
+
+```bash
+docker compose exec backend npm run db:seed
+```
+
+Dong bo du lieu san pham sang vector store AI de semantic search/recommendation co du lieu:
+
+```bash
+curl -X POST http://localhost:8000/sync
+```
+
+Kiem tra nhanh cac service:
+
+```bash
+curl http://localhost:3000/api
+curl http://localhost:8000/
+curl http://localhost:3000/api/recommendations/public
+```
+
+Truy cap ung dung:
+
+- **Frontend Web:** `http://localhost:3001`
+- **Backend API:** `http://localhost:3000/api`
+- **AI Service:** `http://localhost:8000`
+- **RabbitMQ Management:** `http://localhost:15672` voi user/pass mac dinh `guest`/`guest`
+
+Neu clone ve may moi ma frontend hien it/khong co san pham, thu tu can kiem tra la:
+
+1. `docker compose ps` de chac container dang `Up`.
+2. `docker compose exec backend npx prisma migrate status`.
+3. `docker compose exec backend npm run db:seed` neu DB dang trong.
+4. `curl -X POST http://localhost:8000/sync`.
+5. `docker compose logs backend ai-service` neu API van loi.
+
+### 2.2 Chay bang Docker Compose tren may da co san env/db
 
 Tu thu muc goc:
 
@@ -46,7 +131,7 @@ Xoa ca du lieu volume:
 docker compose down -v
 ```
 
-### 2.2 Chay local dev
+### 2.3 Chay local dev khong dung Docker cho app
 
 Can co PostgreSQL, Redis va RabbitMQ dang chay, dong thoi cau hinh `.env` phu hop cho tung service.
 
