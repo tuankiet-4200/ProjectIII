@@ -23,7 +23,6 @@ import {
   BadgeCheck,
   Share2,
   Check,
-  ThumbsUp,
   MessageSquare,
   Package,
   Loader2,
@@ -642,7 +641,7 @@ export default function ProductDetailPage() {
         await api.post(`/products/${productRealId}/interact`, {
           interaction_type: 'ADD_TO_CART'
         });
-      } catch (e) {}
+      } catch {}
 
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2000);

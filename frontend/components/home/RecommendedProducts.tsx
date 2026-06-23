@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, PackageOpen } from "lucide-react";
+import Link from "next/link";
 import api from "@/lib/axios";
 import { Product } from "@/types";
 import FeaturedProductCard from "@/components/home/FeaturedProductCard";
@@ -13,10 +13,11 @@ export default function RecommendedProducts() {
 
   useEffect(() => {
     const fetchRecommendations = async () => {
+      const recentSearch = localStorage.getItem("recent_search");
+      const queryStr = recentSearch ? `?q=${encodeURIComponent(recentSearch)}` : "";
+
       try {
         const { isAuthenticated } = useAuthStore.getState();
-        const recentSearch = localStorage.getItem("recent_search");
-        const queryStr = recentSearch ? `?q=${encodeURIComponent(recentSearch)}` : "";
         let res;
         if (isAuthenticated) {
            res = await api.get(`/recommendations${queryStr}`);
@@ -73,7 +74,7 @@ export default function RecommendedProducts() {
           <p className="text-sm text-slate-500 dark:text-gray-400">Hand-picked premium selections</p>
         </div>
         <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-card-border">
-          <a href="/products" className="px-4 py-1.5 text-xs font-medium rounded-md bg-primary text-white">All Products</a>
+          <Link href="/products" className="px-4 py-1.5 text-xs font-medium rounded-md bg-primary text-white">All Products</Link>
         </div>
       </div>
 

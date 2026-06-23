@@ -34,7 +34,6 @@ import {
   TrendingUp,
   Cloud,
   Database,
-  Eye,
   Download,
 } from "lucide-react";
 
@@ -115,13 +114,6 @@ function getBreadcrumb(cats: Category[], targetId: string): string[] {
   find(cats, []); return path;
 }
 
-function getParentName(cats: Category[], parentId: string | null): string {
-  if (!parentId) return "None (Root)";
-  return getAllCategories(cats).find((c) => c.id === parentId)?.name || "None";
-}
-
-
-
 // ─── Tree Node ────────────────────────────────────────────────────────────────
 
 function TreeNode({ category, depth, expanded, onToggle, selected, onSelect, checked, onCheck }: {
@@ -191,7 +183,7 @@ export default function AdminCategories() {
         setSelectedId(uiData[0].id);
         setExpanded({ [uiData[0].id]: true });
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load categories");
     } finally {
       setLoading(false);
@@ -220,7 +212,7 @@ export default function AdminCategories() {
       setNewSlug("");
       setNewParentId("");
       await fetchCategories();
-    } catch (error) {
+    } catch {
       toast.error("Failed to create category");
     } finally {
       setIsSubmitting(false);
@@ -230,7 +222,6 @@ export default function AdminCategories() {
   const allCategories = getAllCategories(categories);
   const selectedCategory = allCategories.find((c) => c.id === selectedId) || null;
   const breadcrumb = selectedCategory ? getBreadcrumb(categories, selectedCategory.id) : [];
-  const parentName = selectedCategory ? getParentName(categories, selectedCategory.parentId) : "";
 
   useEffect(() => {
     if (selectedCategory) {
@@ -241,7 +232,7 @@ export default function AdminCategories() {
         description: selectedCategory.description || "",
       });
     }
-  }, [selectedCategory?.id, selectedCategory?.name]);
+  }, [selectedCategory]);
 
   const handleSaveChanges = async () => {
     if (!selectedId) return;
@@ -254,7 +245,7 @@ export default function AdminCategories() {
       });
       toast.success("Category updated successfully");
       await fetchCategories();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update category");
     } finally {
       setIsSubmitting(false);
@@ -274,7 +265,7 @@ export default function AdminCategories() {
       setChecked({});
       if (idsToDelete.includes(selectedId)) setSelectedId("");
       await fetchCategories();
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete categories. Ensure no products are attached.");
     } finally {
       setIsSubmitting(false);
@@ -289,7 +280,7 @@ export default function AdminCategories() {
       toast.success("Category deleted successfully");
       if (id === selectedId) setSelectedId("");
       await fetchCategories();
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete category. Ensure no products are attached.");
     } finally {
       setIsSubmitting(false);
@@ -337,7 +328,11 @@ export default function AdminCategories() {
           {/* Tree */}
           <div className="flex-1 overflow-y-auto rounded-2xl bg-[#14121C] border border-white/5 p-3">
             <div className="space-y-0.5">
-              {categories.map((cat) => (<TreeNode key={cat.id} category={cat} depth={0} expanded={expanded} onToggle={toggleExpand} selected={selectedId} onSelect={(c) => { setSelectedId(c.id); setEditTab("general"); }} checked={checked} onCheck={toggleCheck} />))}
+              {loading ? (
+                <div className="py-10 text-center text-xs text-gray-500">Loading categories...</div>
+              ) : (
+                categories.map((cat) => (<TreeNode key={cat.id} category={cat} depth={0} expanded={expanded} onToggle={toggleExpand} selected={selectedId} onSelect={(c) => { setSelectedId(c.id); setEditTab("general"); }} checked={checked} onCheck={toggleCheck} />))
+              )}
             </div>
             <div className="text-center mt-4 pb-2"><button className="text-[11px] font-semibold text-violet-400 hover:text-violet-300 transition-colors">View All {allCategories.length} Categories</button></div>
           </div>

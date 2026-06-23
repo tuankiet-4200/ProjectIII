@@ -1,13 +1,11 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: projectiii_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: projectiii
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-projectiii}
     ports:
       - "5432:5432"
     volumes:
@@ -26,8 +24,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
 
   backend:
     build:
@@ -40,19 +38,19 @@ services:
       - /app/node_modules
     command: npm run start:dev
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/projectiii?schema=public
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_ACCESS_SECRET=super_secret_access_key_projectiii
-      - JWT_REFRESH_SECRET=super_secret_refresh_key_projectiii
-      - JWT_ACCESS_EXPIRATION=7d
-      - JWT_REFRESH_EXPIRATION=7d
-      - GOOGLE_CLIENT_ID=443299735874-6lrjdfhfu30n7svv8aukss52dohggfim.apps.googleusercontent.com
-      - GOOGLE_CLIENT_SECRET=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
-      - GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
-      - FRONTEND_URL=http://localhost:3001
-      - AI_SERVICE_URL=http://ai-service:8000
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - DATABASE_URL=${BACKEND_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/projectiii?schema=public}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-change_me_access_secret}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change_me_refresh_secret}
+      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION:-7d}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-7d}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
+      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}
     depends_on:
       - postgres
       - redis
@@ -84,7 +82,7 @@ services:
       - /app/node_modules
     command: npm run dev
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3000/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
     depends_on:
       - backend
 

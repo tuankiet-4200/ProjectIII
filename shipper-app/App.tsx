@@ -15,7 +15,7 @@ export default function App() {
 
   useEffect(() => {
     const bootstrapAsync = async () => {
-      let token;
+      let token: string | null = null;
       try {
         token = await AsyncStorage.getItem('shipper_token');
       } catch (e) {

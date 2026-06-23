@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { getPublicImageUrl } from "@/lib/images";
 import {
   Package,
@@ -14,18 +14,10 @@ import {
   Edit3,
   Copy,
   Trash2,
-  Image as ImageIcon,
   Upload,
-  Tag,
-  Palette,
-  Ruler,
-  Globe,
   AlertTriangle,
-  CheckCircle2,
-  FileText,
   MoreVertical,
   Eye,
-  Archive,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -154,10 +146,12 @@ export default function VendorProducts() {
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
 
   // Sync editForm whenever selectedProduct changes
-  const selectProduct = (p: Product) => {
-    newImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+  const selectProduct = useCallback((p: Product) => {
+    setNewImagePreviews((prev) => {
+      prev.forEach((url) => URL.revokeObjectURL(url));
+      return [];
+    });
     setNewImages([]);
-    setNewImagePreviews([]);
     setSelectedProduct(p);
     setEditForm({
       name: p.name,
@@ -169,7 +163,7 @@ export default function VendorProducts() {
       metaDescription: p.metaDescription || '',
       images: p.images || [],
     });
-  };
+  }, []);
 
   const handleDiscard = () => {
     if (!selectedProduct) return;
@@ -243,7 +237,7 @@ export default function VendorProducts() {
   };
 
   // Load products from API
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const { shopsService } = await import('@/services/shops.service');
@@ -284,7 +278,7 @@ export default function VendorProducts() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectProduct]);
 
   useEffect(() => {
     loadProducts();
@@ -292,7 +286,7 @@ export default function VendorProducts() {
     import('@/services/categories.service').then(({ categoriesService }) => {
       categoriesService.getAll().then(setCategories).catch(() => {});
     });
-  }, []);
+  }, [loadProducts]);
 
   const handleDelete = async (productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
@@ -405,6 +399,18 @@ export default function VendorProducts() {
                   );
                 })}
               </div>
+              <div className="mt-4 relative max-w-sm">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search products..."
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-2 pl-9 pr-3 text-xs text-white placeholder:text-gray-500 outline-none transition-colors focus:border-violet-500/50"
+                />
+              </div>
             </div>
 
             {/* Inventory Overview Card */}
@@ -455,7 +461,12 @@ export default function VendorProducts() {
 
                 {/* Table rows */}
                 <div className="divide-y divide-white/[0.03]">
-                  {paginatedProducts.length === 0 ? (
+                  {isLoading ? (
+                    <div className="py-16 text-center">
+                      <Package size={32} className="text-violet-500 mx-auto mb-3 animate-pulse" />
+                      <p className="text-sm text-gray-500">Loading products...</p>
+                    </div>
+                  ) : paginatedProducts.length === 0 ? (
                     <div className="py-16 text-center">
                       <Package size={32} className="text-gray-700 mx-auto mb-3" />
                       <p className="text-sm text-gray-500">No products found</p>

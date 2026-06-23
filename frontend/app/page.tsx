@@ -1,35 +1,7 @@
-import Link from "next/link";
-import { Headphones, Watch, Shirt, Laptop, Glasses, Coffee, CheckCircle2, PackageOpen } from "lucide-react";
-import { Product } from "@/types";
-import FeaturedProductCard from "@/components/home/FeaturedProductCard";
+import { CheckCircle2 } from "lucide-react";
 import RecommendedProducts from "@/components/home/RecommendedProducts";
 
-const getApiUrl = () => {
-  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-  // If running inside Docker server-side, replace localhost with the backend container name
-  if (typeof window === 'undefined' && process.env.NODE_ENV !== 'test') {
-    return url.replace('localhost', 'backend');
-  }
-  return url;
-};
-
-async function getFeaturedProducts(): Promise<Product[]> {
-  try {
-    const res = await fetch(`${getApiUrl()}/products?limit=8`, { 
-      cache: 'no-store' 
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json.products || json.data || [];
-  } catch (error) {
-    console.error("Failed to fetch products:", error);
-    return [];
-  }
-}
-
-export default async function Home() {
-  const products = await getFeaturedProducts();
-
+export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
       {/* Hero Section */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { formatVnd } from "@/lib/currency";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -455,6 +455,14 @@ function Sidebar({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ProductsPageContent />
+    </Suspense>
+  );
+}
+
+function ProductsPageContent() {
   const [activeCategory, setActiveCategory] = useState("Tất cả sản phẩm");
   const [priceRange, setPriceRange] = useState(15000000);
   const [minRating, setMinRating] = useState(0);
@@ -507,12 +515,16 @@ export default function ProductsPage() {
       }
     };
     loadProducts();
-  }, []);
+  }, [defaultSearch]);
 
   const toggleWish = (id: number) => {
     setWished((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };

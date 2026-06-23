@@ -28,7 +28,6 @@ import {
   ChevronRight,
   Package,
   Clock,
-  Star,
   Camera,
   Bell,
   LogOut,
@@ -39,39 +38,6 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Section = "profile" | "address" | "orders" | "wishlist" | "security";
-
-interface Address {
-  id: number;
-  label: string;
-  isDefault: boolean;
-  line1: string;
-  line2?: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
-
-interface Order {
-  id: string;
-  date: string;
-  status: "delivered" | "processing" | "shipped" | "cancelled";
-  total: number;
-  items: number;
-  productName: string;
-  emoji: string;
-}
-
-interface WishlistItem {
-  id: number;
-  name: string;
-  price: number;
-  originalPrice?: number;
-  emoji: string;
-  bgFrom: string;
-  bgTo: string;
-  inStock: boolean;
-}
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -86,117 +52,6 @@ const formatDate = (dateString?: string | Date) => {
   const d = new Date(str);
   if (isNaN(d.getTime())) return "Recently";
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-};
-
-const ADDRESSES: Address[] = [
-  {
-    id: 1,
-    label: "Home Office",
-    isDefault: true,
-    line1: "1230 Creative Lane, Suite 404",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94107",
-    country: "United States",
-  },
-  {
-    id: 2,
-    label: "Downtown Loft",
-    isDefault: false,
-    line1: "111 Market Street, Apt 12B",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94103",
-    country: "United States",
-  },
-];
-
-const ORDERS: Order[] = [
-  {
-    id: "#LXM-00412",
-    date: "Mar 15, 2026",
-    status: "delivered",
-    total: 1299,
-    items: 1,
-    productName: "SonicMaster Elite Headphones",
-    emoji: "🎧",
-  },
-  {
-    id: "#LXM-00389",
-    date: "Mar 2, 2026",
-    status: "delivered",
-    total: 249,
-    items: 1,
-    productName: "Lunar Series Minimalist Watch",
-    emoji: "⌚",
-  },
-  {
-    id: "#LXM-00371",
-    date: "Feb 18, 2026",
-    status: "shipped",
-    total: 420,
-    items: 1,
-    productName: "Retrospect 35mm Analog Camera",
-    emoji: "📷",
-  },
-  {
-    id: "#LXM-00340",
-    date: "Jan 30, 2026",
-    status: "cancelled",
-    total: 189,
-    items: 2,
-    productName: "Sonic-X Noise Cancelling Headphones",
-    emoji: "🎵",
-  },
-];
-
-const WISHLIST: WishlistItem[] = [
-  {
-    id: 1,
-    name: "Golden Era Tube Amplifier",
-    price: 12500,
-    emoji: "🔆",
-    bgFrom: "#1c1209",
-    bgTo: "#2d1a08",
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: "Vintage Walnut Turntable Pro",
-    price: 2850,
-    emoji: "🎵",
-    bgFrom: "#2d1b0e",
-    bgTo: "#4a2c0a",
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: "Reference Series 5 Monitor Speaker",
-    price: 4200,
-    originalPrice: 4800,
-    emoji: "🔊",
-    bgFrom: "#f8f8f5",
-    bgTo: "#e8e8e0",
-    inStock: false,
-  },
-  {
-    id: 4,
-    name: "Crystalline IEM Reference Earphones",
-    price: 680,
-    emoji: "🎶",
-    bgFrom: "#0d1b2a",
-    bgTo: "#1b2838",
-    inStock: true,
-  },
-];
-
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-
-const STATUS_STYLE: Record<Order["status"], { label: string; cls: string }> = {
-  delivered: { label: "Delivered", cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  processing: { label: "Processing", cls: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
-  shipped: { label: "Shipped", cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  cancelled: { label: "Cancelled", cls: "bg-red-500/10 text-red-400 border-red-500/20" },
 };
 
 // ─── Sidebar Nav Item ─────────────────────────────────────────────────────────
@@ -376,14 +231,14 @@ function AddressSection() {
       await usersService.updateAddress(id, { is_default: true });
       const data = await usersService.getAddresses();
       setAddresses(data);
-    } catch(e) {}
+    } catch {}
   };
 
   const remove = async (id: string) => {
     try {
       await usersService.deleteAddress(id);
       setAddresses(addresses.filter((a) => a.id !== id));
-    } catch(e) {}
+    } catch {}
   };
 
   const submitNewAddress = async () => {
@@ -397,7 +252,7 @@ function AddressSection() {
       setAddresses([...addresses, addr]);
       setIsAdding(false);
       setNewAddr({ address_line: "", ward: "", district: "", city: "" });
-    } catch(e) {
+    } catch {
     } finally {
       setSaving(false);
     }
@@ -520,7 +375,6 @@ function OrdersSection() {
   const [orders, setOrders] = useState<ParentOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<ParentOrder | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
@@ -534,11 +388,10 @@ function OrdersSection() {
     setSelectedOrderId(orderId);
     setDetailLoading(true);
     try {
-      const detail = await ordersService.getOrderDetail(orderId);
-      setSelectedOrder(detail);
+      await ordersService.getOrderDetail(orderId);
       router.push(`/orders/${orderId}`);
     } catch {
-      setSelectedOrder(null);
+      toast.error("Không thể mở chi tiết đơn hàng");
     } finally {
       setDetailLoading(false);
     }
@@ -647,7 +500,7 @@ function WishlistSection() {
       await wishlistService.toggleWishlist(productId);
       setItems((prev) => prev.filter((i) => i.id !== productId));
       toast.success("Đã xóa khỏi danh sách yêu thích");
-    } catch (err) {
+    } catch {
       toast.error("Không thể xóa sản phẩm");
     }
   };

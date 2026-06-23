@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   customerName: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 5 },
   customerAddress: { color: '#aaa', fontSize: 13 },
   quickActions: { flexDirection: 'row', gap: 10, marginLeft: 10 },
-  iconBtn: { backgroundColor: '#1C1828', pading: 10, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
+  iconBtn: { backgroundColor: '#1C1828', padding: 10, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   actionBtn: { flex: 1, backgroundColor: '#333', paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
   actionBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },

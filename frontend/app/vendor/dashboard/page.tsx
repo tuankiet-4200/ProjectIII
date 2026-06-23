@@ -4,10 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShoppingBag,
-  Package,
   TrendingUp,
   TrendingDown,
-  Eye,
   ShoppingCart,
   AlertCircle,
   ChevronRight,
@@ -86,13 +84,6 @@ function MiniBar({ values, color }: { values: number[]; color: string }) {
       {values.map((v, i) => (<div key={i} className="flex-1 rounded-sm transition-all" style={{ height: `${(v / max) * 100}%`, backgroundColor: i === values.length - 1 ? color : `${color}55` }} />))}
     </div>
   );
-}
-
-function MiniLine({ values, color }: { values: number[]; color: string }) {
-  const max = Math.max(...values, 1); const min = Math.min(...values, 0);
-  const W = 100; const H = 32;
-  const pts = values.map((v, i) => { const x = (i / (values.length - 1 || 1)) * W; const y = H - ((v - min) / (max - min + 1)) * H; return `${x},${y}`; });
-  return (<svg viewBox={`0 0 ${W} ${H}`} className="w-24 h-8" preserveAspectRatio="none"><polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={pts.join(" ")} /></svg>);
 }
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────

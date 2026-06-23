@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Tag, Search, Trash2, Calendar, Edit, Loader2, X, AlertCircle } from "lucide-react";
+import { Plus, Tag, Search, Trash2, Calendar, Loader2, X, AlertCircle } from "lucide-react";
 import api from "@/lib/axios";
 import { formatVnd } from "@/lib/currency";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ export default function VendorCouponsPage() {
       setLoading(true);
       const res = await api.get("/coupons/vendor");
       setCoupons(res.data);
-    } catch (error) {
+    } catch {
       toast.error("Không thể tải danh sách mã giảm giá");
     } finally {
       setLoading(false);

@@ -40,6 +40,8 @@ class VectorStoreLocalEmbeddingTest(unittest.TestCase):
             "dotenv",
             "sqlalchemy",
             "sentence_transformers",
+            "ai-service.services.database",
+            "services.database",
             "ai-service.services.vector_store",
             "services.vector_store",
             "vector_store",
@@ -101,6 +103,18 @@ class VectorStoreLocalEmbeddingTest(unittest.TestCase):
                 "n_results": 3,
                 "where": {"shop_id": "shop-1"},
             },
+        )
+
+    def test_normalize_database_url_removes_prisma_schema_param(self):
+        database = importlib.import_module("ai-service.services.database")
+
+        normalized = database.normalize_database_url(
+            "postgresql://postgres:postgres@postgres:5432/projectiii?schema=public&sslmode=disable"
+        )
+
+        self.assertEqual(
+            normalized,
+            "postgresql://postgres:postgres@postgres:5432/projectiii?sslmode=disable",
         )
 
 

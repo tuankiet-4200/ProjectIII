@@ -6,7 +6,10 @@ export const trackingService = {
     return data;
   },
 
-  createEvent: async (shopOrderId: string, payload: { event_type: string; location?: string }) => {
+  createEvent: async (
+    shopOrderId: string,
+    payload: { event_type: string; location?: string; proof_image?: string },
+  ) => {
     const { data } = await api.post(`/shop-orders/${shopOrderId}/tracking`, payload);
     return data;
   },

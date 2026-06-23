@@ -19,7 +19,7 @@ import { ordersService } from "@/services/orders.service";
 import { formatVnd } from "@/lib/currency";
 import { getPublicImageUrl } from "@/lib/images";
 import { toast } from "sonner";
-import type { ParentOrder, TrackingEvent } from "@/types";
+import type { ParentOrder } from "@/types";
 import { useNotificationStore } from "@/store/useNotificationStore";
 
 const TRACKING_EVENT_LABELS: Record<string, string> = {
@@ -115,7 +115,7 @@ export default function OrderDetailPage() {
     if (changed) {
       setOrder((prev) => prev ? { ...prev, shop_orders: updatedShopOrders } : prev);
     }
-  }, [orderStatusUpdates]);
+  }, [orderStatusUpdates, order]);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">

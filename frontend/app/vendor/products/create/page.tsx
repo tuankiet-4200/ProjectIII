@@ -47,7 +47,7 @@ export default function CreateProduct() {
       try {
         const data = await categoriesService.getAll();
         setCategories(data);
-      } catch (error) {
+      } catch {
         toast.error("Failed to load categories.");
       } finally {
         setIsLoadingCategories(false);

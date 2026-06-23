@@ -183,8 +183,6 @@ export default function CheckoutPage() {
     0
   );
   const shippingFee = subtotal >= 200 ? 0 : 12;
-  const tax = Math.round(subtotal * 0.035);
-  const total = subtotal + shippingFee + tax;
   const itemCount = allItems.reduce((s, i) => s + i.quantity, 0);
 
   const updateQty = async (productId: string, nextQty: number) => {

@@ -3,11 +3,12 @@ from fastapi import APIRouter
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 from services.vector_store import search_products
+from services.database import normalize_database_url
 
 load_dotenv()
 router = APIRouter()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = normalize_database_url(os.getenv("DATABASE_URL"))
 engine = create_engine(DATABASE_URL) if DATABASE_URL else None
 
 def get_trending_products(conn, limit=5, exclude_ids=None):

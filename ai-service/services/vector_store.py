@@ -4,6 +4,11 @@ from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
+try:
+    from services.database import normalize_database_url
+except ModuleNotFoundError:
+    from .database import normalize_database_url
+
 load_dotenv()
 
 EMBEDDING_MODEL_NAME = os.getenv(
@@ -11,7 +16,7 @@ EMBEDDING_MODEL_NAME = os.getenv(
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
 )
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = normalize_database_url(os.getenv("DATABASE_URL"))
 if DATABASE_URL:
     engine = create_engine(DATABASE_URL)
 

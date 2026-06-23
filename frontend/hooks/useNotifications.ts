@@ -192,7 +192,7 @@ export function useNotifications() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [isAuthenticated, token]);
+  }, [addNotification, isAuthenticated, pushOrderStatusUpdate, pushTrackingEvent, token]);
 
   // Yêu cầu quyền browser notification lần đầu đăng nhập
   useEffect(() => {

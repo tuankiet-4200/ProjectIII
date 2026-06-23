@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/useCartStore";
 import {
   Trash2,
@@ -43,11 +42,6 @@ interface CartShop {
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const SHOPS: CartShop[] = [
-  { id: 1, name: "TechHub Official Store", badge: "Top Seller" },
-  { id: 2, name: "Luxe Living Home", badge: "Verified" },
-];
 
 const INITIAL_ITEMS: CartItem[] = [
   {
@@ -94,7 +88,7 @@ const PERKS = [
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CartPage() {
-  const { groups, totalItems, fetchCart, updateItem: updateItemStore, removeItem: removeItemStore, isLoading } = useCartStore();
+  const { groups, fetchCart, updateItem: updateItemStore, removeItem: removeItemStore, isLoading } = useCartStore();
   const [items, setItems] = useState<CartItem[]>(INITIAL_ITEMS);
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);

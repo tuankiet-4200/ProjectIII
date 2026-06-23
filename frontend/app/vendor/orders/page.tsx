@@ -281,7 +281,12 @@ export default function VendorOrders() {
 
                 {/* Table rows */}
                 <div className="divide-y divide-white/[0.03]">
-                  {paginatedOrders.length === 0 ? (
+                  {isLoading ? (
+                    <div className="py-16 text-center">
+                      <Loader2 size={32} className="text-violet-500 mx-auto mb-3 animate-spin" />
+                      <p className="text-sm text-gray-500">Loading orders...</p>
+                    </div>
+                  ) : paginatedOrders.length === 0 ? (
                     <div className="py-16 text-center">
                       <ShoppingBag size={32} className="text-gray-700 mx-auto mb-3" />
                       <p className="text-sm text-gray-500">No orders found</p>

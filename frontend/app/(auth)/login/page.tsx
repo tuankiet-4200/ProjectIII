@@ -86,7 +86,7 @@ function LoginContent() {
     } else {
       router.replace('/');
     }
-  }, [mounted, isAuthenticated, user, router, searchParams]);
+  }, [mounted, isAuthenticated, user, router, searchParams, logout]);
 
   // Show reason toast (only when NOT already authenticated)
   useEffect(() => {
@@ -95,7 +95,7 @@ function LoginContent() {
     if (reason === 'unauthenticated') toast.info('Please login to continue');
     else if (reason === 'session_expired') toast.warning('Your session has expired. Please login again.');
     else if (reason === 'forbidden') toast.error('You do not have permission to access that page.');
-  }, [mounted, isAuthenticated]);
+  }, [mounted, isAuthenticated, searchParams]);
 
   const getInputClassName = (hasValue: boolean) =>
     `w-full rounded-xl border pl-12 py-4 text-slate-900 placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-all font-light shadow-sm ${
