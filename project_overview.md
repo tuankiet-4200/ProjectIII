@@ -8,7 +8,7 @@ ProjectIII la san thuong mai dien tu da nguoi ban, tap trung vao cac bai toan th
 - Chu shop co the quan ly gian hang, san pham, don hang, coupon va chat voi khach.
 - Admin co the quan ly nguoi dung, danh muc va trang thai shop.
 - Shipper co app rieng de nhan don, cap nhat hanh trinh, gui GPS va xac nhan giao hang.
-- AI service ho tro chatbot, semantic search va recommendation.
+- AI service ho tro chatbot DeepSeek; goi y san pham nam trong backend dua tren user interactions.
 
 ## 2. Kien truc hien tai
 
@@ -16,7 +16,7 @@ Repo gom 4 phan ung dung chinh:
 
 - `backend`: NestJS Core API.
 - `frontend`: Next.js web app.
-- `ai-service`: FastAPI service cho AI chatbot, semantic search va recommendation.
+- `ai-service`: FastAPI service cho AI chatbot DeepSeek.
 - `shipper-app`: Expo/React Native app cho shipper.
 
 Ha tang chay qua Docker Compose:
@@ -51,9 +51,7 @@ Ha tang chay qua Docker Compose:
 
 - FastAPI.
 - DeepSeek Chat API cho chatbot.
-- sentence-transformers local embeddings cho semantic search/RAG/recommendation.
-- ChromaDB/vector store.
-- SQLAlchemy/psycopg2 de doc du lieu PostgreSQL.
+- DeepSeek Chat API cho auto reply/chatbot.
 
 ### Mobile Shipper
 
@@ -79,7 +77,7 @@ Ha tang chay qua Docker Compose:
 - Quan ly category cha/con.
 - Quan ly san pham, anh san pham, ton kho, doanh so, SEO meta.
 - Public product listing/detail, category page, shop detail.
-- Search san pham uu tien semantic search, fallback text search.
+- Search san pham bang text search tren ten/mo ta.
 
 ### Gio hang va dat hang
 
@@ -104,13 +102,12 @@ Ha tang chay qua Docker Compose:
 - Review san pham, tinh lai rating shop.
 - User interaction log cho recommendation.
 - Chat customer-shop, vendor inbox va AI auto reply khi bat.
+- Chat AI nhan them context san pham lien quan cua shop tu backend SQL/text search, nen co the tra loi theo san pham that ma khong can vector store.
 
 ### AI
 
 - Chat endpoint `/chat/predict`.
-- Recommendation endpoint `/recommendations/{user_id}`.
-- Semantic search endpoint `/search`.
-- Sync endpoint `/sync` de nap lai vector store khi catalog thay doi.
+- Recommendation endpoint nam o backend `/recommendations`, dua tren `user_interactions` va fallback trending.
 
 ## 5. Cac bang du lieu chinh
 
@@ -131,5 +128,4 @@ Ha tang chay qua Docker Compose:
 - Bo sung/kiem tra test e2e cho luong checkout bat dong bo RabbitMQ.
 - Kiem tra lai cac dashboard frontend voi du lieu that.
 - Quan ly secret OAuth/API key an toan hon cho moi truong deploy.
-- Dam bao AI vector store duoc sync sau seed/migration.
 - Dong bo tai lieu demo va script seed neu can thuyet trinh.

@@ -2,7 +2,33 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SendMessageDto } from './dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { SenderType } from '@prisma/client';
+import { Prisma, SenderType } from '@prisma/client';
+
+const CHAT_PRODUCT_STOPWORDS = new Set([
+  'shop',
+  'cua',
+  'của',
+  'co',
+  'có',
+  'khong',
+  'không',
+  'san',
+  'sản',
+  'pham',
+  'phẩm',
+  'hang',
+  'hàng',
+  'ban',
+  'bán',
+  'gia',
+  'giá',
+  'bao',
+  'nhieu',
+  'nhiêu',
+  'con',
+  'còn',
+  'khong?',
+]);
 
 @Injectable()
 export class ChatService {
@@ -76,6 +102,9 @@ export class ChatService {
               role: m.sender_type === 'USER' ? 'user' : 'model',
               parts: [m.message_text],
             }));
+          const productsContext = session.shop_id
+            ? await this.getShopProductsContext(session.shop_id, dto.message_text)
+            : [];
 
           const response = await fetch(`${aiServiceUrl}/chat/predict`, {
             method: 'POST',
@@ -86,6 +115,7 @@ export class ChatService {
               history: history,
               shop_id: session.shop_id,
               shop_name: session.shop?.name,
+              products_context: productsContext,
             }),
           });
 
@@ -166,5 +196,48 @@ export class ChatService {
         },
       },
     });
+  }
+
+  private async getShopProductsContext(shopId: string, message: string) {
+    const keywords = this.extractProductKeywords(message);
+    const where: Prisma.ProductWhereInput = { shop_id: shopId };
+
+    if (keywords.length > 0) {
+      where.OR = keywords.flatMap((keyword) => [
+        { name: { contains: keyword, mode: 'insensitive' as const } },
+        { description: { contains: keyword, mode: 'insensitive' as const } },
+        { meta_title: { contains: keyword, mode: 'insensitive' as const } },
+        { meta_description: { contains: keyword, mode: 'insensitive' as const } },
+      ]);
+    }
+
+    return this.prisma.product.findMany({
+      where,
+      orderBy: [{ sales_count: 'desc' }, { created_at: 'desc' }],
+      take: 8,
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock_quantity: true,
+        description: true,
+        slug: true,
+      },
+    });
+  }
+
+  private extractProductKeywords(message: string) {
+    return [
+      ...new Set(
+        message
+          .toLowerCase()
+          .normalize('NFC')
+          .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+          .split(/\s+/)
+          .map((word) => word.trim())
+          .filter((word) => word.length >= 2)
+          .filter((word) => !CHAT_PRODUCT_STOPWORDS.has(word)),
+      ),
+    ].slice(0, 5);
   }
 }

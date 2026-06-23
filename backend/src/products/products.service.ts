@@ -20,35 +20,10 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = {};
 
     if (query.search) {
-      try {
-        const aiServiceUrl =
-          process.env.AI_SERVICE_URL || 'http://localhost:8000';
-        const response = await fetch(
-          `${aiServiceUrl}/search?q=${encodeURIComponent(query.search)}&top_k=20`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data && data.ids && data.ids.length > 0) {
-            where.id = { in: data.ids };
-          } else {
-            where.OR = [
-              { name: { contains: query.search, mode: 'insensitive' } },
-              { description: { contains: query.search, mode: 'insensitive' } },
-            ];
-          }
-        } else {
-          throw new Error('AI Service status not OK');
-        }
-      } catch (err) {
-        console.error(
-          '[ProductsService] AI search failed, falling back to text match:',
-          err.message,
-        );
-        where.OR = [
-          { name: { contains: query.search, mode: 'insensitive' } },
-          { description: { contains: query.search, mode: 'insensitive' } },
-        ];
-      }
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+      ];
     }
 
     if (query.category_id) {
@@ -142,7 +117,6 @@ export class ProductsService {
         ...dto,
       },
     });
-    this.syncVectorDB();
     return product;
   }
 
@@ -160,7 +134,6 @@ export class ProductsService {
       where: { id: productId },
       data: dto,
     });
-    this.syncVectorDB();
     return updated;
   }
 
@@ -177,7 +150,6 @@ export class ProductsService {
     const deleted = await this.prisma.product.delete({
       where: { id: productId },
     });
-    this.syncVectorDB();
     return deleted;
   }
 
@@ -193,16 +165,5 @@ export class ProductsService {
         interaction_type: type,
       },
     });
-  }
-
-  private syncVectorDB() {
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-    // Gọi sync background, không đợi
-    fetch(`${aiServiceUrl}/sync`, { method: 'POST' })
-      .then((res) => res.json())
-      .then((data) => console.log('[ProductSync] Vector DB synced:', data))
-      .catch((err) =>
-        console.error('[ProductSync] Error syncing vector DB:', err.message),
-      );
   }
 }

@@ -1,15 +1,6 @@
 fastapi==0.109.2
 uvicorn==0.27.1
 pydantic==2.6.1
-chromadb
 pydantic-settings==2.2.1
-psycopg2-binary
-sqlalchemy
 python-dotenv
 requests
-numpy<2
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.2+cpu; platform_system == "Linux" and platform_machine == "x86_64"
-torch==2.2.2; platform_system != "Linux" or platform_machine != "x86_64"
-transformers==4.41.2
-sentence-transformers==2.7.0

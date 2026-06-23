@@ -2,7 +2,6 @@ import os
 import requests
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from services.vector_store import search_products
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,6 +18,7 @@ class ChatRequest(BaseModel):
     history: list = []  # List of dicts [{"role": "user"/"model", "parts": ["text"]}]
     shop_id: str = None
     shop_name: str = None
+    products_context: list = []
 
 class ChatResponse(BaseModel):
     reply: str
@@ -29,46 +29,30 @@ async def predict_chat(request: ChatRequest):
         return ChatResponse(reply="[Dummy] Hệ thống đang thiếu DEEPSEEK_API_KEY. Tin nhắn: " + request.message)
 
     try:
-        # Bước 1: RAG Retrieval - Tìm kiếm sản phẩm liên quan
-        search_query = request.message
-        if request.history:
-            for msg in reversed(request.history):
-                if msg.get('role') == 'user':
-                    last_user_msg = msg.get('parts', [''])[0]
-                    search_query = f"{last_user_msg} {request.message}"
-                    break
-                    
-        search_results = search_products(search_query, top_k=3, shop_id=request.shop_id)
-        
-        context_str = "Danh sách sản phẩm tham khảo:\n"
-        if search_results and 'documents' in search_results and len(search_results['documents']) > 0 and len(search_results['documents'][0]) > 0:
-            for idx, doc in enumerate(search_results['documents'][0]):
-                context_str += f"- {doc}\n"
-        else:
-            context_str += "(Không tìm thấy sản phẩm nào liên quan)\n"
-
-        # Bước 2: Chuẩn bị Prompt
+        products_context = format_products_context(request.products_context)
         if request.shop_name:
             system_prompt = f"""Bạn là nhân viên Chăm Sóc Khách Hàng chuyên nghiệp của cửa hàng {request.shop_name} trên sàn Thương Mại Điện Tử ProjectIII.
 Bạn có nhiệm vụ tư vấn sản phẩm của cửa hàng, trả lời câu hỏi và hỗ trợ khách hàng mua sắm.
-Dưới đây là thông tin sản phẩm của cửa hàng tìm thấy trong hệ thống dựa trên yêu cầu của khách:
+Dưới đây là danh sách sản phẩm liên quan được lấy trực tiếp từ hệ thống:
 ---
-{context_str}
+{products_context}
 ---
-Hãy dựa vào các thông tin trên để trả lời khách hàng một cách tự nhiên, thân thiện và ngắn gọn.
-Nếu không có thông tin sản phẩm phù hợp, hãy xin lỗi khách.
-Không bịa đặt thông tin sản phẩm không có trong danh sách tham khảo.
+Hãy trả lời khách hàng một cách tự nhiên, thân thiện và ngắn gọn.
+Chỉ được nêu tên, giá, tồn kho hoặc mô tả sản phẩm có trong danh sách trên.
+Nếu danh sách rỗng hoặc không có sản phẩm phù hợp với câu hỏi, hãy nói rằng hiện chưa tìm thấy sản phẩm phù hợp trong shop và gợi ý khách thử từ khóa khác hoặc nhắn shop.
+Không bịa đặt giá, tồn kho, khuyến mãi hoặc thông số sản phẩm.
 """
         else:
             system_prompt = f"""Bạn là trợ lý ảo AI chuyên nghiệp của sàn Thương Mại Điện Tử ProjectIII.
 Bạn có nhiệm vụ tư vấn sản phẩm, trả lời câu hỏi về chính sách và hỗ trợ khách hàng mua sắm.
-Dưới đây là thông tin sản phẩm tìm thấy trong hệ thống dựa trên yêu cầu của khách:
+Dưới đây là danh sách sản phẩm liên quan được lấy trực tiếp từ hệ thống:
 ---
-{context_str}
+{products_context}
 ---
-Hãy dựa vào các thông tin trên để trả lời khách hàng một cách tự nhiên, lịch sự và ngắn gọn.
-Nếu không có thông tin sản phẩm phù hợp, hãy xin lỗi và gợi ý khách tìm kiếm từ khóa khác.
-Không bịa đặt thông tin sản phẩm không có trong danh sách tham khảo.
+Hãy trả lời khách hàng một cách tự nhiên, lịch sự và ngắn gọn.
+Chỉ được nêu tên, giá, tồn kho hoặc mô tả sản phẩm có trong danh sách trên.
+Nếu danh sách rỗng hoặc không có sản phẩm phù hợp với câu hỏi, hãy nói rằng hiện chưa tìm thấy sản phẩm phù hợp và gợi ý khách thử từ khóa khác.
+Không bịa đặt giá, tồn kho, khuyến mãi hoặc thông số sản phẩm.
 """
         
         # Build history format cho DeepSeek (OpenAI format)
@@ -110,3 +94,29 @@ Không bịa đặt thông tin sản phẩm không có trong danh sách tham kh�
         if 'response' in locals() and hasattr(response, 'text'):
             print(f"Response details: {response.text}")
         raise HTTPException(status_code=500, detail="Internal server error calling AI service")
+
+
+def format_products_context(products: list):
+    if not products:
+        return "(Không tìm thấy sản phẩm phù hợp trong hệ thống)"
+
+    lines = []
+    for product in products[:8]:
+        name = product.get("name") or "Sản phẩm không tên"
+        price = product.get("price")
+        stock = product.get("stock_quantity")
+        description = (product.get("description") or "").strip()
+        slug = product.get("slug")
+
+        parts = [f"Tên: {name}"]
+        if price is not None:
+            parts.append(f"Giá: {price}")
+        if stock is not None:
+            parts.append(f"Tồn kho: {stock}")
+        if slug:
+            parts.append(f"Slug: {slug}")
+        if description:
+            parts.append(f"Mô tả: {description[:300]}")
+        lines.append("- " + "; ".join(parts))
+
+    return "\n".join(lines)

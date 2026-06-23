@@ -4,10 +4,10 @@ Tai lieu nay phan anh trang thai code hien tai cua repo gom `backend`, `frontend
 
 ## 1) Tong quan
 
-- **Muc tieu:** San thuong mai dien tu da nguoi ban, co tach don theo shop, tracking van chuyen realtime, chatbot va goi y/tim kiem bang AI.
+- **Muc tieu:** San thuong mai dien tu da nguoi ban, co tach don theo shop, tracking van chuyen realtime, chatbot AI va goi y san pham dua tren hanh vi nguoi dung.
 - **Backend:** NestJS + Prisma + PostgreSQL + Redis + RabbitMQ + JWT + Socket.IO.
 - **Frontend:** Next.js App Router + TypeScript + Tailwind CSS + Zustand.
-- **AI Service:** FastAPI + DeepSeek Chat API + sentence-transformers local embeddings + ChromaDB + SQLAlchemy, cung cap chat, semantic search va recommendation.
+- **AI Service:** FastAPI + DeepSeek Chat API, chi phu trach chatbot.
 - **Shipper App:** Expo/React Native cho tai xe dang nhap, nhan don, cap nhat tracking, gui GPS va chup anh giao hang.
 - **Infra:** Docker Compose chay `postgres`, `redis`, `rabbitmq`, `backend`, `ai-service`, `frontend`.
 
@@ -21,7 +21,7 @@ Phan nay danh cho truong hop day source len GitHub, sau do clone ve mot may moi.
 
 - Git
 - Docker Desktop hoac Docker Engine co Docker Compose V2
-- Toi thieu khoang 8GB RAM trong luc build vi `ai-service` cai `torch`, `transformers`, `sentence-transformers`
+- Toi thieu khoang 4GB RAM trong luc build Docker.
 - Neu muon chay mobile app: Node.js va Expo/Expo Go
 
 Clone source:
@@ -43,13 +43,8 @@ Mo `.env` va `ai-service/.env` de kiem tra/cap nhat credential:
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`: nen doi sang chuoi bi mat manh khi dung that.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: chi can dien neu dung Google OAuth.
 - `DEEPSEEK_API_KEY`: can dien trong `ai-service/.env` neu muon chatbot AI tra loi bang DeepSeek.
-- `DATABASE_URL` trong `ai-service/.env` khi chay Docker nen la:
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@postgres:5432/projectiii?schema=public
-```
-
-Neu chua co DeepSeek key, semantic search va recommendation van co the chay bang local embedding; rieng chatbot DeepSeek se khong goi duoc model that.
+Neu chua co DeepSeek key, backend/frontend van chay duoc; rieng chatbot DeepSeek se tra dummy message hoac khong goi duoc model that.
 
 Build va chay toan bo he thong:
 
@@ -67,12 +62,6 @@ Neu database moi hoan toan va can du lieu mau de xem san pham/category:
 
 ```bash
 docker compose exec backend npm run db:seed
-```
-
-Dong bo du lieu san pham sang vector store AI de semantic search/recommendation co du lieu:
-
-```bash
-curl -X POST http://localhost:8000/sync
 ```
 
 Kiem tra nhanh cac service:
@@ -95,8 +84,7 @@ Neu clone ve may moi ma frontend hien it/khong co san pham, thu tu can kiem tra 
 1. `docker compose ps` de chac container dang `Up`.
 2. `docker compose exec backend npx prisma migrate status`.
 3. `docker compose exec backend npm run db:seed` neu DB dang trong.
-4. `curl -X POST http://localhost:8000/sync`.
-5. `docker compose logs backend ai-service` neu API van loi.
+4. `docker compose logs backend ai-service` neu API van loi.
 
 ### 2.2 Chay bang Docker Compose tren may da co san env/db
 
@@ -193,11 +181,10 @@ npm start
 
 - Public lay danh sach san pham, chi tiet theo slug.
 - Loc theo category/shop, sort theo moi nhat, gia, ban chay.
-- Search uu tien AI semantic search; fallback sang text search khi AI service loi.
+- Search san pham bang text search tren ten/mo ta san pham.
 - Vendor tao/sua/xoa san pham cua shop minh.
 - San pham co anh, ton kho, sales count, SEO meta title/description.
 - Ghi nhan tuong tac user voi san pham: `VIEW`, `ADD_TO_CART`, `PURCHASE`.
-- Khi san pham thay doi, backend goi AI `/sync` de dong bo vector store.
 
 ### Cart
 
@@ -266,13 +253,14 @@ npm start
 - Socket realtime tin nhan moi.
 - Shop co truong `ai_auto_respond`.
 - Khi auto reply bat hoac session khong gan shop, backend goi AI service `/chat/predict` va luu tin nhan BOT.
+- Neu chat gan voi shop, backend gui kem toi da 8 san pham lien quan cua shop duoc loc bang SQL/text search de AI tra loi dua tren du lieu that, khong dung vector/RAG phuc tap.
 
 ### Recommendations
 
-- Backend `/recommendations` goi AI service.
+- Backend `/recommendations` tu tinh goi y bang `user_interactions`.
 - User dang nhap nhan goi y ca nhan hoa.
 - Guest/public nhan goi y trending.
-- AI service ket hop collaborative filtering, content-based vector search va fallback trending.
+- Logic goi y dua tren user da tuong tac san pham nao, nguoi dung tuong tu quan tam san pham nao va fallback trending.
 
 ## 4) Frontend Web hien co
 
@@ -291,10 +279,8 @@ npm start
 
 ## 5) AI Service hien co
 
-- `GET /search?q=...&top_k=...`: semantic search, tra ve product ids.
-- `GET /recommendations/{user_id}`: goi y san pham cho guest/user.
 - `POST /chat/predict`: chatbot dua tren message, history va thong tin shop.
-- `POST /sync`: dong bo product data vao vector store.
+- `GET /`: health check.
 
 ## 6) Shipper App hien co
 
@@ -310,7 +296,6 @@ npm start
 
 - Can kiem tra lai dong chay end-to-end sau moi thay doi vi worktree hien co dang co nhieu file modified.
 - OAuth Google can cau hinh lai client secret/callback cho moi moi truong thuc te; khong nen commit secret that.
-- AI service phu thuoc `.env` va DeepSeek API key cho chatbot; semantic search/recommendation dung local embedding model.
-- Semantic search/recommendation can co du lieu san pham da sync vao vector store.
+- AI service phu thuoc `.env` va DeepSeek API key cho chatbot; recommendation khong phu thuoc AI service.
 - Frontend da co nhieu binding API that, nhung mot so dashboard/analytics van nen test lai voi du lieu that.
 - Chua thay test e2e day du cho luong Docker + RabbitMQ + AI + socket.
