@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { formatVnd } from "@/lib/currency";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Heart,
   ShoppingCart,
@@ -463,7 +464,9 @@ export default function ProductsPage() {
   const [wished, setWished] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const defaultSearch = searchParams.get('search') || "";
+  const [search, setSearch] = useState(defaultSearch);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
   const TOTAL_PAGES = 52;
@@ -473,7 +476,9 @@ export default function ProductsPage() {
     const loadProducts = async () => {
       try {
         const { productsService } = await import('@/services/products.service');
-        const result = await productsService.getAll({ page: 1, limit: 20 });
+        const queryParams: any = { page: 1, limit: 20 };
+        if (defaultSearch) queryParams.search = defaultSearch;
+        const result = await productsService.getAll(queryParams);
         if (result?.data?.length) {
           const EMOJI_MAP = ['🎧', '🎵', '🔊', '🎤', '📻', '🔆', '🎶', '⚡', '💿', '👜'];
           const BG_MAP = [

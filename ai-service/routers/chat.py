@@ -1,7 +1,7 @@
 import os
+import requests
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import google.generativeai as genai
 from services.vector_store import search_products
 from dotenv import load_dotenv
 
@@ -9,7 +9,9 @@ load_dotenv()
 
 router = APIRouter()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+DEEPSEEK_TIMEOUT_SECONDS = int(os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "30"))
 
 class ChatRequest(BaseModel):
     message: str
@@ -23,9 +25,8 @@ class ChatResponse(BaseModel):
 
 @router.post("/predict", response_model=ChatResponse)
 async def predict_chat(request: ChatRequest):
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "your_gemini_api_key_here":
-        # Fallback dummy logic if no API key
-        return ChatResponse(reply="[Dummy] Hệ thống đang thiếu GEMINI_API_KEY. Tuy nhiên, tôi nhận được tin nhắn của bạn: " + request.message)
+    if not DEEPSEEK_API_KEY:
+        return ChatResponse(reply="[Dummy] Hệ thống đang thiếu DEEPSEEK_API_KEY. Tin nhắn: " + request.message)
 
     try:
         # Bước 1: RAG Retrieval - Tìm kiếm sản phẩm liên quan
@@ -40,7 +41,7 @@ async def predict_chat(request: ChatRequest):
         search_results = search_products(search_query, top_k=3, shop_id=request.shop_id)
         
         context_str = "Danh sách sản phẩm tham khảo:\n"
-        if search_results and search_results['documents'] and len(search_results['documents'][0]) > 0:
+        if search_results and 'documents' in search_results and len(search_results['documents']) > 0 and len(search_results['documents'][0]) > 0:
             for idx, doc in enumerate(search_results['documents'][0]):
                 context_str += f"- {doc}\n"
         else:
@@ -70,28 +71,42 @@ Nếu không có thông tin sản phẩm phù hợp, hãy xin lỗi và gợi ý
 Không bịa đặt thông tin sản phẩm không có trong danh sách tham khảo.
 """
         
-        # Cấu hình model
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        # Build history format cho genai
-        # genai history format: [{'role': 'user', 'parts': ['Hello']}, {'role': 'model', 'parts': ['Hi']}]
-        gemini_history = []
+        # Build history format cho DeepSeek (OpenAI format)
+        messages = [{"role": "system", "content": system_prompt}]
         for msg in request.history:
-            role = 'user' if msg.get('role') == 'user' else 'model'
-            gemini_history.append({
+            role = 'user' if msg.get('role') == 'user' else 'assistant'
+            messages.append({
                 "role": role,
-                "parts": msg.get('parts', [""])
+                "content": msg.get('parts', [""])[0]
             })
             
-        # Khởi tạo chat session
-        chat_session = model.start_chat(history=gemini_history)
-        
-        # Gửi tin nhắn kèm system prompt (dùng mẹo nối system prompt vào tin nhắn hiện tại)
-        full_message = f"{system_prompt}\n\nTin nhắn của khách hàng: {request.message}"
-        response = chat_session.send_message(full_message)
+        messages.append({"role": "user", "content": request.message})
 
-        return ChatResponse(reply=response.text)
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": DEEPSEEK_MODEL,
+            "messages": messages,
+            "stream": False
+        }
+
+        response = requests.post(
+            "https://api.deepseek.com/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=DEEPSEEK_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+        result = response.json()
+        
+        reply_text = result['choices'][0]['message']['content']
+
+        return ChatResponse(reply=reply_text)
 
     except Exception as e:
-        print(f"Error calling Gemini API: {e}")
+        print(f"Error calling DeepSeek API: {e}")
+        if 'response' in locals() and hasattr(response, 'text'):
+            print(f"Response details: {response.text}")
         raise HTTPException(status_code=500, detail="Internal server error calling AI service")

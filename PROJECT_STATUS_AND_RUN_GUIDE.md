@@ -1,52 +1,57 @@
-# ProjectIII — Hướng dẫn chạy & tình trạng chức năng
+# ProjectIII - Huong dan chay va tinh trang chuc nang
 
-Tài liệu này tổng hợp từ code thực tế trong repo (`backend`, `frontend`) và các file tài liệu (`project_overview.md`, `implementation_plan.md`, `tutorial.md`).
+Tai lieu nay phan anh trang thai code hien tai cua repo gom `backend`, `frontend`, `ai-service`, `shipper-app` va `docker-compose.yml`.
 
-## 1) Tổng quan nhanh
+## 1) Tong quan
 
-- **Mục tiêu:** Xây dựng Sàn TMĐT đa người bán (multi-vendor marketplace) giải quyết các bài toán lớn như Tách đơn hàng (Order Splitting), Theo dõi hành trình (Logistics Tracking Real-time), Khuyến nghị sản phẩm và Chatbot bằng AI.
-- **Backend:** Kiến trúc Hệ thống Phân tán (Distributed Systems) và Microservices thu nhỏ. Sử dụng NestJS + Prisma + PostgreSQL + Redis + JWT + Socket.IO.
-- **Frontend:** Next.js App Router + TypeScript + Zustand + Tailwind CSS + Shadcn UI.
-- **AI Service (Kế hoạch):** Python (FastAPI) (chưa khởi tạo). Khuyến nghị sản phẩm (Collaborative Filtering) và NLP Chatbot.
-- **Infra:** Docker Compose chạy đồng thời nhiều cụm: `postgres`, `redis`, `backend`, `frontend`.
+- **Muc tieu:** San thuong mai dien tu da nguoi ban, co tach don theo shop, tracking van chuyen realtime, chatbot va goi y/tim kiem bang AI.
+- **Backend:** NestJS + Prisma + PostgreSQL + Redis + RabbitMQ + JWT + Socket.IO.
+- **Frontend:** Next.js App Router + TypeScript + Tailwind CSS + Zustand.
+- **AI Service:** FastAPI + DeepSeek Chat API + sentence-transformers local embeddings + ChromaDB + SQLAlchemy, cung cap chat, semantic search va recommendation.
+- **Shipper App:** Expo/React Native cho tai xe dang nhap, nhan don, cap nhat tracking, gui GPS va chup anh giao hang.
+- **Infra:** Docker Compose chay `postgres`, `redis`, `rabbitmq`, `backend`, `ai-service`, `frontend`.
 
----
+## 2) Cach chay du an
 
-## 2) Cách chạy dự án
+### 2.1 Chay bang Docker Compose
 
-### 2.1 Chạy bằng Docker Compose (Khuyến nghị)
-
-Đây là cách tiêu chuẩn mô phỏng môi trường thật:
-
-Từ thư mục gốc `/Users/kietnt/ProjectIII`:
+Tu thu muc goc:
 
 ```bash
 docker compose up -d --build
 ```
 
-Kiểm tra trạng thái các container:
+Kiem tra container:
 
 ```bash
 docker ps
 ```
 
-Truy cập:
-- **Frontend (Web):** `http://localhost:3001`
-- **Backend (API):** `http://localhost:3000/api`
+Truy cap:
 
-Dừng hệ thống:
+- **Frontend Web:** `http://localhost:3001`
+- **Backend API:** `http://localhost:3000/api`
+- **AI Service:** `http://localhost:8000`
+- **RabbitMQ Management:** `http://localhost:15672` voi user/pass mac dinh `guest`/`guest`
+
+Dung he thong:
+
 ```bash
 docker compose down
 ```
 
-Xóa dữ liệu Database (Cẩn thận):
+Xoa ca du lieu volume:
+
 ```bash
 docker compose down -v
 ```
 
-### 2.2 Chạy môi trường Local (Dev)
+### 2.2 Chay local dev
+
+Can co PostgreSQL, Redis va RabbitMQ dang chay, dong thoi cau hinh `.env` phu hop cho tung service.
 
 **Backend:**
+
 ```bash
 cd backend
 npm install
@@ -55,71 +60,172 @@ npx prisma migrate dev
 npm run start:dev
 ```
 
+**AI Service:**
+
+```bash
+cd ai-service
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
 **Frontend:**
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-> **Lưu ý:**
-> Cần thiết lập đúng các file `.env` ở backend và frontend ứng với các port Redis, Postgres ở môi trường Local/Docker. Đảm bảo cổng `3000` (Backend) và `3001` (Frontend) không bị chiếm dụng.
+**Shipper App:**
 
----
+```bash
+cd shipper-app
+npm install
+npm start
+```
 
-## 3) Bức tranh tính năng tổng thể (Thiết kế ban đầu)
+## 3) Module va chuc nang backend
 
-- Đăng ký/đăng nhập người dùng, phân quyền JWT chuẩn, OAuth Google.
-- Quản lý hồ sơ cá nhân và nhiều địa chỉ giao nhận (Address).
-- Quản lý Shop (Vendor) toàn diện: Tự động chuyển quyền, ban/unban shop bởi Admin.
-- Quản lý Catalog: Phân cấp Category, tìm kiếm và đăng bá sản phẩm.
-- Giỏ hàng (Cart) tối ưu tốc độ thông qua Redis In-memory Store.
-- Xác nhận Hóa đơn (Checkout) với Transactions và **Thuật toán Tách Đơn (Order Splitting)**.
-- Quản lý quá trình Logistics bằng sự kiện lưu vết minh bạch.
-- Thông báo Tức thời theo thời gian thực với Socket.IO.
-- Chatbot Hỗ trợ người dùng qua AI NLP và gợi ý sản phẩm dựa vào sự kiện (User Interactions Log).
+### Auth va Users
 
----
+- Dang ky, dang nhap, refresh token, logout.
+- JWT access/refresh token, blacklist refresh token bang Redis.
+- Google OAuth endpoints.
+- `JwtAuthGuard`, `RolesGuard`, decorator role.
+- Admin xem/tong hop user, tao user, ban/unban user.
+- User xem/cap nhat profile.
+- User quan ly dia chi giao hang: them, sua, xoa.
 
-## 4) Chức năng **ĐÃ hoàn thành và tích hợp**
+### Shops va Catalog
 
-### 4.1 Backend (NestJS)
+- User tao shop cua minh.
+- Xem danh sach shop public, chi tiet shop va san pham trong shop.
+- Vendor xem shop cua minh, cap nhat thong tin shop.
+- Admin cap nhat trang thai shop: `PENDING`, `ACTIVE`, `REJECTED`, `BANNED`.
+- Category co cau truc cha/con; public xem, admin them/sua/xoa.
 
-- **Auth & Users:** Token rotation (Access + Refresh JWT). Login/Logout có blacklist Redis token. Quản lý roles (ADMIN, CUSTOMER, VENDOR, SHIPPER) thông qua `RolesGuard`.
-- **Shops & Catalog:** Chức năng API RESTful đầy đủ cho Quản lý Gian hàng, Sản phẩm, Phân mục hàng hóa. Đã làm phân cấp parent-child category.
-- **Cart & Redis:** API giỏ hàng đã liên kết với `redis.service`. Validate số lượng realtime. 
-- **Orders Splitting:** Khi gọi hàm thanh toán, Hệ thống tự lấy Giỏ hàng, lập Hóa đơn lớn (Parent Order), bóc tách và chuyển về đơn từng Shop (Shop Orders), trừ kho hàng (Transaction ACID an toàn với mạng rớt).
-- **Tracking & Websocket:** Có cổng `NotificationsGateway` phát đi tọa độ GPS qua Namespace `/gps-tracking` và trạng thái sự kiện đơn hàng.
-- **Sản phẩm Đóng gói Docker:** Docker của backend đã được map chuẩn xác (`npm install` ổn định).
+### Products
 
-### 4.2 Frontend (Next.js)
+- Public lay danh sach san pham, chi tiet theo slug.
+- Loc theo category/shop, sort theo moi nhat, gia, ban chay.
+- Search uu tien AI semantic search; fallback sang text search khi AI service loi.
+- Vendor tao/sua/xoa san pham cua shop minh.
+- San pham co anh, ton kho, sales count, SEO meta title/description.
+- Ghi nhan tuong tac user voi san pham: `VIEW`, `ADD_TO_CART`, `PURCHASE`.
+- Khi san pham thay doi, backend goi AI `/sync` de dong bo vector store.
 
-- **Cấu trúc & Routing:** Hệ thống thư mục phân rõ ràng (Admin, Vendor, Customer Dashboard).
-- **Hệ thống Giao diện Sáng/Tối (Dark/Light Mode):** Đã tinh chỉnh đồng bộ hoàn hảo toàn bộ trang Web (Từ Login đến Home page) bằng Tailwind Semantic colors (`bg-background text-foreground`). Header của trang đã tích hợp `ThemeToggle` và Profile user.
-- **Luồng Đăng nhập (Auth Flow):** Setup middleware chặn các trang nhạy cảm. Gắn Axios Interceptors và xử lý state với Zustand.
-- **Khung giao diện chức năng đồ sộ:** Các Dashboard về Doanh thu, Đơn hàng, Liệt kê sản phẩm cho Chủ Shop (Vendor) và Admin đã được dàn CSS chỉn chu, có mockup UI đẹp.
+### Cart
 
----
+- Gio hang luu trong Redis theo user.
+- Xem gio hang, them item, cap nhat so luong, xoa item, xoa toan bo gio.
+- Validate san pham va ton kho khi thao tac.
 
-## 5) Chức năng Đang phát triển / Còn hạn chế (TODO List)
+### Orders va checkout bat dong bo
 
-### 5.1 Backend & Hệ thống
+- Checkout tao `ParentOrder` trang thai dang xu ly va day event `order.create` vao RabbitMQ.
+- `OrdersProcessor` xu ly event trong transaction:
+  - doc cart snapshot,
+  - nhom item theo shop,
+  - tinh tong tien,
+  - ap dung coupon neu hop le,
+  - tao `ShopOrder` va `OrderItem`,
+  - tru ton kho,
+  - tang `sales_count`,
+  - cap nhat tong tien parent order.
+- Gio hang Redis duoc xoa sau khi tao yeu cau checkout.
+- Socket thong bao `order_checkout_success` hoac `order_checkout_failed`.
+- User xem danh sach/chi tiet don hang.
+- Vendor xem don cua shop va cap nhat trang thai shop order.
 
-- **Dịch vụ AI Chatbot & Gợi ý (FastAPI - Python):** Hiện tại thư mục và bộ framework của Python chưa được tạo ra. API `/api/chat/sessions` phía NestJS mới là khung xương, trả về dummy message.
-- **Message Broker (Kafka/RabbitMQ):** Kiến trúc có đề cập đến Message Queue cho các Event tải cao (Cold Data), hiện tại chưa được cài đặt.
-- **Luồng Tích hợp OAuth Google:** Tuy đã có endpoint redirect callback, nhưng việc config ở `.env` trên môi trường sống chưa đầy đủ.
+### Coupons
 
-### 5.2 Frontend
+- Admin/vendor tao coupon.
+- Coupon toan he thong hoac rieng cho shop.
+- Ho tro giam theo phan tram va giam so tien co dinh.
+- Ho tro don toi thieu, giam toi da, gioi han luot dung, han su dung.
+- Validate coupon truoc khi checkout.
+- Ghi nhan user da dung coupon, moi user chi dung mot lan cho moi coupon.
+- Admin xem tat ca coupon, vendor xem coupon cua shop minh.
+- Xoa coupon theo quyen.
 
-- **Module Thời gian thực (Real-time Socket):** File `lib/socket.ts` đã có nhưng hook `useSocket.ts` để bắt sự kiện pop-up màn hình người dùng khi Tình trạng đơn hàng thay đổi chưa được tạo.
-- **Kết nối Backend-API (Data Binding):** Rất nhiều trang Frontend dù có Layout xịn (Dashboard, Shop Analytics) nhưng vẫn đang dùng **Mock Data**. Chúng chưa được chuyển đổi để lấy dữ liệu thực từ các endpoint Nest API.
-- **Khớp dữ liệu (API Schema Matching):** Cần đảm bảo kiểu dữ liệu từ Axios trỏ thẳng vào các Interface ở Frontend chuẩn xác (VD: `PaginatedResponse`, `Cart`).
+### Wishlist va Reviews
 
----
+- Wishlist: lay danh sach, toggle san pham, check san pham da yeu thich chua.
+- Reviews: user danh gia san pham da mua, moi user mot review tren mot san pham.
+- Xem review theo san pham/shop.
+- Tu dong tinh lai rating cua shop tu review san pham.
 
-## 6) Lộ trình Tiếp theo đề xuất (Next Action Items)
+### Tracking, realtime va upload
 
-Để nhanh chóng ra một sản phẩm hoàn thiện chạy "Ngon ơ" End-to-End:
-1. Gắn **API Call có thật** vào các giao diện chính như Trang Xem Sản phẩm (Public), Giỏ Hàng (Cart), và Trang Thanh Toán (Checkout) trên Frontend.
-2. Viết chức năng **`useSocket.ts`** gắn lên cấp độ file Layout.tsx để người dùng nhận Toast Notification khi kiện hàng thay đổi vị trí.
-3. Chốt phương án phát triển **FastAPI AI Module**. Nếu chưa xây dựng, cần dựng bộ khung Python lên.
+- Tao tracking event cho shop order: `order_packed`, `ready_for_pickup`, `picked_up`, `arrived_at_hub`, `delivering`, `delivered`.
+- Tu dong map tracking event sang status don: `PREPARING`, `READY_FOR_PICKUP`, `SHIPPING`, `DELIVERED`.
+- Ho tro anh xac nhan giao hang `proof_image`.
+- Shipper/Admin xem cac don giao active.
+- `NotificationsGateway` gui realtime:
+  - `orderStatusChanged`
+  - `trackingEvent`
+  - `newChatMessage`
+  - checkout success/failure.
+- `TrackingGateway` namespace `/gps-tracking`:
+  - customer join room theo `shopOrderId`,
+  - shipper gui GPS,
+  - vi tri moi nhat luu Redis TTL 2 gio,
+  - broadcast `locationUpdated`.
+- Upload API tra ve URL file trong `backend/uploads`.
+
+### Chat va AI
+
+- Tao chat session user-shop.
+- Luu lich su tin nhan.
+- Customer gui tin nhan; vendor xem session va tra loi.
+- Socket realtime tin nhan moi.
+- Shop co truong `ai_auto_respond`.
+- Khi auto reply bat hoac session khong gan shop, backend goi AI service `/chat/predict` va luu tin nhan BOT.
+
+### Recommendations
+
+- Backend `/recommendations` goi AI service.
+- User dang nhap nhan goi y ca nhan hoa.
+- Guest/public nhan goi y trending.
+- AI service ket hop collaborative filtering, content-based vector search va fallback trending.
+
+## 4) Frontend Web hien co
+
+- Trang chu, danh sach san pham, chi tiet san pham.
+- Trang categories va category detail.
+- Trang chi tiet shop.
+- Login, register, logout, Google callback.
+- Cart, checkout, profile.
+- Orders list/detail va trang tracking don hang bang Leaflet.
+- Chat widget o trang shop/san pham.
+- Notification bell, unread count, danh dau da doc, xoa thong bao.
+- Admin pages: users, shops, categories, analytics.
+- Vendor pages: dashboard, products, create product, orders, coupons, chat.
+- Seller register page.
+- Dark/light theme va state bang Zustand.
+
+## 5) AI Service hien co
+
+- `GET /search?q=...&top_k=...`: semantic search, tra ve product ids.
+- `GET /recommendations/{user_id}`: goi y san pham cho guest/user.
+- `POST /chat/predict`: chatbot dua tren message, history va thong tin shop.
+- `POST /sync`: dong bo product data vao vector store.
+
+## 6) Shipper App hien co
+
+- Dang nhap bang tai khoan shipper.
+- Lay danh sach active deliveries.
+- Quet/nhap ma shop order de nhan don.
+- Cap nhat tracking event.
+- Gui GPS realtime qua Socket.IO.
+- Chup anh xac nhan khi `delivered`.
+- Goi dien khach hang va mo ban do den dia chi giao.
+
+## 7) Han che va viec can lam tiep
+
+- Can kiem tra lai dong chay end-to-end sau moi thay doi vi worktree hien co dang co nhieu file modified.
+- OAuth Google can cau hinh lai client secret/callback cho moi moi truong thuc te; khong nen commit secret that.
+- AI service phu thuoc `.env` va DeepSeek API key cho chatbot; semantic search/recommendation dung local embedding model.
+- Semantic search/recommendation can co du lieu san pham da sync vao vector store.
+- Frontend da co nhieu binding API that, nhung mot so dashboard/analytics van nen test lai voi du lieu that.
+- Chua thay test e2e day du cho luong Docker + RabbitMQ + AI + socket.

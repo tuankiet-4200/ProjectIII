@@ -1,6 +1,8 @@
 # Hướng dẫn Xây dựng Sàn Thương mại Điện tử Đa Người Bán (Multi-Vendor E-commerce)
 *Hệ thống: Node.js (NestJS) + React (Next.js) + PostgreSQL + Redis + Docker*
 
+> Ghi chu cap nhat: Tai lieu nay la tutorial hoc lai/coding tu dau, khong phai ban mo ta trang thai moi nhat cua repo. Code hien tai da co them FastAPI AI service, RabbitMQ, coupon, wishlist, review, GPS tracking va shipper app. De xem hien trang chuc nang, doc `PROJECT_STATUS_AND_RUN_GUIDE.md`.
+
 Tài liệu này là một quyển "Bí kíp" (Tutorial) từng bước được thiết kế riêng dành cho bạn để học và tự code lại toàn bộ dự án từ con số 0. Dự án được chia thành các Giai đoạn (Phases) rõ ràng kèm giải thích nghiệp vụ và công nghệ.
 
 ---

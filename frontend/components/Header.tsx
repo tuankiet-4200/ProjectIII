@@ -136,14 +136,29 @@ export function Header() {
                 </div>
               </div>
             </div>
-            <input
-              type="text"
-              placeholder="Search premium products..."
-              className="flex-1 bg-transparent px-4 py-2 text-foreground placeholder:text-gray-500 focus:outline-none"
-            />
-            <button className="shrink-0 text-slate-500 dark:text-gray-400 hover:text-foreground">
-              <Search size={18} />
-            </button>
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const searchInput = form.elements.namedItem('search') as HTMLInputElement;
+                const val = searchInput.value.trim();
+                if (val) {
+                  localStorage.setItem('recent_search', val);
+                  window.location.href = `/products?search=${encodeURIComponent(val)}`;
+                }
+              }}
+              className="flex w-full"
+            >
+              <input
+                name="search"
+                type="text"
+                placeholder="Search premium products..."
+                className="flex-1 bg-transparent px-4 py-2 text-foreground placeholder:text-gray-500 focus:outline-none"
+              />
+              <button type="submit" className="shrink-0 text-slate-500 dark:text-gray-400 hover:text-foreground">
+                <Search size={18} />
+              </button>
+            </form>
           </div>
         </div>
 

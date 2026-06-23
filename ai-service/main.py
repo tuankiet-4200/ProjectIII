@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from routers import chat, recommendation
+from routers import chat, recommendation, search
 from services.vector_store import init_vector_store
 
 app = FastAPI(
@@ -32,6 +32,7 @@ async def startup_event():
 
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
 app.include_router(recommendation.router, prefix="/recommendations", tags=["recommendations"])
+app.include_router(search.router, prefix="/search", tags=["search"])
 
 @app.post("/sync", tags=["sync"])
 def sync_data():

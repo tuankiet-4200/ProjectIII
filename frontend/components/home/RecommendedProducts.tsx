@@ -15,11 +15,13 @@ export default function RecommendedProducts() {
     const fetchRecommendations = async () => {
       try {
         const { isAuthenticated } = useAuthStore.getState();
+        const recentSearch = localStorage.getItem("recent_search");
+        const queryStr = recentSearch ? `?q=${encodeURIComponent(recentSearch)}` : "";
         let res;
         if (isAuthenticated) {
-           res = await api.get("/recommendations");
+           res = await api.get(`/recommendations${queryStr}`);
         } else {
-           res = await api.get("/recommendations/public");
+           res = await api.get(`/recommendations/public${queryStr}`);
         }
         
         if (res.data && Array.isArray(res.data)) {
@@ -32,7 +34,7 @@ export default function RecommendedProducts() {
       } catch (error: any) {
         if (error.response?.status === 401) {
             try {
-               const publicRes = await api.get("/recommendations/public");
+               const publicRes = await api.get(`/recommendations/public${queryStr}`);
                if (publicRes.data && Array.isArray(publicRes.data)) {
                   setProducts(publicRes.data);
                } else if (publicRes.data && Array.isArray(publicRes.data.recommendations)) {

@@ -20,10 +20,35 @@ export class ProductsService {
     const where: Prisma.ProductWhereInput = {};
 
     if (query.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { description: { contains: query.search, mode: 'insensitive' } },
-      ];
+      try {
+        const aiServiceUrl =
+          process.env.AI_SERVICE_URL || 'http://localhost:8000';
+        const response = await fetch(
+          `${aiServiceUrl}/search?q=${encodeURIComponent(query.search)}&top_k=20`,
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.ids && data.ids.length > 0) {
+            where.id = { in: data.ids };
+          } else {
+            where.OR = [
+              { name: { contains: query.search, mode: 'insensitive' } },
+              { description: { contains: query.search, mode: 'insensitive' } },
+            ];
+          }
+        } else {
+          throw new Error('AI Service status not OK');
+        }
+      } catch (err) {
+        console.error(
+          '[ProductsService] AI search failed, falling back to text match:',
+          err.message,
+        );
+        where.OR = [
+          { name: { contains: query.search, mode: 'insensitive' } },
+          { description: { contains: query.search, mode: 'insensitive' } },
+        ];
+      }
     }
 
     if (query.category_id) {
@@ -35,7 +60,9 @@ export class ProductsService {
     }
 
     // Build orderBy
-    let orderBy: Prisma.ProductOrderByWithRelationInput = { created_at: 'desc' };
+    let orderBy: Prisma.ProductOrderByWithRelationInput = {
+      created_at: 'desc',
+    };
     switch (query.sort_by) {
       case 'price_asc':
         orderBy = { price: 'asc' };
@@ -72,7 +99,9 @@ export class ProductsService {
     const product = await this.prisma.product.findUnique({
       where: { slug },
       include: {
-        shop: { select: { id: true, name: true, logo_url: true, rating: true } },
+        shop: {
+          select: { id: true, name: true, logo_url: true, rating: true },
+        },
         category: {
           select: {
             id: true,
@@ -145,12 +174,18 @@ export class ProductsService {
       throw new ForbiddenException('Not your product');
     }
 
-    const deleted = await this.prisma.product.delete({ where: { id: productId } });
+    const deleted = await this.prisma.product.delete({
+      where: { id: productId },
+    });
     this.syncVectorDB();
     return deleted;
   }
 
-  async recordInteraction(productId: string, userId: string, type: 'VIEW' | 'ADD_TO_CART' | 'PURCHASE') {
+  async recordInteraction(
+    productId: string,
+    userId: string,
+    type: 'VIEW' | 'ADD_TO_CART' | 'PURCHASE',
+  ) {
     return this.prisma.userInteraction.create({
       data: {
         product_id: productId,
@@ -164,8 +199,10 @@ export class ProductsService {
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     // Gọi sync background, không đợi
     fetch(`${aiServiceUrl}/sync`, { method: 'POST' })
-      .then(res => res.json())
-      .then(data => console.log('[ProductSync] Vector DB synced:', data))
-      .catch(err => console.error('[ProductSync] Error syncing vector DB:', err.message));
+      .then((res) => res.json())
+      .then((data) => console.log('[ProductSync] Vector DB synced:', data))
+      .catch((err) =>
+        console.error('[ProductSync] Error syncing vector DB:', err.message),
+      );
   }
 }

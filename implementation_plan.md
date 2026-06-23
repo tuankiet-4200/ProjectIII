@@ -1,5 +1,7 @@
 # Kế hoạch Xây dựng Sàn Thương mại Điện tử Đa người bán
 
+> Ghi chu cap nhat: Tai lieu nay la ke hoach/ban thiet ke lich su tu giai doan dau du an. Trang thai code hien tai da tien xa hon mot so muc trong plan, dac biet la AI service FastAPI, RabbitMQ checkout, coupon, wishlist, review va shipper app. Neu can xem hien trang moi nhat, uu tien doc `PROJECT_STATUS_AND_RUN_GUIDE.md` va `project_overview.md`.
+
 Xây dựng hệ thống Multi-Vendor Marketplace với kiến trúc microservices, sử dụng NestJS (backend), Next.js (frontend), PostgreSQL + Prisma ORM, Redis, và Python FastAPI (AI Service).
 
 ## User Review Required

@@ -1,12 +1,12 @@
 fastapi==0.109.2
 uvicorn==0.27.1
 pydantic==2.6.1
-google-generativeai
 langchain
-langchain-google-genai
 langchain-community
 chromadb
 pandas
 psycopg2-binary
 sqlalchemy
 python-dotenv
+requests
+sentence-transformers
