@@ -26,8 +26,10 @@ async function bootstrap() {
 
   // Enable CORS
   app.enableCors({
-    origin: ['http://localhost:3001'], // Frontend URL
+    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : '*',
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   });
 
   // Serve static files from the uploads directory
