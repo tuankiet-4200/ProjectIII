@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { VietnameseUiText } from '@/components/VietnameseUiText';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -17,11 +18,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/vendor');
 
   if (hideGlobalChrome) {
-    return <main className="flex-1">{children}</main>;
+    return (
+      <>
+        <VietnameseUiText />
+        <main className="flex-1">{children}</main>
+      </>
+    );
   }
 
   return (
     <>
+      <VietnameseUiText />
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
