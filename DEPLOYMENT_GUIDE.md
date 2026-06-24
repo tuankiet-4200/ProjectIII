@@ -1,25 +1,39 @@
 # ProjectIII Deployment Guide
 
-Tai lieu nay huong dan cach dua ProjectIII len server tu source code tren GitHub.
+Tai lieu nay huong dan deploy ProjectIII tu GitHub len server. Du an gom:
 
-## 1. Co can tao nhanh rieng de deploy khong?
+- `frontend`: Next.js
+- `backend`: NestJS + Prisma
+- `ai-service`: FastAPI + DeepSeek
+- `postgres`, `redis`, `rabbitmq`: ha tang phu tro
 
-Khong bat buoc phai co code khac cho deploy.
+Co 2 cach deploy:
 
-Khuyen nghi:
+- **Cach A - Demo/Staging nhanh:** dung `docker-compose.yml` hien tai. De chay demo tren server, nhanh va de debug.
+- **Cach B - Production khuyen nghi:** dung them `docker-compose.prod.yml`, bo dev mode, bo bind mount, chay image build san, dung reverse proxy HTTPS.
 
-- `develop`: nhanh phat trien va test tinh nang.
-- `main` hoac `production`: nhanh on dinh de deploy.
-- `deploy/*`: nhanh tam thoi neu can thu nghiem cau hinh deploy.
+Neu ban moi deploy lan dau, co the lam Cach A truoc de chac he thong len duoc, sau do nang len Cach B.
 
-Nguyen tac quan trong:
+---
 
-- Khong commit file `.env` that len GitHub.
-- Khong hard-code credential vao source.
-- Code app nen giong nhau giua local va production.
-- Moi truong deploy chi khac o `.env`, domain, secrets, Docker command, reverse proxy va database volume.
+## 1. Co can tao nhanh deploy rieng khong?
 
-Neu muon tao nhanh deploy tu `develop`:
+Khong can tao code khac cho deploy. Nen dung cung source code, chi khac:
+
+- `.env`
+- domain
+- secrets
+- reverse proxy
+- docker compose override
+- database volume
+
+Khuyen nghi ve nhanh:
+
+- `develop`: code dang phat trien
+- `production` hoac `main`: code on dinh de deploy
+- `deploy/*`: nhanh thu nghiem deploy tam thoi neu can
+
+Tao nhanh `production` tu `develop`:
 
 ```bash
 git checkout develop
@@ -28,50 +42,98 @@ git checkout -b production
 git push -u origin production
 ```
 
-Sau nay khi `develop` da on:
+Khi `develop` da on va muon dua len deploy:
 
 ```bash
 git checkout production
+git pull
 git merge develop
 git push
 ```
 
-## 2. Luu y ve Docker Compose hien tai
+Tren server, nen checkout nhanh deploy:
 
-File `docker-compose.yml` hien tai phu hop cho local/dev:
+```bash
+git checkout production
+```
 
-- Backend chay `npm run start:dev`.
-- Frontend chay `npm run dev`.
-- AI service chay `uvicorn --reload`.
-- Backend/frontend/AI co bind mount source code vao container.
+---
 
-Dung file nay de demo tren server van duoc, nhung neu deploy production that thi nen tao them `docker-compose.prod.yml` de:
+## 2. Chuan bi server
 
-- Bo bind mount source code.
-- Backend chay image build san voi `npm run start:prod`.
-- Frontend chay `npm start`.
-- AI service bo `--reload`.
-- Cau hinh restart policy.
-- Dat secrets manh.
-- Dat domain/reverse proxy HTTPS.
+Vi du server Ubuntu 22.04/24.04.
 
-## 3. Chuan bi server
+Yeu cau toi thieu:
 
-Server can co:
-
-- Git
+- 2 CPU
+- 4GB RAM tro len
+- 20GB disk tro len
 - Docker Engine
 - Docker Compose V2
-- Toi thieu 2 CPU va 4GB RAM de build/chay on dinh
-- Domain tro ve IP server neu muon public web
-- Firewall mo cong can thiet
+- Git
+- Domain neu public production
 
-Kiem tra Docker:
+Cap nhat server:
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+Cai Git:
+
+```bash
+sudo apt install -y git curl ca-certificates
+```
+
+Cai Docker neu server chua co:
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+```
+
+Dang xuat/dang nhap lai SSH, sau do kiem tra:
 
 ```bash
 docker --version
 docker compose version
 ```
+
+Neu lenh `docker` bi permission denied, co the chay tam bang `sudo docker`, hoac logout/login lai de group `docker` co hieu luc.
+
+---
+
+## 3. Cau hinh firewall
+
+Neu deploy demo truc tiep bang port:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 3001/tcp
+sudo ufw allow 3000/tcp
+sudo ufw allow 8000/tcp
+sudo ufw enable
+```
+
+Neu deploy production qua Nginx/Caddy HTTPS, chi nen mo:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+```
+
+Khong nen public cac cong nay ra internet trong production:
+
+- Postgres `5432`
+- Redis `6379`
+- RabbitMQ `5672`
+- RabbitMQ Management `15672`
+- AI service `8000`
+
+---
 
 ## 4. Clone source tren server
 
@@ -81,15 +143,24 @@ cd ProjectIII
 git checkout production
 ```
 
-Neu chua co nhanh `production`, co the deploy truc tiep tu `develop` trong giai do demo:
+Neu chua co nhanh `production`, co the dung:
 
 ```bash
 git checkout develop
 ```
 
+Kiem tra source:
+
+```bash
+git status
+ls
+```
+
+---
+
 ## 5. Tao file moi truong
 
-Tao `.env` o thu muc goc:
+Tao `.env` o root:
 
 ```bash
 cp .env.example .env
@@ -101,55 +172,109 @@ Tao `.env` cho AI service:
 cp ai-service/.env.example ai-service/.env
 ```
 
-Sua `.env` root:
+Mo file de sua:
+
+```bash
+nano .env
+nano ai-service/.env
+```
+
+### 5.1 Root `.env` mau cho demo/local server
+
+Dung khi chua co domain, truy cap bang IP server.
 
 ```env
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=<MAT_KHAU_POSTGRES_MANH>
+POSTGRES_PASSWORD=change_this_postgres_password
 POSTGRES_DB=projectiii
 
-RABBITMQ_DEFAULT_USER=<RABBITMQ_USER>
-RABBITMQ_DEFAULT_PASS=<RABBITMQ_PASSWORD_MANH>
+RABBITMQ_DEFAULT_USER=projectiii
+RABBITMQ_DEFAULT_PASS=change_this_rabbitmq_password
 
-BACKEND_DATABASE_URL=postgresql://postgres:<MAT_KHAU_POSTGRES_MANH>@postgres:5432/projectiii?schema=public
+BACKEND_DATABASE_URL=postgresql://postgres:change_this_postgres_password@postgres:5432/projectiii?schema=public
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-JWT_ACCESS_SECRET=<JWT_ACCESS_SECRET_MANH>
-JWT_REFRESH_SECRET=<JWT_REFRESH_SECRET_MANH>
+JWT_ACCESS_SECRET=change_this_access_secret_long_random
+JWT_REFRESH_SECRET=change_this_refresh_secret_long_random
 JWT_ACCESS_EXPIRATION=7d
 JWT_REFRESH_EXPIRATION=7d
 
-FRONTEND_URL=https://your-domain.com
-NEXT_PUBLIC_API_URL=https://your-domain.com/api
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://<SERVER_IP>:3000/api/auth/google/callback
+
+FRONTEND_URL=http://<SERVER_IP>:3001
+NEXT_PUBLIC_API_URL=http://<SERVER_IP>:3000/api
 AI_SERVICE_URL=http://ai-service:8000
-RABBITMQ_URL=amqp://<RABBITMQ_USER>:<RABBITMQ_PASSWORD_MANH>@rabbitmq:5672
+RABBITMQ_URL=amqp://projectiii:change_this_rabbitmq_password@rabbitmq:5672
+```
+
+### 5.2 Root `.env` mau cho production domain
+
+Dung khi co domain, vi du `https://shop.example.com`.
+
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change_this_postgres_password
+POSTGRES_DB=projectiii
+
+RABBITMQ_DEFAULT_USER=projectiii
+RABBITMQ_DEFAULT_PASS=change_this_rabbitmq_password
+
+BACKEND_DATABASE_URL=postgresql://postgres:change_this_postgres_password@postgres:5432/projectiii?schema=public
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+JWT_ACCESS_SECRET=change_this_access_secret_long_random
+JWT_REFRESH_SECRET=change_this_refresh_secret_long_random
+JWT_ACCESS_EXPIRATION=7d
+JWT_REFRESH_EXPIRATION=7d
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=https://your-domain.com/api/auth/google/callback
+GOOGLE_CALLBACK_URL=https://shop.example.com/api/auth/google/callback
+
+FRONTEND_URL=https://shop.example.com
+NEXT_PUBLIC_API_URL=https://shop.example.com/api
+AI_SERVICE_URL=http://ai-service:8000
+RABBITMQ_URL=amqp://projectiii:change_this_rabbitmq_password@rabbitmq:5672
 ```
 
-Sua `ai-service/.env`:
+### 5.3 AI service `.env`
+
+File: `ai-service/.env`
 
 ```env
-DEEPSEEK_API_KEY=<DEEPSEEK_API_KEY>
+DEEPSEEK_API_KEY=your_deepseek_api_key
 DEEPSEEK_API_URL=https://api.deepseek.com/chat/completions
 DEEPSEEK_MODEL=deepseek-chat
 ```
 
-Neu chua dung Google OAuth, co the de trong:
+Neu chua co `DEEPSEEK_API_KEY`, website van chay nhung chatbot AI se khong tra loi bang model that.
 
-```env
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+### 5.4 Tao secret manh
+
+Co the tao secret bang:
+
+```bash
+openssl rand -hex 32
 ```
 
-Backend da duoc xu ly de khong crash khi thieu Google credential. Endpoint Google se tra loi loi cau hinh thay vi lam sap server.
+Dung output cho:
 
-## 6. Chay Docker Compose
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- password Postgres
+- password RabbitMQ
 
-Build va start toan bo service:
+---
+
+## 6. Cach A - Deploy demo bang `docker-compose.yml` hien tai
+
+Day la cach nhanh nhat.
+
+Build va start:
 
 ```bash
 docker compose up -d --build
@@ -161,127 +286,282 @@ Kiem tra container:
 docker compose ps
 ```
 
-Xem log:
+Cho backend/frontend/ai-service len xong, xem log:
 
 ```bash
-docker compose logs -f backend frontend ai-service
+docker compose logs --tail=100 backend
+docker compose logs --tail=100 frontend
+docker compose logs --tail=100 ai-service
 ```
 
-## 7. Chay Prisma migration
-
-Sau khi container backend da len:
+Chay migration:
 
 ```bash
 docker compose exec backend npx prisma migrate deploy
 ```
 
-Kiem tra trang thai migration:
-
-```bash
-docker compose exec backend npx prisma migrate status
-```
-
-Neu database moi hoan toan va can du lieu mau:
+Neu database moi va can du lieu mau:
 
 ```bash
 docker compose exec backend npm run db:seed
 ```
 
-## 8. Smoke test sau deploy
+Truy cap:
 
-Kiem tra backend:
+- Frontend: `http://<SERVER_IP>:3001`
+- Backend: `http://<SERVER_IP>:3000/api`
+- AI service: `http://<SERVER_IP>:8000`
+- RabbitMQ management: `http://<SERVER_IP>:15672`
+
+Luu y: Cach A dang chay dev command (`next dev`, `start:dev`, `uvicorn --reload`), phu hop demo/staging, khong toi uu production.
+
+---
+
+## 7. Cach B - Deploy production khuyen nghi
+
+Tao file `docker-compose.prod.yml` o root server/repo:
+
+```yaml
+services:
+  postgres:
+    ports: []
+    restart: unless-stopped
+
+  redis:
+    ports: []
+    restart: unless-stopped
+
+  rabbitmq:
+    ports: []
+    restart: unless-stopped
+
+  backend:
+    command: npm run start:prod
+    volumes: []
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  frontend:
+    command: npm start
+    volumes: []
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+
+  ai-service:
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes: []
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+```
+
+Chay production compose:
 
 ```bash
-curl -i http://localhost:3000/api
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Kiem tra AI service:
+Chay migration:
 
 ```bash
-curl -i http://localhost:8000/
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend npx prisma migrate deploy
 ```
 
-Kiem tra frontend:
+Kiem tra:
 
 ```bash
-curl -I http://localhost:3001/
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
-Kiem tra API public:
+---
+
+## 8. Cau hinh Nginx reverse proxy HTTPS
+
+Neu dung Nginx tren server:
 
 ```bash
-curl -i "http://localhost:3000/api/products?limit=2"
-curl -i "http://localhost:3000/api/categories"
-curl -i "http://localhost:3000/api/recommendations/public"
+sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
-Neu dung domain va reverse proxy, thay `localhost` bang domain production.
+Tao file:
 
-## 9. Reverse proxy va HTTPS
-
-Voi production, nen dung Nginx/Caddy/Traefik de public domain.
-
-Goi y routing:
-
-- `https://your-domain.com` -> frontend container `projectiii_frontend:3000`
-- `https://your-domain.com/api` -> backend container `projectiii_backend:3000/api`
-- Khong public AI service ra internet neu khong can.
-- Khong public Postgres, Redis, RabbitMQ ra internet.
-
-Neu dung Google OAuth, callback tren Google Console phai trung:
-
-```text
-https://your-domain.com/api/auth/google/callback
+```bash
+sudo nano /etc/nginx/sites-available/projectiii
 ```
 
-Va `.env`:
+Noi dung mau:
+
+```nginx
+server {
+    listen 80;
+    server_name shop.example.com;
+
+    client_max_body_size 20M;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:3000/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Bat site:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/projectiii /etc/nginx/sites-enabled/projectiii
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Cap SSL:
+
+```bash
+sudo certbot --nginx -d shop.example.com
+```
+
+Kiem tra renew:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+Sau khi co HTTPS, cap nhat `.env`:
 
 ```env
-GOOGLE_CALLBACK_URL=https://your-domain.com/api/auth/google/callback
-FRONTEND_URL=https://your-domain.com
-NEXT_PUBLIC_API_URL=https://your-domain.com/api
+FRONTEND_URL=https://shop.example.com
+NEXT_PUBLIC_API_URL=https://shop.example.com/api
+GOOGLE_CALLBACK_URL=https://shop.example.com/api/auth/google/callback
 ```
 
-## 10. Cap nhat version moi tren server
+Build lai frontend vi `NEXT_PUBLIC_API_URL` duoc bake vao build:
 
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend backend
+```
+
+---
+
+## 9. Cau hinh Google OAuth neu can
+
+Trong Google Cloud Console:
+
+Authorized redirect URI:
+
+```text
+https://shop.example.com/api/auth/google/callback
+```
+
+Trong `.env`:
+
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_CALLBACK_URL=https://shop.example.com/api/auth/google/callback
+FRONTEND_URL=https://shop.example.com
+```
+
+Neu khong dung Google OAuth, de trong `GOOGLE_CLIENT_ID` va `GOOGLE_CLIENT_SECRET`. Backend khong nen crash; endpoint Google se bao loi cau hinh.
+
+---
+
+## 10. Smoke test sau deploy
+
+Neu test tren server:
+
+```bash
+curl -i http://127.0.0.1:3000/api
+curl -i http://127.0.0.1:8000/
+curl -I http://127.0.0.1:3001/
+```
+
+Neu test qua domain:
+
+```bash
+curl -i https://shop.example.com/api
+curl -I https://shop.example.com/
+curl -i "https://shop.example.com/api/products?limit=2"
+curl -i "https://shop.example.com/api/categories"
+curl -i "https://shop.example.com/api/recommendations/public"
+```
+
+Kiem tra migration:
+
+```bash
+docker compose exec backend npx prisma migrate status
+```
+
+Kiem tra log realtime:
+
+```bash
+docker compose logs -f backend frontend ai-service
+```
+
+---
+
+## 11. Quy trinh update version moi
+
+Tren may local:
+
+```bash
+git checkout develop
+git pull
+# test local
+git checkout production
+git merge develop
+git push
+```
+
+Tren server:
+
+```bash
+cd ProjectIII
 git checkout production
 git pull
-docker compose up -d --build
-docker compose exec backend npx prisma migrate deploy
-docker compose ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
 
-Xem log sau khi update:
+Xem log sau update:
 
 ```bash
-docker compose logs --tail=100 backend frontend ai-service
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=100 backend frontend ai-service
 ```
 
-## 11. Rollback nhanh
+---
 
-Xem commit gan nhat:
+## 12. Backup va restore database
 
-```bash
-git log --oneline -5
-```
-
-Quay ve commit cu:
+Backup:
 
 ```bash
-git checkout <COMMIT_ID_CU>
-docker compose up -d --build
-docker compose exec backend npx prisma migrate deploy
-```
-
-Luu y: rollback code khong tu dong rollback database schema. Neu migration moi da thay doi schema theo cach khong tuong thich, can co migration rollback rieng hoac restore backup database.
-
-## 12. Backup database
-
-Backup Postgres:
-
-```bash
-docker compose exec postgres pg_dump -U postgres projectiii > projectiii_backup.sql
+docker compose exec postgres pg_dump -U postgres projectiii > projectiii_backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 Restore:
@@ -292,37 +572,170 @@ cat projectiii_backup.sql | docker compose exec -T postgres psql -U postgres pro
 
 Nen backup truoc khi:
 
-- Chay migration moi.
-- Cap nhat production.
-- Thay doi schema lon.
+- chay migration moi
+- update production
+- thay doi schema lon
 
-## 13. Checklist truoc khi public
+---
 
-- `.env` tren server da dung secrets manh.
-- Khong commit `.env` that len GitHub.
-- `docker compose ps` tat ca service can thiet deu `Up`.
-- `npx prisma migrate deploy` da chay thanh cong.
-- Frontend vao duoc.
-- Backend `/api` tra 200.
-- Products/categories/recommendations API tra 200.
-- Chat AI co `DEEPSEEK_API_KEY` hop le neu muon dung chat that.
-- Google OAuth co credential dung neu muon bat dang nhap Google.
-- Domain da tro dung IP.
-- HTTPS da bat.
-- Postgres/Redis/RabbitMQ khong bi public ra internet neu khong can.
+## 13. Rollback code
 
-## 14. Huong deploy toi uu hon ve sau
-
-Nen tao them:
-
-- `docker-compose.prod.yml`
-- `.env.production.example`
-- Nginx/Caddy config mau
-- CI/CD GitHub Actions build va deploy tu nhanh `production`
-
-Khi do lenh deploy co the gon thanh:
+Xem commit:
 
 ```bash
+git log --oneline -10
+```
+
+Quay ve commit cu:
+
+```bash
+git checkout <COMMIT_ID_CU>
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Neu rollback ve version cu nhung migration moi da thay doi DB, can restore backup hoac viet migration rollback rieng.
+
+---
+
+## 14. Troubleshooting loi thuong gap
+
+### Backend khong len
+
+Xem log:
+
+```bash
+docker compose logs --tail=200 backend
+```
+
+Kiem tra:
+
+- `DATABASE_URL` dung chua
+- Postgres da `Up` chua
+- Redis/RabbitMQ da `Up` chua
+- JWT secrets co bi de mac dinh khong
+
+### Frontend goi API sai URL
+
+Kiem tra `.env`:
+
+```env
+NEXT_PUBLIC_API_URL=https://shop.example.com/api
+```
+
+Sau khi sua `NEXT_PUBLIC_API_URL`, phai build lai frontend:
+
+```bash
+docker compose up -d --build frontend
+```
+
+### Database moi nhung khong co san pham
+
+Chay migration:
+
+```bash
 docker compose exec backend npx prisma migrate deploy
+```
+
+Neu can du lieu mau:
+
+```bash
+docker compose exec backend npm run db:seed
+```
+
+### Chat AI khong tra loi
+
+Kiem tra `ai-service/.env`:
+
+```env
+DEEPSEEK_API_KEY=...
+```
+
+Xem log:
+
+```bash
+docker compose logs --tail=100 ai-service
+docker compose logs --tail=100 backend
+```
+
+Kiem tra backend co tro den AI service:
+
+```env
+AI_SERVICE_URL=http://ai-service:8000
+```
+
+### Google OAuth loi redirect_uri_mismatch
+
+Kiem tra URI trong Google Console phai trung 100%:
+
+```text
+https://shop.example.com/api/auth/google/callback
+```
+
+Kiem tra `.env`:
+
+```env
+GOOGLE_CALLBACK_URL=https://shop.example.com/api/auth/google/callback
+FRONTEND_URL=https://shop.example.com
+```
+
+### Nginx 502 Bad Gateway
+
+Kiem tra container co chay khong:
+
+```bash
+docker compose ps
+```
+
+Kiem tra local port:
+
+```bash
+curl -I http://127.0.0.1:3001/
+curl -i http://127.0.0.1:3000/api
+```
+
+Kiem tra Nginx:
+
+```bash
+sudo nginx -t
+sudo journalctl -u nginx --no-pager -n 100
+```
+
+---
+
+## 15. Checklist truoc khi public
+
+- Source tren server o nhanh `production` hoac nhanh deploy on dinh.
+- `.env` da tao tren server, khong commit len GitHub.
+- Password Postgres/RabbitMQ/JWT da doi thanh secret manh.
+- `ai-service/.env` co `DEEPSEEK_API_KEY` neu dung chat AI.
+- `docker compose ps` tat ca service can thiet deu `Up`.
+- `npx prisma migrate deploy` da chay thanh cong.
+- Frontend vao duoc bang domain.
+- Backend `/api` tra 200.
+- Products/categories/recommendations API tra 200.
+- HTTPS da bat.
+- Google OAuth callback dung neu dung Google login.
+- Postgres/Redis/RabbitMQ/AI service khong public ra internet neu khong can.
+- Co backup database truoc lan public dau tien.
+
+---
+
+## 16. Lenh deploy nhanh tong hop
+
+Demo/staging:
+
+```bash
+git pull
+docker compose up -d --build
+docker compose exec backend npx prisma migrate deploy
+docker compose ps
+```
+
+Production:
+
+```bash
+git pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 ```
