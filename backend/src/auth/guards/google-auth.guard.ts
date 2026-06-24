@@ -1,8 +1,28 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  ExecutionContext,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard('google') {
+  constructor(private readonly configService: ConfigService) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext) {
+    const clientID = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
+
+    if (!clientID || !clientSecret) {
+      throw new ServiceUnavailableException('Google OAuth is not configured');
+    }
+
+    return super.canActivate(context);
+  }
+
   getAuthenticateOptions(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<{
       query?: { prompt?: string };

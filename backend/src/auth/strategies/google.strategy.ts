@@ -13,13 +13,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       'http://localhost:3000/api/auth/google/callback',
     );
 
-    if (!clientID || !clientSecret) {
-      throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required');
-    }
-
     super({
-      clientID,
-      clientSecret,
+      clientID: clientID || 'google-oauth-disabled',
+      clientSecret: clientSecret || 'google-oauth-disabled',
       callbackURL,
       scope: ['email', 'profile'],
     });
