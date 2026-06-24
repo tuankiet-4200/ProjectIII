@@ -2,27 +2,23 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: projectiii_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-projectiii}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     container_name: projectiii_redis
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: projectiii_rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    restart: unless-stopped
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
@@ -31,12 +27,9 @@ services:
     build:
       context: ./backend
     container_name: projectiii_backend
+    restart: unless-stopped
     ports:
       - "3000:3000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    command: npm run start:dev
     environment:
       - DATABASE_URL=${BACKEND_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/projectiii?schema=public}
       - REDIS_HOST=${REDIS_HOST:-redis}
@@ -61,10 +54,9 @@ services:
     build:
       context: ./ai-service
     container_name: projectiii_ai
+    restart: unless-stopped
     ports:
       - "8000:8000"
-    volumes:
-      - ./ai-service:/app
     env_file:
       - ./ai-service/.env
 
@@ -74,12 +66,9 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
     container_name: projectiii_frontend
+    restart: unless-stopped
     ports:
       - "3001:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: npm run dev
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
     depends_on:

@@ -10,9 +10,9 @@ Tai lieu nay huong dan deploy ProjectIII tu GitHub len server. Du an gom:
 Co 2 cach deploy:
 
 - **Cach A - Demo/Staging nhanh:** dung `docker-compose.yml` hien tai. De chay demo tren server, nhanh va de debug.
-- **Cach B - Production khuyen nghi:** dung them `docker-compose.prod.yml`, bo dev mode, bo bind mount, chay image build san, dung reverse proxy HTTPS.
+- **Cach B - Production/direct-port khuyen nghi:** dung `docker-compose.prod.yml`, bo dev mode, bo bind mount, chay image build san. Cach nay van co the test truc tiep bang port `3001`, `3000`, `8000`.
 
-Neu ban moi deploy lan dau, co the lam Cach A truoc de chac he thong len duoc, sau do nang len Cach B.
+Neu server chi co 4GB RAM, nen dung Cach B ngay ca khi moi test bang port truc tiep. Cach A chay watcher/dev server nen ton RAM hon.
 
 ---
 
@@ -317,50 +317,48 @@ Luu y: Cach A dang chay dev command (`next dev`, `start:dev`, `uvicorn --reload`
 
 ---
 
-## 7. Cach B - Deploy production khuyen nghi
+## 7. Cach B - Deploy production/direct-port khuyen nghi
 
-Tao file `docker-compose.prod.yml` o root server/repo:
+Repo da co san `docker-compose.prod.yml`.
 
-```yaml
-services:
-  postgres:
-    ports: []
-    restart: unless-stopped
+Khac biet so voi `docker-compose.yml` dev:
 
-  redis:
-    ports: []
-    restart: unless-stopped
+- Khong bind mount source code vao container.
+- Backend chay `npm run start:prod`.
+- Frontend chay Next standalone image bang `node server.js`.
+- AI service chay `uvicorn` khong co `--reload`.
+- Postgres/Redis/RabbitMQ khong expose port ra ngoai.
+- Frontend van expose `3001`, backend expose `3000`, AI service expose `8000` de test truc tiep bang port.
 
-  rabbitmq:
-    ports: []
-    restart: unless-stopped
-
-  backend:
-    command: npm run start:prod
-    volumes: []
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"
-
-  frontend:
-    command: npm start
-    volumes: []
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3001:3000"
-
-  ai-service:
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
-    volumes: []
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8000:8000"
-```
+Luu y: `NEXT_PUBLIC_API_URL` duoc dua vao luc build frontend. Neu doi bien nay trong `.env`, can build lai frontend.
 
 Chay production compose:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Neu server chi co 4GB RAM va build bi cham/het RAM, build tung service de giam peak memory:
+
+```bash
+docker compose -f docker-compose.prod.yml build ai-service
+docker compose -f docker-compose.prod.yml build backend
+docker compose -f docker-compose.prod.yml build frontend
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Hoac gioi han Docker Compose build tung viec mot:
+
+```bash
+COMPOSE_PARALLEL_LIMIT=1 docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Khi chi sua mot service, chi build lai service do:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build frontend
+docker compose -f docker-compose.prod.yml up -d --build backend
+docker compose -f docker-compose.prod.yml up -d --build ai-service
 ```
 
 Chay migration:
@@ -373,6 +371,24 @@ Kiem tra:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+```
+
+Truy cap khi test bang port:
+
+- Frontend: `http://<SERVER_IP>:3001`
+- Backend API: `http://<SERVER_IP>:3000/api`
+- AI service: `http://<SERVER_IP>:8000`
+
+Neu chi sua `.env` backend/AI ma khong sua frontend `NEXT_PUBLIC_API_URL`, thuong chi can:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Neu sua `NEXT_PUBLIC_API_URL`, phai rebuild frontend:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend
 ```
 
 ---
