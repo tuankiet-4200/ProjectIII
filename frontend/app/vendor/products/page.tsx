@@ -44,6 +44,8 @@ type Product = {
   image: string;
   imageBg: string;
   description: string;
+  features: string[];
+  specifications: ProductSpecification[];
   metaTitle: string;
   metaDescription: string;
   variations: ProductVariation[];
@@ -51,6 +53,39 @@ type Product = {
   images: string[];
   categoryId?: number;
 };
+
+type ProductSpecification = {
+  label: string;
+  value: string;
+};
+
+const parseLineList = (value: string) =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+const parseSpecifications = (value: string) =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const separatorIndex = line.indexOf(":");
+      if (separatorIndex === -1) {
+        return { label: line, value: "" };
+      }
+      return {
+        label: line.slice(0, separatorIndex).trim(),
+        value: line.slice(separatorIndex + 1).trim(),
+      };
+    })
+    .filter((spec) => spec.label && spec.value);
+
+const formatLineList = (items?: string[]) => (items || []).join("\n");
+
+const formatSpecifications = (items?: ProductSpecification[]) =>
+  (items || []).map((spec) => `${spec.label}: ${spec.value}`).join("\n");
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -134,13 +169,15 @@ export default function VendorProducts() {
   const [editForm, setEditForm] = useState<{
     name: string;
     description: string;
+    featuresText: string;
+    specificationsText: string;
     price: string;
     stock: string;
     category_id: string;
     metaTitle: string;
     metaDescription: string;
     images: string[];
-  }>({ name: '', description: '', price: '', stock: '', category_id: '', metaTitle: '', metaDescription: '', images: [] });
+  }>({ name: '', description: '', featuresText: '', specificationsText: '', price: '', stock: '', category_id: '', metaTitle: '', metaDescription: '', images: [] });
 
   const [newImages, setNewImages] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
@@ -156,6 +193,8 @@ export default function VendorProducts() {
     setEditForm({
       name: p.name,
       description: p.description,
+      featuresText: formatLineList(p.features),
+      specificationsText: formatSpecifications(p.specifications),
       price: String(p.price),
       stock: String(p.stock),
       category_id: String(p.categoryId || ''),
@@ -171,6 +210,8 @@ export default function VendorProducts() {
     setEditForm({
       name: selectedProduct.name,
       description: selectedProduct.description,
+      featuresText: formatLineList(selectedProduct.features),
+      specificationsText: formatSpecifications(selectedProduct.specifications),
       price: String(selectedProduct.price),
       stock: String(selectedProduct.stock),
       category_id: String(selectedProduct.categoryId || ''),
@@ -217,6 +258,8 @@ export default function VendorProducts() {
       await productsService.update(selectedProduct.id, {
         name: editForm.name,
         description: editForm.description,
+        features: parseLineList(editForm.featuresText),
+        specifications: parseSpecifications(editForm.specificationsText),
         price: Number(editForm.price),
         stock_quantity: Number(editForm.stock),
         ...(editForm.category_id ? { category_id: Number(editForm.category_id) } : {}),
@@ -262,6 +305,8 @@ export default function VendorProducts() {
             image: EMOJI_MAP[i % EMOJI_MAP.length],
             imageBg: BG_MAP[i % BG_MAP.length],
             description: p.description || '',
+            features: Array.isArray(p.features) ? p.features : [],
+            specifications: Array.isArray(p.specifications) ? p.specifications : [],
             metaTitle: p.meta_title || p.name || '',
             metaDescription: p.meta_description || p.description || '',
             variations: [],
@@ -652,6 +697,28 @@ export default function VendorProducts() {
                         rows={4}
                         className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed focus:border-violet-500/60 focus:outline-none transition-colors resize-none"
                         placeholder="Mô tả sản phẩm..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Đặc điểm nổi bật</label>
+                      <textarea
+                        value={editForm.featuresText}
+                        onChange={(e) => setEditForm(f => ({ ...f, featuresText: e.target.value }))}
+                        rows={4}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed focus:border-violet-500/60 focus:outline-none transition-colors resize-y"
+                        placeholder={"Mỗi dòng một đặc điểm\nVí dụ: Chống nước 5ATM"}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-medium mb-1 block">Thông số kỹ thuật</label>
+                      <textarea
+                        value={editForm.specificationsText}
+                        onChange={(e) => setEditForm(f => ({ ...f, specificationsText: e.target.value }))}
+                        rows={5}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed focus:border-violet-500/60 focus:outline-none transition-colors resize-y"
+                        placeholder={"Mỗi dòng theo dạng Tên: Giá trị\nVí dụ: Chất liệu: Thép không gỉ"}
                       />
                     </div>
                   </div>

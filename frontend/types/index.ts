@@ -71,6 +71,8 @@ export interface Product {
   name: string;
   slug: string;
   description: string | null;
+  features?: string[];
+  specifications?: ProductSpecification[];
   meta_title?: string | null;
   meta_description?: string | null;
   price: number;
@@ -81,6 +83,11 @@ export interface Product {
   updated_at: string;
   shop?: Shop;
   category?: Category;
+}
+
+export interface ProductSpecification {
+  label: string;
+  value: string;
 }
 
 // ─── Home Content ────────────────────────────────────────────────────────────
@@ -227,6 +234,8 @@ export interface CreateProductData {
   name: string;
   slug: string;
   description?: string;
+  features?: string[];
+  specifications?: ProductSpecification[];
   meta_title?: string;
   meta_description?: string;
   price: number;
@@ -239,6 +248,8 @@ export interface UpdateProductData {
   name?: string;
   slug?: string;
   description?: string;
+  features?: string[];
+  specifications?: ProductSpecification[];
   meta_title?: string;
   meta_description?: string;
   price?: number;

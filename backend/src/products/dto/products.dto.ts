@@ -1,5 +1,24 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  IsNumber,
+  Min,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class ProductSpecificationDto {
+  @IsString()
+  @IsNotEmpty()
+  label: string;
+
+  @IsString()
+  @IsNotEmpty()
+  value: string;
+}
 
 export class CreateProductDto {
   @IsInt()
@@ -16,6 +35,17 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  features?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductSpecificationDto)
+  specifications?: ProductSpecificationDto[];
 
   @IsString()
   @IsOptional()
@@ -55,6 +85,17 @@ export class UpdateProductDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  features?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductSpecificationDto)
+  specifications?: ProductSpecificationDto[];
 
   @IsString()
   @IsOptional()

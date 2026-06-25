@@ -11,6 +11,19 @@ import { CreateProductDto, UpdateProductDto, ProductQueryDto } from './dto';
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeProductDetails<T extends CreateProductDto | UpdateProductDto>(
+    dto: T,
+  ) {
+    return {
+      ...dto,
+      features: dto.features?.filter((feature) => feature.trim().length > 0),
+      specifications: dto.specifications?.map((spec) => ({
+        label: spec.label,
+        value: spec.value,
+      })),
+    };
+  }
+
   async findAll(query: ProductQueryDto) {
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -121,7 +134,7 @@ export class ProductsService {
     const product = await this.prisma.product.create({
       data: {
         shop_id: shopId,
-        ...dto,
+        ...this.normalizeProductDetails(dto),
       },
     });
     return product;
@@ -139,7 +152,7 @@ export class ProductsService {
 
     const updated = await this.prisma.product.update({
       where: { id: productId },
-      data: dto,
+      data: this.normalizeProductDetails(dto),
     });
     return updated;
   }

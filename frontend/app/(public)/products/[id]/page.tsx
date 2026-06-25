@@ -51,13 +51,30 @@ type ReviewPreview = {
   created_at: string;
 };
 
+type ProductSpecification = {
+  label: string;
+  value: string;
+};
+
+const normalizeSpecifications = (value: unknown): ProductSpecification[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const spec = item as { label?: unknown; value?: unknown };
+      if (typeof spec.label !== "string" || typeof spec.value !== "string") return null;
+      return { label: spec.label, value: spec.value };
+    })
+    .filter((item): item is ProductSpecification => Boolean(item));
+};
+
 // ─── Mock Product ─────────────────────────────────────────────────────────────
 
 const PRODUCT = {
   id: 1,
-  name: "Eclipse Gen-2 Wireless Studio",
-  brand: "Lumina Audio",
-  category: "Over-Ear Headphones",
+  name: "Sản phẩm ProjectIII",
+  brand: "ProjectIII",
+  category: "Danh mục",
   badge: "POPULAR CHOICE",
   rating: 4.9,
   reviewCount: 2489,
@@ -67,26 +84,7 @@ const PRODUCT = {
   inStock: true,
   stockCount: 14,
   description:
-    "Experience uncompromised sound with hybrid active noise cancellation and 60-hour battery life. Crafted for creators and audiophiles.",
-  longDescription:
-    "Designed for those who hear every detail. The Eclipse Gen-2 features our proprietary 40mm liquid crystal polymer drivers, providing a frequency response that goes beyond human hearing. Whether you're mixing in a studio or commuting through the city, the active noise cancellation adapts in real-time to your surroundings.",
-  features: [
-    "Adaptive Active Noise Cancellation with Transparency Mode",
-    "High-Resolution Audio via Bluetooth 5.3 LDAC Support",
-    "Ergonomic vegan leather memory foam cushions",
-    "Quad-microphone system for crystal-clear calls",
-    "Fast charge: 10 mins = 5 hours of playback",
-  ],
-  specs: [
-    { label: "Driver Size", value: "40mm Custom LCP" },
-    { label: "Frequency Response", value: "4 Hz – 40,000 Hz" },
-    { label: "Battery Life", value: "Up to 60 hours" },
-    { label: "Bluetooth", value: "5.3 with LDAC & aptX" },
-    { label: "Noise Cancellation", value: "Hybrid ANC (-42dB)" },
-    { label: "Weight", value: "254g" },
-    { label: "Charging", value: "USB-C, 10 min = 5 hrs" },
-    { label: "Color Options", value: "Space Black, Silver, Midnight Blue" },
-  ],
+    "Sản phẩm này hiện chưa có mô tả chi tiết.",
   colors: [
     { name: "Space Black", hex: "#1a1a1a" },
     { name: "Silver", hex: "#c0c0c0" },
@@ -173,31 +171,52 @@ function RelatedCard({ product }: { product: RelatedProduct }) {
 
 // ─── Tab content ──────────────────────────────────────────────────────────────
 
-function DetailsTab() {
+function DetailsTab({
+  name,
+  description,
+  features,
+}: {
+  name: string;
+  description?: string | null;
+  features: string[];
+}) {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-base font-bold text-foreground mb-2">Precision Audio for Professionals</h3>
+        <h3 className="text-base font-bold text-foreground mb-2">Mô tả sản phẩm</h3>
         <p className="text-sm text-slate-500 dark:text-gray-400 leading-relaxed mb-4">
-          {PRODUCT.longDescription}
+          {description?.trim() || `${name} hiện chưa có mô tả chi tiết.`}
         </p>
-        <ul className="space-y-2">
-          {PRODUCT.features.map((f) => (
-            <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-gray-300">
-              <Check size={14} className="text-violet-400 shrink-0 mt-0.5" />
-              {f}
-            </li>
-          ))}
-        </ul>
+        {features.length > 0 ? (
+          <ul className="space-y-2">
+            {features.map((f) => (
+              <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-gray-300">
+                <Check size={14} className="text-violet-400 shrink-0 mt-0.5" />
+                {f}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-slate-400 dark:text-gray-500">
+            Sản phẩm này chưa có danh sách đặc điểm nổi bật.
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-function SpecificationsTab() {
+function SpecificationsTab({
+  specifications,
+  fallbackSpecs,
+}: {
+  specifications: ProductSpecification[];
+  fallbackSpecs: ProductSpecification[];
+}) {
+  const rows = specifications.length > 0 ? specifications : fallbackSpecs;
   return (
     <div className="rounded-xl overflow-hidden border border-card-border">
-      {PRODUCT.specs.map((spec, idx) => (
+      {rows.map((spec, idx) => (
         <div
           key={spec.label}
           className={`flex items-center gap-4 px-5 py-3.5 text-sm ${
@@ -425,6 +444,10 @@ export default function ProductDetailPage() {
     categorySlug: '' as string,
     parentCategory: '' as string,
     shopSlug: '' as string,
+    features: [] as string[],
+    specifications: [] as ProductSpecification[],
+    salesCount: 0,
+    createdAt: '' as string,
     shop: { ...PRODUCT.shop, id: '' as string },
   });
 
@@ -443,8 +466,12 @@ export default function ProductDetailPage() {
             name: p.name,
             price: p.price,
             description: p.description || PRODUCT.description,
+            features: Array.isArray(p.features) ? p.features : [],
+            specifications: normalizeSpecifications(p.specifications),
             inStock: p.stock_quantity > 0,
             stockCount: p.stock_quantity,
+            salesCount: p.sales_count || 0,
+            createdAt: p.created_at || '',
             brand: p.shop?.name || PRODUCT.brand,
             category: p.category?.name || PRODUCT.category,
             categoryId: p.category_id,
@@ -618,6 +645,17 @@ export default function ProductDetailPage() {
     { id: "specifications", label: "Specifications" },
     { id: "reviews", label: `Reviews${reviewStats.total > 0 ? ` (${reviewStats.total.toLocaleString()})` : ''}` },
     { id: "shipping", label: "Shipping" },
+  ];
+
+  const fallbackSpecifications: ProductSpecification[] = [
+    { label: "Danh mục", value: productData.category || "Chưa phân loại" },
+    { label: "Cửa hàng", value: productData.shop.name || "ProjectIII" },
+    { label: "Tình trạng", value: productData.inStock ? "Còn hàng" : "Hết hàng" },
+    { label: "Tồn kho", value: `${productData.stockCount} sản phẩm` },
+    { label: "Đã bán", value: `${productData.salesCount} sản phẩm` },
+    ...(productData.createdAt
+      ? [{ label: "Ngày đăng", value: new Date(productData.createdAt).toLocaleDateString("vi-VN") }]
+      : []),
   ];
 
   return (
@@ -869,8 +907,19 @@ export default function ProductDetailPage() {
             ))}
           </div>
 
-          {tab === "details" && <DetailsTab />}
-          {tab === "specifications" && <SpecificationsTab />}
+          {tab === "details" && (
+            <DetailsTab
+              name={productData.name}
+              description={productData.description}
+              features={productData.features}
+            />
+          )}
+          {tab === "specifications" && (
+            <SpecificationsTab
+              specifications={productData.specifications}
+              fallbackSpecs={fallbackSpecifications}
+            />
+          )}
           {tab === "reviews" && <ReviewsTab productId={productRealId} onStatsLoaded={setReviewStats} />}
           {tab === "shipping" && <ShippingTab />}
         </div>

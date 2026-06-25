@@ -24,6 +24,29 @@ import type { Category } from "@/types";
 import Link from "next/link";
 import CategorySelect from "@/components/vendor/CategorySelect";
 
+const parseLineList = (value: string) =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+const parseSpecifications = (value: string) =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const separatorIndex = line.indexOf(":");
+      if (separatorIndex === -1) {
+        return { label: line, value: "" };
+      }
+      return {
+        label: line.slice(0, separatorIndex).trim(),
+        value: line.slice(separatorIndex + 1).trim(),
+      };
+    })
+    .filter((spec) => spec.label && spec.value);
+
 export default function CreateProduct() {
   const router = useRouter();
   
@@ -37,6 +60,8 @@ export default function CreateProduct() {
     name: "",
     slug: "",
     description: "",
+    featuresText: "",
+    specificationsText: "",
     price: "",
     stock_quantity: "",
     category_id: "",
@@ -113,6 +138,8 @@ export default function CreateProduct() {
         name: formData.name,
         slug: formData.slug,
         description: formData.description,
+        features: parseLineList(formData.featuresText),
+        specifications: parseSpecifications(formData.specificationsText),
         price: Number(formData.price),
         stock_quantity: Number(formData.stock_quantity),
         category_id: Number(formData.category_id),
@@ -198,6 +225,26 @@ export default function CreateProduct() {
                       className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-gray-300 placeholder:text-gray-600 outline-none focus:border-violet-500/50 focus:bg-white/[0.05] transition-all resize-y"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Đặc điểm nổi bật</label>
+                  <textarea
+                    value={formData.featuresText}
+                    onChange={(e) => setFormData(prev => ({ ...prev, featuresText: e.target.value }))}
+                    placeholder={"Mỗi dòng một đặc điểm\nVí dụ: Chống nước 5ATM"}
+                    rows={4}
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-300 placeholder:text-gray-600 outline-none focus:border-violet-500/50 focus:bg-white/[0.05] transition-all resize-y"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Thông số kỹ thuật</label>
+                  <textarea
+                    value={formData.specificationsText}
+                    onChange={(e) => setFormData(prev => ({ ...prev, specificationsText: e.target.value }))}
+                    placeholder={"Mỗi dòng theo dạng Tên: Giá trị\nVí dụ: Chất liệu: Thép không gỉ"}
+                    rows={5}
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-300 placeholder:text-gray-600 outline-none focus:border-violet-500/50 focus:bg-white/[0.05] transition-all resize-y"
+                  />
                 </div>
               </div>
             </div>

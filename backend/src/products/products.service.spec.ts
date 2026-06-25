@@ -8,9 +8,15 @@ describe('ProductsService', () => {
     category: {
       findUnique: jest.Mock;
     };
+    shop: {
+      findUnique: jest.Mock;
+    };
     product: {
       findMany: jest.Mock;
       count: jest.Mock;
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -19,9 +25,15 @@ describe('ProductsService', () => {
       category: {
         findUnique: jest.fn(),
       },
+      shop: {
+        findUnique: jest.fn(),
+      },
       product: {
         findMany: jest.fn(),
         count: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -84,6 +96,56 @@ describe('ProductsService', () => {
     );
     expect(prisma.product.count).toHaveBeenCalledWith({
       where: { category_id: { in: [1, 2, 3] } },
+    });
+  });
+
+  it('persists product features and specifications when creating a product', async () => {
+    prisma.shop.findUnique.mockResolvedValueOnce({ id: 'shop-1', owner_id: 'owner-1' });
+    prisma.product.create.mockResolvedValueOnce({ id: 'product-1' });
+
+    await service.create('shop-1', 'owner-1', {
+      category_id: 1,
+      name: 'Đồng hồ chống nước',
+      slug: 'dong-ho-chong-nuoc',
+      description: 'Mô tả thật',
+      price: 1200000,
+      stock_quantity: 5,
+      features: ['Chống nước 5ATM', 'Mặt kính sapphire'],
+      specifications: [
+        { label: 'Chất liệu', value: 'Thép không gỉ' },
+        { label: 'Kích thước', value: '42mm' },
+      ],
+    });
+
+    expect(prisma.product.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        features: ['Chống nước 5ATM', 'Mặt kính sapphire'],
+        specifications: [
+          { label: 'Chất liệu', value: 'Thép không gỉ' },
+          { label: 'Kích thước', value: '42mm' },
+        ],
+      }),
+    });
+  });
+
+  it('updates product features and specifications for owned products', async () => {
+    prisma.product.findUnique.mockResolvedValueOnce({
+      id: 'product-1',
+      shop: { owner_id: 'owner-1' },
+    });
+    prisma.product.update.mockResolvedValueOnce({ id: 'product-1' });
+
+    await service.update('product-1', 'owner-1', {
+      features: ['Pin 7 ngày'],
+      specifications: [{ label: 'Pin', value: '7 ngày' }],
+    });
+
+    expect(prisma.product.update).toHaveBeenCalledWith({
+      where: { id: 'product-1' },
+      data: expect.objectContaining({
+        features: ['Pin 7 ngày'],
+        specifications: [{ label: 'Pin', value: '7 ngày' }],
+      }),
     });
   });
 });

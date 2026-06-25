@@ -152,6 +152,8 @@ model Product {
   name           String
   slug           String   @unique
   description    String?  @db.Text
+  features       String[] @default([])
+  specifications Json?
   meta_title     String?  @db.Text
   meta_description String? @db.Text
   price          Decimal  @db.Decimal(12, 2)
