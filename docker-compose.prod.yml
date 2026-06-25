@@ -41,7 +41,7 @@ services:
       - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-7d}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3000/api/auth/google/callback}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:3005/api/auth/google/callback}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
       - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}
@@ -65,13 +65,13 @@ services:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3005/api}
     container_name: projectiii_frontend
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3005/api}
     depends_on:
       - backend
 
