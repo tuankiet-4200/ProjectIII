@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import type { CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Search, Check, FolderOpen, Tag } from "lucide-react";
 
 interface CategoryItem {
@@ -26,12 +28,45 @@ export default function CategorySelect({
 }: CategorySelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const updateDropdownPosition = () => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.max(220, window.innerHeight - rect.bottom - 24),
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updateDropdownPosition();
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
+  }, [open]);
 
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const clickedTrigger = ref.current?.contains(target);
+      const clickedPanel = panelRef.current?.contains(target);
+      if (!clickedTrigger && !clickedPanel) {
         setOpen(false);
         setSearch("");
       }
@@ -99,8 +134,12 @@ export default function CategorySelect({
       </button>
 
       {/* Dropdown panel */}
-      {open && (
-        <div className="absolute z-50 mt-1.5 w-full bg-[#1C1929] border border-white/10 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
+      {open && mounted && createPortal(
+        <div
+          ref={panelRef}
+          style={dropdownStyle}
+          className="z-[1000] bg-[#1C1929] border border-white/10 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden"
+        >
           {/* Search */}
           <div className="px-3 py-2.5 border-b border-white/5">
             <div className="flex items-center gap-2 bg-white/5 rounded-xl px-2.5 py-2">
@@ -117,7 +156,7 @@ export default function CategorySelect({
           </div>
 
           {/* Options */}
-          <div className="max-h-64 overflow-y-auto py-1.5 scrollbar-thin">
+          <div className="overflow-y-auto py-1.5 scrollbar-thin" style={{ maxHeight: "min(16rem, calc(100vh - 10rem))" }}>
             {filtered.length === 0 ? (
               <div className="px-4 py-4 text-center text-xs text-gray-600">Không tìm thấy danh mục</div>
             ) : (
@@ -163,7 +202,8 @@ export default function CategorySelect({
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

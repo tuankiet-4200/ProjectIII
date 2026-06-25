@@ -8,7 +8,7 @@ import {
   Save, 
   Info,
   Package,
-  DollarSign,
+  Banknote,
   Tag,
   AlignLeft,
   XCircle,
@@ -253,21 +253,21 @@ export default function CreateProduct() {
             <div className="grid grid-cols-2 gap-6">
               <div className="rounded-2xl bg-[#14121C] border border-white/5 overflow-hidden">
                 <div className="px-5 py-4 border-b border-white/5 bg-white/[0.02] flex items-center gap-2">
-                  <DollarSign size={14} className="text-emerald-400" />
-                  <h2 className="text-xs font-bold text-white uppercase tracking-wider">Pricing</h2>
+                  <Banknote size={14} className="text-emerald-400" />
+                  <h2 className="text-xs font-bold text-white uppercase tracking-wider">Giá bán</h2>
                 </div>
                 <div className="p-5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Regular Price ($) <span className="text-red-400">*</span></label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Giá bán (VNĐ) <span className="text-red-400">*</span></label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₫</span>
                     <input
                       type="number"
                       required
                       min="0"
-                      step="0.01"
+                      step="1000"
                       value={formData.price}
                       onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                      placeholder="0.00"
+                      placeholder="0"
                       className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-white placeholder:text-gray-600 outline-none focus:border-emerald-500/50 focus:bg-white/[0.05] transition-all"
                     />
                   </div>
