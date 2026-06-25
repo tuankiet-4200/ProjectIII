@@ -56,6 +56,8 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  description?: string | null;
+  icon?: string | null;
   parent_id: number | null;
   parent?: Category;
   children?: Category[];
@@ -270,5 +272,7 @@ export interface ProductQuery {
 export interface CreateCategoryData {
   name: string;
   slug: string;
-  parent_id?: number;
+  parent_id?: number | null;
+  description?: string;
+  icon?: string;
 }

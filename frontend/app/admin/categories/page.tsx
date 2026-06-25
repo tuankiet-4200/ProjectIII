@@ -31,9 +31,6 @@ import {
   Dumbbell,
   X,
   Check,
-  TrendingUp,
-  Cloud,
-  Database,
   Download,
 } from "lucide-react";
 
@@ -77,18 +74,23 @@ const ICON_OPTIONS: { name: string; icon: IconComponent }[] = [
 const DEFAULT_COLORS = ["#8B5CF6", "#3B82F6", "#F59E0B", "#EC4899", "#10B981", "#6366F1"];
 const DEFAULT_ICONS = [Monitor, Home, Shirt, Dumbbell, BookOpen, Smartphone, Headphones];
 
+function getIconOption(iconName?: string | null) {
+  return ICON_OPTIONS.find((option) => option.name === iconName) || ICON_OPTIONS[0];
+}
+
 function mapApiToUiCategory(apiCat: ApiCategory, depth = 0): Category {
   const color = DEFAULT_COLORS[(apiCat.id || depth) % DEFAULT_COLORS.length];
-  const iconComponent = DEFAULT_ICONS[(apiCat.id || depth) % DEFAULT_ICONS.length];
+  const iconOption = apiCat.icon ? getIconOption(apiCat.icon) : null;
+  const iconComponent = iconOption?.icon || DEFAULT_ICONS[(apiCat.id || depth) % DEFAULT_ICONS.length];
   return {
     id: String(apiCat.id),
     name: apiCat.name,
     slug: apiCat.slug,
-    icon: "Default",
+    icon: iconOption?.name || "Monitor",
     iconComponent,
     color,
     productCount: apiCat._count?.products || 0,
-    description: "Generated category from API",
+    description: apiCat.description || "",
     parentId: apiCat.parent_id ? String(apiCat.parent_id) : null,
     visible: true,
     metaTitle: `${apiCat.name} - Store`,
@@ -168,10 +170,12 @@ export default function AdminCategories() {
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
   const [newParentId, setNewParentId] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newIcon, setNewIcon] = useState("Monitor");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Edit Category State
-  const [editForm, setEditForm] = useState({ name: "", slug: "", parentId: "", description: "" });
+  const [editForm, setEditForm] = useState({ name: "", slug: "", parentId: "", description: "", icon: "Monitor" });
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -204,13 +208,17 @@ export default function AdminCategories() {
       await categoriesService.create({ 
         name: newName, 
         slug: newSlug, 
-        parent_id: newParentId ? parseInt(newParentId) : undefined 
+        parent_id: newParentId ? parseInt(newParentId) : null,
+        description: newDescription.trim() || undefined,
+        icon: newIcon,
       });
       toast.success("Category created successfully");
       setShowNewModal(false);
       setNewName("");
       setNewSlug("");
       setNewParentId("");
+      setNewDescription("");
+      setNewIcon("Monitor");
       await fetchCategories();
     } catch {
       toast.error("Failed to create category");
@@ -230,6 +238,7 @@ export default function AdminCategories() {
         slug: selectedCategory.slug || "",
         parentId: selectedCategory.parentId || "",
         description: selectedCategory.description || "",
+        icon: selectedCategory.icon || "Monitor",
       });
     }
   }, [selectedCategory]);
@@ -241,7 +250,9 @@ export default function AdminCategories() {
       await categoriesService.update(Number(selectedId), {
         name: editForm.name,
         slug: editForm.slug,
-        parent_id: editForm.parentId ? Number(editForm.parentId) : undefined,
+        parent_id: editForm.parentId ? Number(editForm.parentId) : null,
+        description: editForm.description.trim(),
+        icon: editForm.icon,
       });
       toast.success("Category updated successfully");
       await fetchCategories();
@@ -337,11 +348,6 @@ export default function AdminCategories() {
             <div className="text-center mt-4 pb-2"><button className="text-[11px] font-semibold text-violet-400 hover:text-violet-300 transition-colors">View All {allCategories.length} Categories</button></div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-3 shrink-0">
-            <div className="flex items-center gap-4 text-[10px] text-gray-600"><span>© 2024 CatFlow CMS</span><span>·</span><button className="hover:text-gray-400 transition-colors">Privacy Policy</button><span>·</span><button className="hover:text-gray-400 transition-colors">Help Center</button></div>
-            <div className="flex items-center gap-4 text-[10px] text-gray-600"><span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><Cloud size={9} /> Cloud Sync Active</span><span className="flex items-center gap-1"><Database size={9} /> API v2.4.0-stable</span></div>
-          </div>
         </div>
 
         {/* Right Panel: Edit Category */}
@@ -363,9 +369,25 @@ export default function AdminCategories() {
                 <>
                   <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Category Title</label><input type="text" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors" /></div>
                   <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">URL Slug</label><div className="flex items-center bg-white/[0.03] border border-white/5 rounded-xl overflow-hidden focus-within:border-violet-500/40 transition-colors"><span className="px-3 text-[10px] text-gray-600 border-r border-white/5 py-2.5 bg-white/[0.02]">/store/</span><input type="text" value={editForm.slug} onChange={e => setEditForm({...editForm, slug: e.target.value})} className="flex-1 bg-transparent px-3 py-2.5 text-xs text-white outline-none" /></div></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Icon</label><div className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2"><div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${selectedCategory.color}20` }}><selectedCategory.iconComponent size={12} style={{ color: selectedCategory.color }} /></div><span className="flex-1 text-xs text-white">{selectedCategory.icon}</span><ChevronDown size={10} className="text-gray-600" /></div></div>
-                    <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Badge Color</label><div className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2"><div className="w-5 h-5 rounded-md shrink-0" style={{ backgroundColor: selectedCategory.color }} /><span className="flex-1 text-xs text-gray-400 font-mono">{selectedCategory.color}</span></div></div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Icon</label>
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center shrink-0">
+                        {(() => {
+                          const PreviewIcon = getIconOption(editForm.icon).icon;
+                          return <PreviewIcon size={15} className="text-violet-300" />;
+                        })()}
+                      </div>
+                      <select
+                        value={editForm.icon}
+                        onChange={e => setEditForm({ ...editForm, icon: e.target.value })}
+                        className="flex-1 bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors"
+                      >
+                        {ICON_OPTIONS.map((opt) => (
+                          <option key={opt.name} value={opt.name}>{opt.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Parent Category</label><select value={editForm.parentId} onChange={e => setEditForm({...editForm, parentId: e.target.value})} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none"><option value="">None (Root Level)</option>{allCategories.filter(c => c.id !== selectedId).map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
                   <div><label className="text-[10px] text-gray-500 font-semibold mb-1.5 block">Description</label><textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} rows={3} className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-gray-300 outline-none focus:border-violet-500/40 transition-colors resize-none leading-relaxed" /></div>
@@ -404,10 +426,6 @@ export default function AdminCategories() {
                 <button className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-semibold text-gray-300 hover:bg-white/10 transition-all">Discard</button>
                 <button onClick={() => handleDeleteSingle(selectedId)} disabled={isSubmitting} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all disabled:opacity-50" title="Delete Category"><Trash2 size={14} /> Delete</button>
               </div>
-              <div className="rounded-xl bg-violet-600/10 border border-violet-500/20 p-3 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-violet-600/20 flex items-center justify-center shrink-0"><TrendingUp size={16} className="text-violet-400" /></div>
-                <div><div className="text-xs font-bold text-white">Category Performance</div><div className="text-[10px] text-gray-400 mt-0.5">This category contributes to 14% of total electronics sales this month.</div></div>
-              </div>
             </div>
           </div>
         )}
@@ -423,10 +441,20 @@ export default function AdminCategories() {
               <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Category Name</label><input type="text" value={newName} onChange={(e) => { setNewName(e.target.value); if (!newSlug) setNewSlug(e.target.value.toLowerCase().replace(/\\s+/g, '-')); }} placeholder="e.g. Accessories" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors" /></div>
               <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">URL Slug</label><input type="text" value={newSlug} onChange={(e) => setNewSlug(e.target.value)} placeholder="e.g. accessories" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors" /></div>
               <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Parent Category</label><select value={newParentId} onChange={e => setNewParentId(e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none"><option value="">None (Root Level)</option>{allCategories.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
-              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Description</label><textarea placeholder="Brief description..." rows={2} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors resize-none" /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Icon</label><select className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors appearance-none">{ICON_OPTIONS.map((opt) => (<option key={opt.name} value={opt.name}>{opt.name}</option>))}</select></div>
-                <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Color</label><input type="text" defaultValue="#8B5CF6" className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors font-mono" /></div>
+              <div><label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Description</label><textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Brief description..." rows={2} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-gray-600 outline-none focus:border-violet-500/40 transition-colors resize-none" /></div>
+              <div>
+                <label className="text-[10px] text-gray-500 font-medium mb-1.5 block uppercase tracking-wider">Icon</label>
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center shrink-0">
+                    {(() => {
+                      const PreviewIcon = getIconOption(newIcon).icon;
+                      return <PreviewIcon size={16} className="text-violet-300" />;
+                    })()}
+                  </div>
+                  <select value={newIcon} onChange={(e) => setNewIcon(e.target.value)} className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none focus:border-violet-500/40 transition-colors">
+                    {ICON_OPTIONS.map((opt) => (<option key={opt.name} value={opt.name}>{opt.name}</option>))}
+                  </select>
+                </div>
               </div>
             </div>
             <div className="flex gap-2 mt-6">

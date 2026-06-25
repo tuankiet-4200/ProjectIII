@@ -133,10 +133,12 @@ model Shop {
 // ==================== 3. PRODUCT & CATEGORY ====================
 
 model Category {
-  id        Int     @id @default(autoincrement())
-  name      String
-  slug      String  @unique
-  parent_id Int?
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  icon        String?
+  parent_id   Int?
 
   parent   Category?  @relation("CategoryTree", fields: [parent_id], references: [id])
   children Category[] @relation("CategoryTree")

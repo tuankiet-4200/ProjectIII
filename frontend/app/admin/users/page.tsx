@@ -7,12 +7,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Shield,
-  FileText,
   UserCheck,
-  LogIn,
   Ban,
-  ShieldCheck,
   RefreshCw,
   Plus,
   X,
@@ -178,7 +174,7 @@ export default function AdminUserGovernance() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight">User Governance</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Audit user behavior, manage account statuses, and troubleshoot via Safe Mode impersonation.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Quản lý tài khoản, trạng thái hoạt động và quyền truy cập người dùng.</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white hover:bg-violet-500 transition-all active:scale-95 shadow shadow-violet-900/40">
@@ -272,9 +268,6 @@ export default function AdminUserGovernance() {
                     </span>
                   </div>
                   <div className="col-span-3 flex items-center justify-center gap-3">
-                    <button className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all">
-                      <LogIn size={9} /> Safe Mode
-                    </button>
                     <Toggle enabled={!isBanned} onChange={() => handleToggleBan(user.id)} />
                     <button
                       onClick={() => handleToggleBan(user.id)}
@@ -313,21 +306,6 @@ export default function AdminUserGovernance() {
             </button>
           </div>
         )}
-      </div>
-
-      {/* Bottom: Safe Mode Guidelines */}
-      <div className="rounded-2xl bg-[#14121C] border border-white/5 p-5 relative overflow-hidden">
-        <div className="flex items-center gap-2 mb-2">
-          <Shield size={16} className="text-violet-400" />
-          <h3 className="text-base font-bold text-white">Safe Mode Guidelines</h3>
-        </div>
-        <p className="text-xs text-gray-400 leading-relaxed mb-4 max-w-2xl">
-          Remember: Safe Mode impersonation is fully audited. Any sensitive actions taken while acting as a user will be flagged for review. Use the Ban toggle to restrict access without deleting user data.
-        </p>
-        <button className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-bold text-white hover:bg-white/10 transition-colors">
-          <FileText size={11} /> Read Protocol
-        </button>
-        <div className="absolute -bottom-4 -right-4 opacity-[0.03]"><ShieldCheck size={120} /></div>
       </div>
 
       {/* Create User Modal */}

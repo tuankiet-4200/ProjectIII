@@ -7,6 +7,9 @@ describe('CategoriesService', () => {
   let prisma: {
     category: {
       findMany: jest.Mock;
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
     };
   };
 
@@ -14,6 +17,9 @@ describe('CategoriesService', () => {
     prisma = {
       category: {
         findMany: jest.fn(),
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -53,6 +59,33 @@ describe('CategoriesService', () => {
         },
       },
       orderBy: { name: 'asc' },
+    });
+  });
+
+  it('creates categories with description and icon metadata', async () => {
+    const dto = {
+      name: 'Camera',
+      slug: 'camera',
+      description: 'Thiết bị chụp ảnh',
+      icon: 'Camera',
+    };
+
+    prisma.category.create.mockResolvedValueOnce({ id: 1, ...dto });
+
+    await service.create(dto);
+
+    expect(prisma.category.create).toHaveBeenCalledWith({ data: dto });
+  });
+
+  it('updates category metadata', async () => {
+    prisma.category.findUnique.mockResolvedValueOnce({ id: 1 });
+    prisma.category.update.mockResolvedValueOnce({ id: 1, icon: 'Monitor' });
+
+    await service.update(1, { description: 'Mô tả mới', icon: 'Monitor' });
+
+    expect(prisma.category.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { description: 'Mô tả mới', icon: 'Monitor' },
     });
   });
 });

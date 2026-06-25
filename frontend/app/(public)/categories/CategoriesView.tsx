@@ -2,7 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Grid, List, Tags, ArrowRight, ChevronDown, Loader2 } from "lucide-react";
+import {
+  Grid,
+  List,
+  Tags,
+  ArrowRight,
+  ChevronDown,
+  Loader2,
+  Monitor,
+  Headphones,
+  Speaker,
+  Smartphone,
+  Camera,
+  Gamepad2,
+  Watch,
+  Home,
+  Shirt,
+  Footprints,
+  Gem,
+  Baby,
+  UtensilsCrossed,
+  BookOpen,
+  Palette,
+  Dumbbell,
+} from "lucide-react";
 import { categoriesService } from "@/services/categories.service";
 import type { Category } from "@/types";
 
@@ -13,6 +36,33 @@ const GRADIENTS = [
   "from-rose-500/20 to-orange-500/20",
   "from-amber-500/20 to-yellow-500/20",
 ];
+
+const CATEGORY_ICONS = {
+  Monitor,
+  Headphones,
+  Speaker,
+  Smartphone,
+  Camera,
+  Gamepad: Gamepad2,
+  Watch,
+  Home,
+  Shirt,
+  Footprints,
+  Gem,
+  Baby,
+  Utensils: UtensilsCrossed,
+  Book: BookOpen,
+  Palette,
+  Dumbbell,
+};
+
+function getCategoryIcon(icon?: string | null) {
+  return CATEGORY_ICONS[icon as keyof typeof CATEGORY_ICONS] || Grid;
+}
+
+function getCategoryDescription(category: Category) {
+  return category.description?.trim() || `Khám phá các sản phẩm trong danh mục ${category.name}.`;
+}
 
 export default function CategoriesView() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -118,6 +168,7 @@ export default function CategoriesView() {
           }>
             {categories.map((cat, index) => {
                const gradient = GRADIENTS[index % GRADIENTS.length];
+               const Icon = getCategoryIcon(cat.icon);
                
                if (viewMode === "list") {
                  const isExpanded = expandedIds.includes(cat.id);
@@ -129,7 +180,7 @@ export default function CategoriesView() {
                        <div className={`absolute left-0 top-0 w-32 h-full bg-gradient-to-r ${gradient} opacity-10 group-hover:opacity-20 transition-opacity duration-500 rounded-l-2xl`}></div>
                        
                        <div className="h-16 w-16 shrink-0 rounded-2xl bg-slate-100 dark:bg-white/5 border border-card-border flex items-center justify-center text-foreground group-hover:scale-105 group-hover:text-primary transition-transform duration-300 relative z-10">
-                         <Grid size={28} />
+                         <Icon size={28} />
                        </div>
                        
                        <div className="flex-1 relative z-10 w-full">
@@ -139,7 +190,7 @@ export default function CategoriesView() {
                          </div>
                          
                          <p className="text-sm text-slate-500 dark:text-gray-400 mb-2 line-clamp-2 max-w-2xl">
-                           Khám phá các sản phẩm nổi bật trong danh mục {cat.name}.
+                           {getCategoryDescription(cat)}
                          </p>
                        </div>
                        
@@ -189,12 +240,12 @@ export default function CategoriesView() {
                    
                    <div className="p-8 relative z-10 flex flex-col flex-1">
                      <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-card-border flex items-center justify-center mb-6 text-foreground group-hover:scale-110 group-hover:text-primary transition-transform duration-300 shadow-sm">
-                       <Grid size={24} />
+                       <Icon size={24} />
                      </div>
                      
                      <h2 className="text-2xl font-bold text-foreground mb-2 tracking-tight group-hover:text-primary transition-colors">{cat.name}</h2>
                      <p className="text-sm text-slate-500 dark:text-gray-400 mb-8 line-clamp-2 leading-relaxed">
-                       Khám phá các sản phẩm nổi bật trong danh mục {cat.name}.
+                       {getCategoryDescription(cat)}
                      </p>
 
                      {cat.children && cat.children.length > 0 && (

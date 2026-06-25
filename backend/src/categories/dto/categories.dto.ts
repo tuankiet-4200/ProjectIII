@@ -11,7 +11,15 @@ export class CreateCategoryDto {
 
   @IsInt()
   @IsOptional()
-  parent_id?: number;
+  parent_id?: number | null;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  icon?: string;
 }
 
 export class UpdateCategoryDto {
@@ -25,5 +33,13 @@ export class UpdateCategoryDto {
 
   @IsInt()
   @IsOptional()
-  parent_id?: number;
+  parent_id?: number | null;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  icon?: string;
 }

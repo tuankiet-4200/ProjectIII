@@ -20,6 +20,7 @@ import { CouponsModule } from './coupons/coupons.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
 import { HomeContentModule } from './home-content/home-content.module';
+import { AdminAnalyticsModule } from './admin-analytics/admin-analytics.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -40,7 +41,8 @@ import { HomeContentModule } from './home-content/home-content.module';
     CouponsModule,
     WishlistModule,
     RecommendationsModule,
-    HomeContentModule
+    HomeContentModule,
+    AdminAnalyticsModule
   ],
   controllers: [AppController],
   providers: [AppService],
