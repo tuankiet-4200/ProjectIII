@@ -29,14 +29,14 @@ function isTokenExpired(payload: { exp: number }): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
 
   const accessToken = request.cookies.get("access_token")?.value;
 
   // ─── Helper: redirect to login ───────────────────────────────────────────
   const redirectToLogin = (reason?: string) => {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
+    loginUrl.searchParams.set("redirect", `${pathname}${search}`);
     if (reason) loginUrl.searchParams.set("reason", reason);
     return NextResponse.redirect(loginUrl);
   };
@@ -70,7 +70,8 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/checkout") ||
     pathname.startsWith("/orders") ||
-    pathname.startsWith("/profile")
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/payment")
   ) {
     if (!accessToken) return redirectToLogin("unauthenticated");
 
@@ -90,5 +91,6 @@ export const config = {
     "/checkout/:path*",
     "/orders/:path*",
     "/profile/:path*",
+    "/payment/:path*",
   ],
 };

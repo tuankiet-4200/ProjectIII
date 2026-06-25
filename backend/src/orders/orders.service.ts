@@ -12,6 +12,15 @@ import { RedisService } from '../redis/redis.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { CheckoutDto, UpdateShopOrderStatusDto } from './dto';
 import { Prisma, ShopOrder } from '@prisma/client';
+import { SepayCheckoutService } from './sepay-checkout.service';
+
+const PAID_SEPAY_STATUSES = new Set([
+  'COMPLETED',
+  'PAID',
+  'SUCCESS',
+  'SUCCEEDED',
+  'CAPTURED',
+]);
 
 @Injectable()
 export class OrdersService {
@@ -22,6 +31,7 @@ export class OrdersService {
     private redis: RedisService,
     private notifications: NotificationsGateway,
     @Inject('RMQ_SERVICE') private readonly rmqClient: ClientProxy,
+    private sepayCheckout: SepayCheckoutService,
   ) {}
 
   /**
@@ -146,6 +156,86 @@ export class OrdersService {
 
     if (!order) throw new NotFoundException('Order not found');
     return order;
+  }
+
+  private readSepayStatus(payload: any): string | undefined {
+    const source = payload?.data || payload?.order || payload;
+    return (
+      source?.order_status ||
+      source?.status ||
+      source?.payment_status ||
+      source?.transaction_status
+    )?.toString().toUpperCase();
+  }
+
+  private readSepayAmount(payload: any): number | undefined {
+    const source = payload?.data || payload?.order || payload;
+    const raw =
+      source?.order_amount ||
+      source?.amount ||
+      source?.total_amount ||
+      source?.payment_amount;
+    if (raw === undefined || raw === null) return undefined;
+    const amount = Number(raw);
+    return Number.isFinite(amount) ? amount : undefined;
+  }
+
+  async confirmSepayPayment(userId: string, orderId: string) {
+    const order = await this.prisma.parentOrder.findFirst({
+      where: { id: orderId, user_id: userId },
+      include: {
+        shop_orders: {
+          include: {
+            shop: { select: { id: true, name: true } },
+            order_items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.payment_method !== 'SEPAY') {
+      throw new BadRequestException('Đơn hàng này không thanh toán qua SePay');
+    }
+    if (order.payment_status === 'PAID') {
+      return order;
+    }
+
+    const sepayOrder = await this.sepayCheckout.retrieveOrder(order.id);
+    const status = this.readSepayStatus(sepayOrder);
+    const amount = this.readSepayAmount(sepayOrder);
+    const expectedAmount = Math.round(order.total_payment.toNumber());
+
+    if (!status || !PAID_SEPAY_STATUSES.has(status)) {
+      throw new BadRequestException(
+        `SePay chưa xác nhận thanh toán thành công${status ? ` (${status})` : ''}`,
+      );
+    }
+
+    if (amount !== undefined && Math.round(amount) !== expectedAmount) {
+      throw new BadRequestException('Số tiền SePay trả về không khớp đơn hàng');
+    }
+
+    return this.prisma.parentOrder.update({
+      where: { id: order.id },
+      data: { payment_status: 'PAID' },
+      include: {
+        shop_orders: {
+          include: {
+            shop: { select: { id: true, name: true } },
+            order_items: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   // Shop owner: get orders for their shop

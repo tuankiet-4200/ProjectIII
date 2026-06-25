@@ -3,6 +3,8 @@ import { EventPattern, Payload } from '@nestjs/microservices';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { Prisma, ShopOrder } from '@prisma/client';
+import { SepayCheckoutService } from './sepay-checkout.service';
+import { calculateOrderTotals } from './order-totals';
 
 @Controller()
 export class OrdersProcessor {
@@ -11,6 +13,7 @@ export class OrdersProcessor {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsGateway,
+    private sepayCheckout: SepayCheckoutService,
   ) {}
 
   @EventPattern('order.create')
@@ -98,9 +101,11 @@ export class OrdersProcessor {
           }
         }
 
-        const finalTotalPayment = new Prisma.Decimal(
-          Math.max(0, totalPayment.toNumber() - discountAmount),
+        const totals = calculateOrderTotals(
+          totalPayment.toNumber(),
+          discountAmount,
         );
+        const finalTotalPayment = new Prisma.Decimal(totals.total);
 
         // Update the pending parent order with the final calculated total
         await tx.parentOrder.update({
@@ -111,14 +116,16 @@ export class OrdersProcessor {
         // Decrement stock and create orders
         const shopOrders: ShopOrder[] = [];
 
+        let isFirstShopOrder = true;
         for (const group of shopGroups.values()) {
           const shopOrder = await tx.shopOrder.create({
             data: {
               parent_order_id: parentOrderId,
               shop_id: group.shopId,
-              shipping_fee: 0,
+              shipping_fee: isFirstShopOrder ? totals.shipping : 0,
             },
           });
+          isFirstShopOrder = false;
 
           for (const item of group.items) {
             await tx.orderItem.create({
@@ -153,12 +160,23 @@ export class OrdersProcessor {
 
       this.logger.log(`Successfully processed parentOrder ${parentOrderId}`);
       
+      const paymentRequired =
+        dto.payment_method === 'SEPAY'
+          ? this.sepayCheckout.createPayment({
+              orderId: parentOrderId,
+              amount: result.finalTotalPayment.toNumber(),
+              description: `Thanh toan don hang ${parentOrderId}`,
+              customerId: userId,
+            })
+          : undefined;
+
       // Notify Frontend via Socket
       this.notifications.server.to(`user_${userId}`).emit('order_checkout_success', {
         parentOrderId,
         message: 'Đơn hàng của bạn đã được xử lý thành công!',
         totalPayment: result.finalTotalPayment,
-        status: 'COMPLETED'
+        status: 'COMPLETED',
+        paymentRequired,
       });
 
     } catch (error) {

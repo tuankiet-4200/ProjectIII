@@ -42,6 +42,14 @@ export class OrdersController {
     return this.ordersService.getOrderDetail(userId, orderId);
   }
 
+  @Patch('orders/:id/sepay/confirm')
+  confirmSepayPayment(
+    @CurrentUser('id') userId: string,
+    @Param('id') orderId: string,
+  ) {
+    return this.ordersService.confirmSepayPayment(userId, orderId);
+  }
+
   // ==================== Shop Owner Endpoints ====================
 
   @Get('shops/:shopId/orders')

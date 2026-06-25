@@ -25,7 +25,7 @@ const FEATURE_SLIDES = [
   },
   {
     title: "Thanh toán linh hoạt",
-    desc: "Hỗ trợ COD, mã giảm giá và checkout theo sản phẩm đã chọn trong giỏ hàng.",
+    desc: "Hỗ trợ COD, SePay, mã giảm giá và checkout theo sản phẩm đã chọn trong giỏ hàng.",
     icon: CreditCard,
   },
   {

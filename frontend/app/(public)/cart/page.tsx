@@ -18,6 +18,7 @@ import {
   Truck,
 } from "lucide-react";
 import { formatVnd } from "@/lib/currency";
+import { calculateOrderTotals } from "@/lib/orderTotals";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,9 +137,7 @@ export default function CartPage() {
   const selectedItemCount = selectedItems.reduce((s, i) => s + i.qty, 0);
   const subtotal = selectedItems.reduce((sum, i) => sum + i.price * i.qty, 0);
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
-  const shipping = subtotal === 0 || subtotal >= 200000 ? 0 : 12000;
-  const tax = Math.round(subtotal * 0.035 * 100) / 100;
-  const total = subtotal - discount + shipping + tax;
+  const totals = calculateOrderTotals(subtotal, discount);
 
   const itemsByShop = items.reduce((acc, item) => {
     let group = acc.find(g => g.id === item.shopId);
@@ -318,17 +317,17 @@ export default function CartPage() {
                   )}
                   <div className="flex justify-between text-gray-400">
                     <span>Vận chuyển</span>
-                    <span className={shipping === 0 ? "text-emerald-400 font-semibold" : "text-foreground font-medium"}>
-                      {shipping === 0 ? "MIỄN PHÍ" : formatVnd(shipping)}
+                    <span className={totals.shipping === 0 ? "text-emerald-400 font-semibold" : "text-foreground font-medium"}>
+                      {totals.shipping === 0 ? "MIỄN PHÍ" : formatVnd(totals.shipping)}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-400">
                     <span>Thuế (3.5%)</span>
-                    <span className="text-foreground font-medium">{formatVnd(tax)}</span>
+                    <span className="text-foreground font-medium">{formatVnd(totals.tax)}</span>
                   </div>
                   <div className="border-t border-card-border pt-3 flex justify-between">
                     <span className="font-bold text-foreground text-base">Tổng thanh toán</span>
-                    <span className="font-extrabold text-violet-400 text-lg">{formatVnd(total)}</span>
+                    <span className="font-extrabold text-violet-400 text-lg">{formatVnd(totals.total)}</span>
                   </div>
                 </div>
 

@@ -3,7 +3,7 @@
 export type UserRole = 'CUSTOMER' | 'ADMIN' | 'SHIPPER';
 export type ShopStatus = 'PENDING' | 'ACTIVE' | 'REJECTED' | 'BANNED';
 export type PaymentStatus = 'UNPAID' | 'PAID' | 'REFUNDED';
-export type PaymentMethod = 'COD' | 'VNPAY' | 'MOMO';
+export type PaymentMethod = 'COD' | 'SEPAY';
 export type ShopOrderStatus = 'PENDING' | 'PREPARING' | 'READY_FOR_PICKUP' | 'SHIPPING' | 'DELIVERED' | 'CANCELLED';
 
 // ─── User ────────────────────────────────────────────────────────────────────
@@ -173,6 +173,18 @@ export interface CheckoutData {
   payment_method: PaymentMethod;
   coupon_code?: string;
   selected_product_ids?: string[];
+}
+
+export interface SepayPaymentRequired {
+  provider: 'SEPAY';
+  checkoutUrl: string;
+  fields: Record<string, string | number | undefined>;
+}
+
+export interface CheckoutResponse {
+  message: string;
+  parent_order_id: string;
+  status: 'PROCESSING';
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────

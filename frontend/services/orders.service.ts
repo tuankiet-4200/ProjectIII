@@ -1,5 +1,5 @@
 import api from '../lib/axios';
-import type { ParentOrder, ShopOrder, PaginatedResponse, CheckoutData, ShopOrderStatus } from '../types';
+import type { ParentOrder, ShopOrder, PaginatedResponse, CheckoutData, CheckoutResponse, ShopOrderStatus } from '../types';
 
 const normalizePaginated = <T>(payload: any): PaginatedResponse<T> => {
   if (payload?.data && payload?.meta) {
@@ -27,7 +27,7 @@ const normalizePaginated = <T>(payload: any): PaginatedResponse<T> => {
 export const ordersService = {
   // ─── Customer ────────────────────────────────────────────────────────────────
 
-  checkout: async (data: CheckoutData): Promise<ParentOrder> => {
+  checkout: async (data: CheckoutData): Promise<CheckoutResponse> => {
     const response = await api.post('/orders/checkout', data);
     return response.data;
   },
@@ -39,6 +39,11 @@ export const ordersService = {
 
   getOrderDetail: async (orderId: string): Promise<ParentOrder> => {
     const response = await api.get(`/orders/${orderId}`);
+    return response.data;
+  },
+
+  confirmSepayPayment: async (orderId: string): Promise<ParentOrder> => {
+    const response = await api.patch(`/orders/${orderId}/sepay/confirm`);
     return response.data;
   },
 

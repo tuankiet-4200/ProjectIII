@@ -75,7 +75,7 @@ api.interceptors.response.use(
         document.cookie = 'access_token=; path=/; max-age=0';
         
         const path = window.location.pathname;
-        if (path.startsWith('/admin') || path.startsWith('/vendor') || path.startsWith('/checkout') || path.startsWith('/cart')) {
+        if (path.startsWith('/admin') || path.startsWith('/vendor') || path.startsWith('/checkout') || path.startsWith('/cart') || path.startsWith('/profile') || path.startsWith('/payment')) {
           window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
         }
         return Promise.reject(refreshError);

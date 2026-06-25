@@ -21,24 +21,91 @@ import {
   X,
 } from "lucide-react";
 import { formatVnd } from "@/lib/currency";
+import { calculateOrderTotals } from "@/lib/orderTotals";
 import { getPublicImageUrl } from "@/lib/images";
 import { toast } from "sonner";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
+import { socket } from "@/lib/socket";
+import type { SepayPaymentRequired } from "@/types";
 import dynamic from 'next/dynamic';
 
 const AddressMapPicker = dynamic(() => import('@/components/AddressMapPicker').then(mod => mod.AddressMapPicker), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PaymentMethod = "cod" | "vnpay" | "momo";
+type PaymentMethod = "cod" | "sepay";
 type Step = 1 | 2;
 
 const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; desc: string; emoji: string }[] = [
   { id: "cod", label: "COD", desc: "Cash on delivery", emoji: "💵" },
-  { id: "vnpay", label: "VNPay", desc: "Bank Transfer", emoji: "🏦" },
-  { id: "momo", label: "MoMo", desc: "Mobile Wallet", emoji: "💜" },
+  { id: "sepay", label: "SePay", desc: "QR bank transfer", emoji: "🏦" },
 ];
+
+type CheckoutSuccessEvent = {
+  parentOrderId: string;
+  message: string;
+  totalPayment: number | string;
+  status: "COMPLETED";
+  paymentRequired?: SepayPaymentRequired;
+};
+
+type CheckoutFailedEvent = {
+  parentOrderId: string;
+  message: string;
+  status: "FAILED";
+};
+
+function submitSepayPayment(paymentRequired: SepayPaymentRequired) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = paymentRequired.checkoutUrl;
+  form.style.display = "none";
+
+  Object.entries(paymentRequired.fields).forEach(([name, value]) => {
+    if (value === undefined || value === null) return;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = String(value);
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
+function waitForCheckoutSocket(token: string) {
+  if (socket.connected) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      socket.off("connect", handleConnect);
+      socket.off("connect_error", handleConnectError);
+    };
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Không thể kết nối realtime để xử lý đơn hàng."));
+    }, 10000);
+    const handleConnect = () => {
+      window.clearTimeout(timer);
+      cleanup();
+      resolve();
+    };
+    const handleConnectError = () => {
+      window.clearTimeout(timer);
+      cleanup();
+      reject(new Error("Không thể kết nối realtime để xử lý đơn hàng."));
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("connect_error", handleConnectError);
+    socket.auth = { token };
+    socket.connect();
+  });
+}
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -110,6 +177,7 @@ export default function CheckoutPage() {
   const updateItem = useCartStore((s) => s.updateItem);
   const removeItem = useCartStore((s) => s.removeItem);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const accessToken = useAuthStore((s) => s.accessToken);
 
   // Shipping form state
   const [shipping, setShipping] = useState({
@@ -207,7 +275,7 @@ export default function CheckoutPage() {
     (sum, item) => sum + Number(item.product?.price || 0) * item.quantity,
     0
   );
-  const shippingFee = subtotal === 0 || subtotal >= 200000 ? 0 : 12000;
+  const totals = calculateOrderTotals(subtotal, couponApplied?.discount_amount ?? 0);
   const itemCount = allItems.reduce((s, i) => s + i.quantity, 0);
 
   const updateQty = async (productId: string, nextQty: number) => {
@@ -268,18 +336,63 @@ export default function CheckoutPage() {
     const address = `${shipping.fullName}, ${shipping.phone}, ${shipping.address}, ${shipping.ward}, ${shipping.district}, ${shipping.city}`;
     try {
       const { ordersService } = await import('@/services/orders.service');
-      const paymentMap: Record<string, 'COD' | 'VNPAY' | 'MOMO'> = { cod: 'COD', vnpay: 'VNPAY', momo: 'MOMO' };
-      await ordersService.checkout({
-        shipping_address: address,
-        payment_method: paymentMap[payment],
-        coupon_code: couponApplied?.code,
-        selected_product_ids: allItems.map((item) => item.product_id),
+      const paymentMap: Record<PaymentMethod, 'COD' | 'SEPAY'> = { cod: 'COD', sepay: 'SEPAY' };
+
+      if (!accessToken) {
+        toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        router.push("/login?redirect=/checkout");
+        return;
+      }
+
+      await waitForCheckoutSocket(accessToken);
+
+      const checkoutResult = await new Promise<CheckoutSuccessEvent>((resolve, reject) => {
+        const cleanup = () => {
+          socket.off("order_checkout_success", handleSuccess);
+          socket.off("order_checkout_failed", handleFailed);
+        };
+        const timer = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("Xử lý đơn hàng quá lâu. Vui lòng kiểm tra lại trong trang đơn hàng."));
+        }, 30000);
+        const handleSuccess = (event: CheckoutSuccessEvent) => {
+          window.clearTimeout(timer);
+          cleanup();
+          resolve(event);
+        };
+        const handleFailed = (event: CheckoutFailedEvent) => {
+          window.clearTimeout(timer);
+          cleanup();
+          reject(new Error(event.message || "Xử lý đơn hàng thất bại."));
+        };
+
+        socket.on("order_checkout_success", handleSuccess);
+        socket.on("order_checkout_failed", handleFailed);
+
+        ordersService.checkout({
+          shipping_address: address,
+          payment_method: paymentMap[payment],
+          coupon_code: couponApplied?.code,
+          selected_product_ids: allItems.map((item) => item.product_id),
+        }).catch((error) => {
+          window.clearTimeout(timer);
+          cleanup();
+          reject(error);
+        });
       });
+
       sessionStorage.removeItem("checkout:selected_product_ids");
-      setPlaced(true);
       await fetchCart();
+
+      if (checkoutResult.paymentRequired?.provider === "SEPAY") {
+        toast.success("Đang chuyển sang SePay...");
+        submitSepayPayment(checkoutResult.paymentRequired);
+        return;
+      }
+
+      setPlaced(true);
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Đặt hàng thất bại. Vui lòng thử lại.');
+      toast.error(e?.response?.data?.message || e?.message || 'Đặt hàng thất bại. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
     }
@@ -624,8 +737,8 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-slate-500 dark:text-gray-400">
                   <span>Vận chuyển</span>
-                  <span className={shippingFee === 0 ? "text-emerald-500 font-bold" : "text-foreground font-medium"}>
-                    {shippingFee === 0 ? 'MIỄN PHÍ' : formatVnd(shippingFee)}
+                  <span className={totals.shipping === 0 ? "text-emerald-500 font-bold" : "text-foreground font-medium"}>
+                    {totals.shipping === 0 ? 'MIỄN PHÍ' : formatVnd(totals.shipping)}
                   </span>
                 </div>
                 {couponApplied && (
@@ -634,10 +747,16 @@ export default function CheckoutPage() {
                     <span className="font-bold">-{formatVnd(couponApplied.discount_amount)}</span>
                   </div>
                 )}
+                <div className="flex justify-between text-slate-500 dark:text-gray-400">
+                  <span>Thuế (3.5%)</span>
+                  <span className="text-foreground font-medium">
+                    {formatVnd(totals.tax)}
+                  </span>
+                </div>
                 <div className="border-t border-card-border pt-3 flex justify-between items-baseline gap-3">
                   <span className="font-bold text-foreground">Tổng thanh toán</span>
                   <span className="font-extrabold text-violet-500 text-xl tabular-nums whitespace-nowrap">
-                    {formatVnd(Math.max(0, subtotal + shippingFee - (couponApplied?.discount_amount ?? 0)))}
+                    {formatVnd(totals.total)}
                   </span>
                 </div>
               </div>

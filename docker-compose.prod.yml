@@ -45,6 +45,13 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3001}
       - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8000}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}
+      - SEPAY_ENV=${SEPAY_ENV:-sandbox}
+      - SEPAY_MERCHANT_ID=${SEPAY_MERCHANT_ID:-}
+      - SEPAY_SECRET_KEY=${SEPAY_SECRET_KEY:-}
+      - SEPAY_PAYMENT_METHOD=${SEPAY_PAYMENT_METHOD:-BANK_TRANSFER}
+      - SEPAY_SUCCESS_URL=${SEPAY_SUCCESS_URL:-http://localhost:3001/payment/sepay/return}
+      - SEPAY_ERROR_URL=${SEPAY_ERROR_URL:-http://localhost:3001/checkout?payment=error}
+      - SEPAY_CANCEL_URL=${SEPAY_CANCEL_URL:-http://localhost:3001/checkout?payment=cancelled}
     depends_on:
       - postgres
       - redis
