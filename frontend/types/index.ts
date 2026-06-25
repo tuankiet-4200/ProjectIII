@@ -83,6 +83,37 @@ export interface Product {
   category?: Category;
 }
 
+// ─── Home Content ────────────────────────────────────────────────────────────
+
+export interface HomeBanner {
+  id: number;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  primary_label: string;
+  primary_href: string;
+  secondary_label: string;
+  secondary_href: string;
+  visual_label: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UpdateHomeBannerData = Partial<
+  Pick<
+    HomeBanner,
+    | 'eyebrow'
+    | 'title'
+    | 'subtitle'
+    | 'primary_label'
+    | 'primary_href'
+    | 'secondary_label'
+    | 'secondary_href'
+    | 'visual_label'
+  >
+>;
+
 // ─── Order ───────────────────────────────────────────────────────────────────
 
 export interface TrackingEvent {
@@ -229,4 +260,3 @@ export interface CreateCategoryData {
   slug: string;
   parent_id?: number;
 }
-

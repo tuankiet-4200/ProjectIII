@@ -19,6 +19,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { RecommendationsModule } from './recommendations/recommendations.module';
+import { HomeContentModule } from './home-content/home-content.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -38,7 +39,8 @@ import { RecommendationsModule } from './recommendations/recommendations.module'
     ReviewsModule,
     CouponsModule,
     WishlistModule,
-    RecommendationsModule
+    RecommendationsModule,
+    HomeContentModule
   ],
   controllers: [AppController],
   providers: [AppService],

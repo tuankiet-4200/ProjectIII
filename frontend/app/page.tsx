@@ -1,39 +1,11 @@
 import { CheckCircle2 } from "lucide-react";
+import HomeBanner from "@/components/home/HomeBanner";
 import RecommendedProducts from "@/components/home/RecommendedProducts";
 
 export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
-      {/* Hero Section */}
-      <section className="container mx-auto max-w-7xl px-4 lg:px-8 pt-8 pb-16">
-        <div className="relative overflow-hidden rounded-3xl bg-card border border-card-border p-8 md:p-16 lg:p-20 shadow-2xl transition-colors duration-300">
-          {/* Abstract Glow representing the neon light */}
-          <div className="absolute right-10 top-1/2 -translate-y-1/2 w-[400px] h-[200px] rounded-full bg-cyan-500/10 blur-[100px] pointer-events-none hidden md:block"></div>
-          <div className="absolute right-20 top-20 border-2 border-cyan-500/30 rounded-lg px-8 py-4 opacity-40 shadow-[0_0_30px_rgba(6,182,212,0.3)] hidden lg:block">
-            <span className="text-cyan-500/70 tracking-[0.2em] font-bold text-xl uppercase">Digital Haute Couture</span>
-          </div>
-
-          <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center rounded-full bg-primary/20 px-3 py-1 text-xs font-semibold text-primary mb-6 ring-1 ring-primary/30">
-              SEASONAL DROP
-            </div>
-            <h1 className="text-5xl tracking-tight font-extrabold text-foreground sm:text-6xl md:text-7xl mb-6 leading-[1.1]">
-              Redefine Your <br /> Tech Aesthetic.
-            </h1>
-            <p className="max-w-xl text-lg text-slate-500 dark:text-gray-400 mb-10 leading-relaxed">
-              Curated selection of high-performance electronics and artisanal fashion pieces for the digital elite.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button className="rounded-lg bg-primary px-8 py-3.5 text-sm font-semibold text-white shadow-lg hover:bg-primary/90 transition-all hover:scale-105 active:scale-95">
-                Explore Collection
-              </button>
-              <button className="rounded-lg bg-white/5 border border-card-border px-8 py-3.5 text-sm font-semibold text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-all">
-                View Lookbook
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HomeBanner />
 
       {/* Recommended Products Section */}
       <RecommendedProducts />

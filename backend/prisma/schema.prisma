@@ -308,6 +308,25 @@ model Wishlist {
   @@map("wishlists")
 }
 
+// ==================== 9. HOMEPAGE CONTENT ====================
+
+model HomeBanner {
+  id              Int      @id @default(autoincrement())
+  eyebrow         String   @default("SEASONAL DROP")
+  title           String   @db.Text
+  subtitle        String   @db.Text
+  primary_label   String
+  primary_href    String
+  secondary_label String
+  secondary_href  String
+  visual_label    String
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@map("home_banners")
+}
+
 // ==================== 6. AI CHATBOT & RECOMMENDATION ====================
 
 model ChatSession {
