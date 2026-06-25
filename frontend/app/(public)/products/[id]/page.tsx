@@ -636,13 +636,6 @@ export default function ProductDetailPage() {
       }
       await addItem(productId, qty);
 
-      try {
-        const { default: api } = await import('@/lib/axios');
-        await api.post(`/products/${productRealId}/interact`, {
-          interaction_type: 'ADD_TO_CART'
-        });
-      } catch {}
-
       setAddedToCart(true);
       setTimeout(() => setAddedToCart(false), 2000);
       toast.success("Added to cart successfully!");

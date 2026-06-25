@@ -14,65 +14,75 @@ export class RecommendationsService {
         return this.getTrendingProducts(q);
       }
 
-      const interactedProducts = await this.prisma.userInteraction.findMany({
+      const interactions = await this.prisma.userInteraction.findMany({
         where: { user_id: userId },
-        select: { product_id: true },
+        select: {
+          product_id: true,
+          interaction_type: true,
+          created_at: true,
+          product: {
+            select: {
+              category_id: true,
+              shop_id: true,
+            },
+          },
+        },
         orderBy: { created_at: 'desc' },
         take: 50,
       });
 
-      const interactedProductIds = interactedProducts.map(
-        (item) => item.product_id,
-      );
+      const interactedProductIds = interactions.map((item) => item.product_id);
       if (interactedProductIds.length === 0) {
         return this.getTrendingProducts(q);
       }
 
-      const similarUsers = await this.prisma.userInteraction.findMany({
-        where: {
-          product_id: { in: interactedProductIds },
-          user_id: { not: userId },
-        },
-        distinct: ['user_id'],
-        select: { user_id: true },
-        take: 50,
+      const categoryScores = new Map<number, number>();
+      const shopScores = new Map<string, number>();
+
+      interactions.forEach((interaction, index) => {
+        const baseWeight = this.getInteractionWeight(
+          interaction.interaction_type,
+        );
+        const recencyWeight = Math.max(0.35, 1 - index * 0.03);
+        const score = baseWeight * recencyWeight;
+
+        categoryScores.set(
+          interaction.product.category_id,
+          (categoryScores.get(interaction.product.category_id) || 0) + score,
+        );
+        shopScores.set(
+          interaction.product.shop_id,
+          (shopScores.get(interaction.product.shop_id) || 0) + score,
+        );
       });
 
-      const similarUserIds = similarUsers.map((item) => item.user_id);
-      if (similarUserIds.length === 0) {
-        return this.getTrendingProducts(q, interactedProductIds);
-      }
+      const categoryIds = [...categoryScores.keys()];
+      const shopIds = [...shopScores.keys()];
 
-      const candidateInteractions = await this.prisma.userInteraction.findMany({
-        where: {
-          user_id: { in: similarUserIds },
-          product_id: { notIn: interactedProductIds },
-        },
-        select: { product_id: true },
-        orderBy: { created_at: 'desc' },
-        take: 100,
-      });
-
-      const candidateProductIds = [
-        ...new Set(candidateInteractions.map((item) => item.product_id)),
-      ];
-      if (candidateProductIds.length === 0) {
-        return this.getTrendingProducts(q, interactedProductIds);
-      }
-
-      const products = await this.prisma.product.findMany({
+      const candidateProducts = await this.prisma.product.findMany({
         where: {
           ...this.buildSearchWhere(q),
-          id: { in: candidateProductIds },
+          id: { notIn: interactedProductIds },
+          OR: [
+            { category_id: { in: categoryIds } },
+            { shop_id: { in: shopIds } },
+          ],
         },
-        orderBy: [{ sales_count: 'desc' }, { created_at: 'desc' }],
-        take: 16,
+        take: 48,
         include: this.productInclude,
       });
 
-      if (products.length >= 16) {
-        return products;
-      }
+      const products = candidateProducts
+        .map((product) => ({
+          product,
+          score:
+            (categoryScores.get(product.category_id) || 0) * 3 +
+            (shopScores.get(product.shop_id) || 0) +
+            Number(product.sales_count || 0) * 0.01,
+        }))
+        .sort((a, b) => b.score - a.score)
+        .map((item) => item.product)
+        .slice(0, 16);
 
       const fallbackProducts = await this.getTrendingProducts(q, [
         ...interactedProductIds,
@@ -92,6 +102,18 @@ export class RecommendationsService {
     shop: { select: { id: true, name: true, logo_url: true } },
     category: { select: { id: true, name: true, slug: true } },
   };
+
+  private getInteractionWeight(type: string) {
+    switch (type) {
+      case 'PURCHASE':
+        return 8;
+      case 'ADD_TO_CART':
+        return 5;
+      case 'VIEW':
+      default:
+        return 1;
+    }
+  }
 
   private buildSearchWhere(q?: string): Prisma.ProductWhereInput {
     if (!q?.trim()) {

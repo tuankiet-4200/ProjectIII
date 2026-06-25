@@ -4,9 +4,12 @@ import { Suspense, useState, useEffect } from "react";
 import { formatVnd } from "@/lib/currency";
 import { getPublicImageUrl } from "@/lib/images";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { categoriesService } from "@/services/categories.service";
 import { productsService } from "@/services/products.service";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useCartStore } from "@/store/useCartStore";
 import type { Category, Product as ApiProduct } from "@/types";
 import {
   Heart,
@@ -79,10 +82,12 @@ function ProductCard({
   product,
   wished,
   onToggleWish,
+  onAddToCart,
 }: {
   product: Product;
   wished: boolean;
   onToggleWish: () => void;
+  onAddToCart: () => void;
 }) {
   return (
     <Link
@@ -175,7 +180,10 @@ function ProductCard({
             </span>
           ) : (
             <button
-              onClick={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.preventDefault();
+                onAddToCart();
+              }}
               className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-foreground hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40 shrink-0"
             >
               <ShoppingCart size={13} />
@@ -396,6 +404,7 @@ function ProductsPageContent() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const router = useRouter();
 
   const sortParamMap: Record<string, string> = {
     "Mới nhất": "newest",
@@ -509,6 +518,22 @@ function ProductsPageContent() {
       }
       return next;
     });
+  };
+
+  const handleAddToCart = async (productId: string) => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      toast.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    try {
+      await useCartStore.getState().addItem(productId, 1);
+      toast.success("Đã thêm sản phẩm vào giỏ hàng");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng");
+    }
   };
 
   const filteredProducts = apiProducts.filter(
@@ -731,6 +756,7 @@ function ProductsPageContent() {
                       product={product}
                       wished={wished.has(product.id)}
                       onToggleWish={() => toggleWish(product.id)}
+                      onAddToCart={() => handleAddToCart(product.id)}
                     />
                   ) : (
                     /* List view */
@@ -800,7 +826,10 @@ function ProductsPageContent() {
                                 Xem chi tiết
                               </Link>
                             ) : (
-                              <button className="flex items-center gap-1 text-xs rounded-lg bg-violet-600 px-3 py-1.5 font-semibold hover:bg-violet-500 transition-colors">
+                              <button
+                                onClick={() => handleAddToCart(product.id)}
+                                className="flex items-center gap-1 text-xs rounded-lg bg-violet-600 px-3 py-1.5 font-semibold hover:bg-violet-500 transition-colors"
+                              >
                                 <ShoppingCart size={12} /> Thêm vào giỏ
                               </button>
                             )}

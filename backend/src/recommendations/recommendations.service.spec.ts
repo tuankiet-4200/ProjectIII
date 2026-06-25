@@ -7,6 +7,7 @@ describe('RecommendationsService', () => {
   let prisma: {
     userInteraction: {
       findMany: jest.Mock;
+      create?: jest.Mock;
     };
     product: {
       findMany: jest.Mock;
@@ -53,63 +54,75 @@ describe('RecommendationsService', () => {
     });
   });
 
-  it('recommends products from similar users and excludes products the user already interacted with', async () => {
-    prisma.userInteraction.findMany
-      .mockResolvedValueOnce([
-        { product_id: 'viewed-1' },
-        { product_id: 'cart-1' },
-      ])
-      .mockResolvedValueOnce([
-        { user_id: 'similar-user-1' },
-        { user_id: 'similar-user-2' },
-      ])
-      .mockResolvedValueOnce([
-        { product_id: 'recommended-1' },
-        { product_id: 'recommended-2' },
-      ]);
+  it('scores content-based recommendations from weighted user interactions', async () => {
+    prisma.userInteraction.findMany.mockResolvedValueOnce([
+      {
+        product_id: 'viewed-phone',
+        interaction_type: 'VIEW',
+        created_at: new Date('2026-06-25T10:00:00Z'),
+        product: { category_id: 1, shop_id: 'shop-a' },
+      },
+      {
+        product_id: 'cart-audio',
+        interaction_type: 'ADD_TO_CART',
+        created_at: new Date('2026-06-25T11:00:00Z'),
+        product: { category_id: 2, shop_id: 'shop-b' },
+      },
+    ]);
 
-    const recommendedProducts = [
-      { id: 'recommended-1', name: 'Recommended product' },
-    ];
-    prisma.product.findMany
-      .mockResolvedValueOnce(recommendedProducts)
-      .mockResolvedValueOnce([]);
+    prisma.product.findMany.mockResolvedValueOnce([
+      {
+        id: 'same-view-category',
+        category_id: 1,
+        shop_id: 'shop-x',
+        sales_count: 100,
+        created_at: new Date('2026-06-20T00:00:00Z'),
+      },
+      {
+        id: 'same-cart-category',
+        category_id: 2,
+        shop_id: 'shop-y',
+        sales_count: 1,
+        created_at: new Date('2026-06-20T00:00:00Z'),
+      },
+    ]);
+    prisma.product.findMany.mockResolvedValueOnce([]);
 
     const result = await service.getRecommendations('user-1');
 
-    expect(result).toEqual(recommendedProducts);
-    expect(prisma.userInteraction.findMany).toHaveBeenNthCalledWith(1, {
+    expect(prisma.userInteraction.findMany).toHaveBeenCalledWith({
       where: { user_id: 'user-1' },
-      select: { product_id: true },
+      select: {
+        product_id: true,
+        interaction_type: true,
+        created_at: true,
+        product: {
+          select: {
+            category_id: true,
+            shop_id: true,
+          },
+        },
+      },
       orderBy: { created_at: 'desc' },
       take: 50,
-    });
-    expect(prisma.userInteraction.findMany).toHaveBeenNthCalledWith(2, {
-      where: {
-        product_id: { in: ['viewed-1', 'cart-1'] },
-        user_id: { not: 'user-1' },
-      },
-      distinct: ['user_id'],
-      select: { user_id: true },
-      take: 50,
-    });
-    expect(prisma.userInteraction.findMany).toHaveBeenNthCalledWith(3, {
-      where: {
-        user_id: { in: ['similar-user-1', 'similar-user-2'] },
-        product_id: { notIn: ['viewed-1', 'cart-1'] },
-      },
-      select: { product_id: true },
-      orderBy: { created_at: 'desc' },
-      take: 100,
     });
     expect(prisma.product.findMany).toHaveBeenNthCalledWith(1, {
-      where: { id: { in: ['recommended-1', 'recommended-2'] } },
-      orderBy: [{ sales_count: 'desc' }, { created_at: 'desc' }],
-      take: 16,
+      where: {
+        id: { notIn: ['viewed-phone', 'cart-audio'] },
+        OR: [
+          { category_id: { in: [1, 2] } },
+          { shop_id: { in: ['shop-a', 'shop-b'] } },
+        ],
+      },
+      take: 48,
       include: {
         shop: { select: { id: true, name: true, logo_url: true } },
         category: { select: { id: true, name: true, slug: true } },
       },
     });
+    expect(result.map((product) => product.id)).toEqual([
+      'same-cart-category',
+      'same-view-category',
+    ]);
   });
 });

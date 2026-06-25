@@ -96,6 +96,14 @@ export class CartService {
       newQty.toString(),
     );
 
+    await this.prisma.userInteraction.create({
+      data: {
+        product_id: dto.product_id,
+        user_id: userId,
+        interaction_type: 'ADD_TO_CART',
+      },
+    });
+
     return { message: 'Item added to cart', product_id: dto.product_id, quantity: newQty };
   }
 

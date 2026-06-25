@@ -13,16 +13,13 @@ export default function RecommendedProducts() {
 
   useEffect(() => {
     const fetchRecommendations = async () => {
-      const recentSearch = localStorage.getItem("recent_search");
-      const queryStr = recentSearch ? `?q=${encodeURIComponent(recentSearch)}` : "";
-
       try {
         const { isAuthenticated } = useAuthStore.getState();
         let res;
         if (isAuthenticated) {
-           res = await api.get(`/recommendations${queryStr}`);
+           res = await api.get('/recommendations');
         } else {
-           res = await api.get(`/recommendations/public${queryStr}`);
+           res = await api.get('/recommendations/public');
         }
         
         if (res.data && Array.isArray(res.data)) {
@@ -35,7 +32,7 @@ export default function RecommendedProducts() {
       } catch (error: any) {
         if (error.response?.status === 401) {
             try {
-               const publicRes = await api.get(`/recommendations/public${queryStr}`);
+               const publicRes = await api.get('/recommendations/public');
                if (publicRes.data && Array.isArray(publicRes.data)) {
                   setProducts(publicRes.data);
                } else if (publicRes.data && Array.isArray(publicRes.data.recommendations)) {
@@ -70,11 +67,11 @@ export default function RecommendedProducts() {
     <section className="container mx-auto max-w-7xl px-4 lg:px-8 py-12">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Featured Drops</h2>
-          <p className="text-sm text-slate-500 dark:text-gray-400">Hand-picked premium selections</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">Sản phẩm nổi bật</h2>
+          <p className="text-sm text-slate-500 dark:text-gray-400">Gợi ý dựa trên sản phẩm bạn đã quan tâm</p>
         </div>
         <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-card-border">
-          <Link href="/products" className="px-4 py-1.5 text-xs font-medium rounded-md bg-primary text-white">All Products</Link>
+          <Link href="/products" className="px-4 py-1.5 text-xs font-medium rounded-md bg-primary text-white">Tất cả sản phẩm</Link>
         </div>
       </div>
 
