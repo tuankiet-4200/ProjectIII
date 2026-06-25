@@ -101,10 +101,10 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState<{ code: string; discount_amount: number; description: string } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[] | null>(null);
   const router = useRouter();
 
   const groups = useCartStore((s) => s.groups);
-  const totalAmount = useCartStore((s) => s.totalAmount);
   const isLoading = useCartStore((s) => s.isLoading);
   const fetchCart = useCartStore((s) => s.fetchCart);
   const updateItem = useCartStore((s) => s.updateItem);
@@ -174,15 +174,40 @@ export default function CheckoutPage() {
     fetchCart().catch(() => toast.error("Failed to load cart"));
   }, [fetchCart, isAuthenticated, router]);
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem("checkout:selected_product_ids");
+    if (!raw) {
+      setSelectedProductIds(null);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      setSelectedProductIds(Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : null);
+    } catch {
+      setSelectedProductIds(null);
+    }
+  }, []);
+
+  const checkoutGroups = useMemo(() => {
+    if (selectedProductIds === null) return groups;
+    const selected = new Set(selectedProductIds);
+    return groups
+      .map((group) => ({
+        ...group,
+        items: (group.items || []).filter((item) => selected.has(item.product_id)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [groups, selectedProductIds]);
+
   const allItems = useMemo(
-    () => groups.flatMap((g) => g.items || []).filter((item) => item.product),
-    [groups]
+    () => checkoutGroups.flatMap((g) => g.items || []).filter((item) => item.product),
+    [checkoutGroups]
   );
   const subtotal = allItems.reduce(
     (sum, item) => sum + Number(item.product?.price || 0) * item.quantity,
     0
   );
-  const shippingFee = subtotal >= 200 ? 0 : 12;
+  const shippingFee = subtotal === 0 || subtotal >= 200000 ? 0 : 12000;
   const itemCount = allItems.reduce((s, i) => s + i.quantity, 0);
 
   const updateQty = async (productId: string, nextQty: number) => {
@@ -205,9 +230,9 @@ export default function CheckoutPage() {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
     try {
-      const shop_amounts = groups.map(g => ({
+      const shop_amounts = checkoutGroups.map(g => ({
         shop_id: g.shop?.id || "",
-        amount: g.subtotal ?? g.items.reduce((s, i) => s + Number(i.product?.price || 0) * i.quantity, 0)
+        amount: g.items.reduce((s, i) => s + Number(i.product?.price || 0) * i.quantity, 0)
       })).filter(s => s.shop_id !== "");
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'}/coupons/validate`, {
@@ -248,7 +273,9 @@ export default function CheckoutPage() {
         shipping_address: address,
         payment_method: paymentMap[payment],
         coupon_code: couponApplied?.code,
+        selected_product_ids: allItems.map((item) => item.product_id),
       });
+      sessionStorage.removeItem("checkout:selected_product_ids");
       setPlaced(true);
       await fetchCart();
     } catch (e: any) {
@@ -336,7 +363,7 @@ export default function CheckoutPage() {
                 <h2 className="text-sm font-bold text-foreground">Review Order Items</h2>
               </div>
 
-              {groups.map((group) => (
+              {checkoutGroups.map((group) => (
                 <div key={group.shop?.id || group.shop?.name} className="border-b border-card-border last:border-b-0">
                   {/* Shop header */}
                   <div className="flex items-center gap-2 px-5 py-3 bg-foreground/5">
@@ -346,11 +373,10 @@ export default function CheckoutPage() {
                       Tạm tính:{" "}
                       <span className="text-foreground font-semibold">
                         {formatVnd(
-                          group.subtotal ??
-                            group.items.reduce(
-                              (s, i) => s + Number(i.product?.price || 0) * i.quantity,
-                              0
-                            )
+                          group.items.reduce(
+                            (s, i) => s + Number(i.product?.price || 0) * i.quantity,
+                            0
+                          )
                         )}
                       </span>
                     </span>
@@ -593,7 +619,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-slate-500 dark:text-gray-400">
                   <span>Tạm tính ({itemCount} sản phẩm)</span>
                   <span className="text-foreground font-medium text-right tabular-nums whitespace-nowrap">
-                    {formatVnd(subtotal || totalAmount)}
+                    {formatVnd(subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500 dark:text-gray-400">

@@ -41,44 +41,6 @@ interface CartShop {
   badge?: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const INITIAL_ITEMS: CartItem[] = [
-  {
-    id: "prod-1",
-    name: "Pro-Sound Wireless Headphones",
-    variant: "Space Grey, Over-ear",
-    price: 199,
-    qty: 1,
-    emoji: "🎧",
-    bgFrom: "#1a1a1a",
-    bgTo: "#2d2d2d",
-    shopId: 1, shopName: "TechHub Official Store",
-  },
-  {
-    id: "prod-2",
-    name: "SwiftClick Gaming Mouse",
-    variant: "RGB, 16000 DPI",
-    price: 100,
-    qty: 1,
-    emoji: "🖱️",
-    bgFrom: "#0d1b2a",
-    bgTo: "#1b2838",
-    shopId: 1, shopName: "TechHub Official Store",
-  },
-  {
-    id: "prod-3",
-    name: "Organic Soy Candle",
-    variant: "Lavender & Bergamot",
-    price: 45,
-    qty: 1,
-    emoji: "🕯️",
-    bgFrom: "#f5f0e0",
-    bgTo: "#e8dcb8",
-    shopId: 2, shopName: "Luxe Living Home",
-  },
-];
-
 const PERKS = [
   { icon: Truck, text: "Miễn phí vận chuyển cho đơn hàng trên 200.000₫" },
   { icon: ShieldCheck, text: "Bảo vệ người mua trên tất cả đơn hàng" },
@@ -89,7 +51,8 @@ const PERKS = [
 
 export default function CartPage() {
   const { groups, fetchCart, updateItem: updateItemStore, removeItem: removeItemStore, isLoading } = useCartStore();
-  const [items, setItems] = useState<CartItem[]>(INITIAL_ITEMS);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
 
@@ -124,8 +87,16 @@ export default function CartPage() {
         });
       });
       setItems(mapped);
+      setSelectedIds((prev) => {
+        const currentIds = mapped.map((item) => item.id);
+        if (prev.length === 0) return currentIds;
+        const preserved = prev.filter((id) => currentIds.includes(id));
+        const added = currentIds.filter((id) => !prev.includes(id));
+        return [...preserved, ...added];
+      });
     } else if (!isLoading) {
       setItems([]);
+      setSelectedIds([]);
     }
   }, [groups, isLoading]);
 
@@ -149,12 +120,23 @@ export default function CartPage() {
   const removeItem = async (id: string) => {
     // Optimistic update
     setItems((prev) => prev.filter((i) => i.id !== id));
+    setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
     await removeItemStore(id);
   };
 
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const toggleItem = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((selectedId) => selectedId !== id)
+        : [...prev, id],
+    );
+  };
+
+  const selectedItems = items.filter((item) => selectedIds.includes(item.id));
+  const selectedItemCount = selectedItems.reduce((s, i) => s + i.qty, 0);
+  const subtotal = selectedItems.reduce((sum, i) => sum + i.price * i.qty, 0);
   const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
-  const shipping = subtotal >= 200 ? 0 : 12;
+  const shipping = subtotal === 0 || subtotal >= 200000 ? 0 : 12000;
   const tax = Math.round(subtotal * 0.035 * 100) / 100;
   const total = subtotal - discount + shipping + tax;
 
@@ -220,7 +202,11 @@ export default function CartPage() {
                     <span className="ml-auto text-xs text-gray-500">
                       Tạm tính:{" "}
                       <span className="text-foreground font-medium">
-                        {formatVnd(shop.items.reduce((s, i) => s + i.price * i.qty, 0))}
+                        {formatVnd(
+                          shop.items
+                            .filter((item) => selectedIds.includes(item.id))
+                            .reduce((s, i) => s + i.price * i.qty, 0)
+                        )}
                       </span>
                     </span>
                   </div>
@@ -229,6 +215,14 @@ export default function CartPage() {
                   <div className="divide-y divide-card-border transition-colors duration-300">
                     {shop.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-5">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => toggleItem(item.id)}
+                          aria-label={`Chọn ${item.name} để thanh toán`}
+                          className="h-4 w-4 shrink-0 rounded border-card-border accent-violet-600"
+                        />
+
                         {/* Thumbnail */}
                         {item.imageUrl ? (
                           <div className="w-16 h-16 rounded-xl shrink-0 overflow-hidden bg-white">
@@ -273,12 +267,12 @@ export default function CartPage() {
                               <Plus size={13} />
                             </button>
                           </div>
-                          <div className="text-sm font-bold text-foreground w-16 text-right">
+                          <div className="text-sm font-bold text-foreground w-28 text-right tabular-nums whitespace-nowrap">
                             {formatVnd(item.price * item.qty)}
                           </div>
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="text-gray-600 hover:text-red-400 transition-colors ml-1"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -313,7 +307,7 @@ export default function CartPage() {
 
                 <div className="space-y-2.5 text-sm">
                   <div className="flex justify-between text-gray-400">
-                    <span>Tạm tính ({items.reduce((s, i) => s + i.qty, 0)} sản phẩm)</span>
+                    <span>Tạm tính ({selectedItemCount} sản phẩm)</span>
                     <span className="text-foreground font-medium">{formatVnd(subtotal)}</span>
                   </div>
                   {couponApplied && (
@@ -368,7 +362,19 @@ export default function CartPage() {
                 {/* CTA */}
                 <Link
                   href="/checkout"
-                  className="flex items-center justify-center gap-2 w-full rounded-xl bg-violet-600 py-3 text-sm font-bold text-white hover:bg-violet-500 active:scale-95 transition-all shadow-lg shadow-violet-900/40"
+                  onClick={(event) => {
+                    if (selectedIds.length === 0) {
+                      event.preventDefault();
+                      return;
+                    }
+                    sessionStorage.setItem("checkout:selected_product_ids", JSON.stringify(selectedIds));
+                  }}
+                  aria-disabled={selectedIds.length === 0}
+                  className={`flex items-center justify-center gap-2 w-full rounded-xl py-3 text-sm font-bold transition-all shadow-lg shadow-violet-900/40 ${
+                    selectedIds.length === 0
+                      ? "pointer-events-none bg-violet-600/40 text-white/60"
+                      : "bg-violet-600 text-white hover:bg-violet-500 active:scale-95"
+                  }`}
                 >
                   Proceed to Checkout <ArrowRight size={15} />
                 </Link>
@@ -380,11 +386,6 @@ export default function CartPage() {
                   Continue Shopping
                 </Link>
 
-                <div className="flex items-center justify-center gap-4 pt-1">
-                  {["🔒 Secure", "💳 Multi-pay", "📦 Fast Ship"].map((badge) => (
-                    <span key={badge} className="text-[10px] text-gray-600">{badge}</span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

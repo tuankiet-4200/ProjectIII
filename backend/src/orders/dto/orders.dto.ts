@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsArray } from 'class-validator';
 import { PaymentMethod, ShopOrderStatus } from '@prisma/client';
 
 export class CheckoutDto {
@@ -12,6 +12,11 @@ export class CheckoutDto {
   @IsOptional()
   @IsString()
   coupon_code?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  selected_product_ids?: string[];
 }
 
 export class UpdateShopOrderStatusDto {

@@ -36,6 +36,20 @@ export class OrdersService {
       throw new BadRequestException('Giỏ hàng của bạn đang trống');
     }
 
+    const selectedProductIds = dto.selected_product_ids?.filter(Boolean) || [];
+    const checkoutCartData =
+      selectedProductIds.length > 0
+        ? Object.fromEntries(
+            Object.entries(cartData).filter(([productId]) =>
+              selectedProductIds.includes(productId),
+            ),
+          )
+        : cartData;
+
+    if (Object.keys(checkoutCartData).length === 0) {
+      throw new BadRequestException('Vui lòng chọn sản phẩm cần thanh toán');
+    }
+
     // 2. Create a pending parent order immediately
     // Calculate an approximate total or just keep it 0 until processor finishes
     const parentOrder = await this.prisma.parentOrder.create({
@@ -52,11 +66,14 @@ export class OrdersService {
       userId,
       parentOrderId: parentOrder.id,
       dto,
-      cartData,
+      cartData: checkoutCartData,
     });
 
-    // Clear cart proactively from Redis (or processor can do it)
-    await this.redis.del(cartKey);
+    if (selectedProductIds.length > 0) {
+      await this.redis.hdel(cartKey, ...Object.keys(checkoutCartData));
+    } else {
+      await this.redis.del(cartKey);
+    }
 
     return {
       message: 'Đơn hàng đang được xử lý',

@@ -170,6 +170,7 @@ export interface CheckoutData {
   shipping_address: string;
   payment_method: PaymentMethod;
   coupon_code?: string;
+  selected_product_ids?: string[];
 }
 
 // ─── Cart ────────────────────────────────────────────────────────────────────
