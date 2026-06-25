@@ -11,9 +11,15 @@ export class CategoriesService {
     const categories = await this.prisma.category.findMany({
       where: { parent_id: null },
       include: {
+        _count: { select: { products: true } },
         children: {
           include: {
-            children: true, // 3 levels deep
+            _count: { select: { products: true } },
+            children: {
+              include: {
+                _count: { select: { products: true } },
+              },
+            },
           },
         },
       },

@@ -80,7 +80,7 @@ export function NotificationBell() {
       <button
         id="notification-bell"
         onClick={() => setOpen((v) => !v)}
-        className="relative text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 dark:text-gray-400 hover:text-foreground transition-colors"
         aria-label="Thông báo"
       >
         <Bell size={22} />

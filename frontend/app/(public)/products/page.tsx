@@ -2,8 +2,12 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { formatVnd } from "@/lib/currency";
+import { getPublicImageUrl } from "@/lib/images";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { categoriesService } from "@/services/categories.service";
+import { productsService } from "@/services/products.service";
+import type { Category, Product as ApiProduct } from "@/types";
 import {
   Heart,
   ShoppingCart,
@@ -22,10 +26,13 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Product {
-  id: number;
+  id: string;
+  slug: string;
   name: string;
   brand: string;
   location: string;
+  categoryId: number;
+  categorySlug?: string;
   price: number;
   originalPrice?: number;
   rating: number;
@@ -36,144 +43,9 @@ interface Product {
   bgFrom: string;
   bgTo: string;
   emoji: string;
+  imageUrl?: string;
   viewOnly?: boolean;
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const ALL_PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: "SonicMaster Elite Wireless Headphones",
-    brand: "Aura Sound",
-    location: "London",
-    price: 1299,
-    originalPrice: 1549,
-    rating: 4.9,
-    sold: 124,
-    badge: "GỢI Ý SANG XỊN",
-    badgeColor: "bg-violet-500",
-    discount: -11,
-    bgFrom: "#1a1a2e",
-    bgTo: "#16213e",
-    emoji: "🎧",
-  },
-  {
-    id: 2,
-    name: "Vintage Walnut Turntable Pro",
-    brand: "Heritage HiFi",
-    location: "Berlin",
-    price: 2850,
-    rating: 5.0,
-    sold: 56,
-    badge: "HÀNG MỚI VỀ",
-    badgeColor: "bg-emerald-500",
-    bgFrom: "#2d1b0e",
-    bgTo: "#4a2c0a",
-    emoji: "🎵",
-    viewOnly: true,
-  },
-  {
-    id: 3,
-    name: "Reference Series 5 Monitor Speaker",
-    brand: "Studio Pro",
-    location: "Tokyo",
-    price: 4200,
-    rating: 4.8,
-    sold: 96,
-    badge: "SỐ LƯỢNG CÓ HẠN",
-    badgeColor: "bg-red-500",
-    bgFrom: "#f8f8f5",
-    bgTo: "#e8e8e0",
-    emoji: "🔊",
-  },
-  {
-    id: 4,
-    name: "Velvet Vocal C-99 Condenser Mic",
-    brand: "AudioTech",
-    location: "San Francisco",
-    price: 850,
-    rating: 4.7,
-    sold: 2100,
-    bgFrom: "#1a1a1a",
-    bgTo: "#2d2d2d",
-    emoji: "🎤",
-  },
-  {
-    id: 5,
-    name: "Acoustic Sphere Portable Speaker",
-    brand: "Vibe Store",
-    location: "New York",
-    price: 349,
-    rating: 4.9,
-    sold: 5400,
-    badge: "BÁN CHẠY NHẤT",
-    badgeColor: "bg-amber-500",
-    bgFrom: "#f5f0e8",
-    bgTo: "#e8dcc8",
-    emoji: "📻",
-  },
-  {
-    id: 6,
-    name: "Golden Era Tube Amplifier",
-    brand: "Tube Haven",
-    location: "Paris",
-    price: 12500,
-    rating: 5.0,
-    sold: 12,
-    badge: "KHUYÊN DÙNG",
-    badgeColor: "bg-yellow-600",
-    bgFrom: "#1c1209",
-    bgTo: "#2d1a08",
-    emoji: "🔆",
-    viewOnly: true,
-  },
-  {
-    id: 7,
-    name: "Crystalline IEM Reference Earphones",
-    brand: "AcousticLab",
-    location: "Seoul",
-    price: 680,
-    rating: 4.6,
-    sold: 890,
-    bgFrom: "#0d1b2a",
-    bgTo: "#1b2838",
-    emoji: "🎶",
-  },
-  {
-    id: 8,
-    name: "NanoFi Wireless DAC/AMP Combo",
-    brand: "TechPure",
-    location: "Munich",
-    price: 420,
-    rating: 4.8,
-    sold: 3200,
-    badge: "ĐÁNH GIÁ CAO",
-    badgeColor: "bg-purple-500",
-    bgFrom: "#120824",
-    bgTo: "#1e0f3c",
-    emoji: "⚡",
-  },
-  {
-    id: 9,
-    name: "OakWood Vinyl Record Player",
-    brand: "Craftsman Audio",
-    location: "Oslo",
-    price: 1750,
-    rating: 4.9,
-    sold: 445,
-    bgFrom: "#1a0e06",
-    bgTo: "#2d1a0a",
-    emoji: "💿",
-  },
-];
-
-const CATEGORIES = [
-  { name: "Tất cả sản phẩm", count: 1246 },
-  { name: "Âm thanh cao cấp", count: 412 },
-  { name: "Đồng hồ cao cấp", count: 324 },
-  { name: "Phụ kiện luxury", count: 512 },
-];
 
 const SORT_OPTIONS = [
   "Mới nhất",
@@ -214,7 +86,7 @@ function ProductCard({
 }) {
   return (
     <Link
-      href={`/products/${product.id}`}
+      href={`/products/${product.slug}`}
       className="group relative rounded-2xl overflow-hidden border border-card-border bg-card hover:border-violet-500/30 hover:shadow-[0_0_30px_rgba(139,92,246,0.08)] transition-all duration-300 flex flex-col"
     >
       {/* Image area */}
@@ -255,10 +127,17 @@ function ProductCard({
           <Heart size={14} fill={wished ? "currentColor" : "none"} />
         </button>
 
-        {/* Product visual */}
-        <span className="text-6xl select-none group-hover:scale-110 transition-transform duration-300">
-          {product.emoji}
-        </span>
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <span className="text-6xl select-none group-hover:scale-110 transition-transform duration-300">
+            {product.emoji}
+          </span>
+        )}
       </div>
 
       {/* Info */}
@@ -312,24 +191,36 @@ function ProductCard({
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 function Sidebar({
-  activeCategory,
-  setActiveCategory,
+  categories,
+  activeCategoryId,
+  totalCount,
+  onCategoryChange,
   priceRange,
   setPriceRange,
+  maxPrice,
   minRating,
   setMinRating,
   verifiedOnly,
   setVerifiedOnly,
 }: {
-  activeCategory: string;
-  setActiveCategory: (c: string) => void;
+  categories: Category[];
+  activeCategoryId: number | null;
+  totalCount: number;
+  onCategoryChange: (categoryId: number | null) => void;
   priceRange: number;
   setPriceRange: (v: number) => void;
+  maxPrice: number;
   minRating: number;
   setMinRating: (v: number) => void;
   verifiedOnly: boolean;
   setVerifiedOnly: (v: boolean) => void;
 }) {
+  const getCategoryCount = (category: Category) => {
+    const ownCount = category._count?.products || 0;
+    const childCount = category.children?.reduce((sum, child) => sum + (child._count?.products || 0), 0) || 0;
+    return ownCount + childCount;
+  };
+
   return (
     <aside className="w-64 shrink-0 space-y-6">
       {/* Categories */}
@@ -339,12 +230,33 @@ function Sidebar({
           Danh mục sản phẩm
         </h3>
         <ul className="space-y-1">
-          {CATEGORIES.map((cat) => (
-            <li key={cat.name}>
+          <li>
+            <button
+              onClick={() => onCategoryChange(null)}
+              className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-all ${
+                activeCategoryId === null
+                  ? "bg-violet-600 text-white font-semibold"
+                  : "text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:bg-white/5 hover:text-foreground"
+              }`}
+            >
+              <span>Tất cả sản phẩm</span>
+              <span
+                className={`text-[10px] rounded-full px-2 py-0.5 font-mono ${
+                  activeCategoryId === null
+                    ? "bg-white/20 text-foreground"
+                    : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-500"
+                }`}
+              >
+                {totalCount.toLocaleString("vi-VN")}
+              </span>
+            </button>
+          </li>
+          {categories.map((cat) => (
+            <li key={cat.id}>
               <button
-                onClick={() => setActiveCategory(cat.name)}
+                onClick={() => onCategoryChange(cat.id)}
                 className={`w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-all ${
-                  activeCategory === cat.name
+                  activeCategoryId === cat.id
                     ? "bg-violet-600 text-white font-semibold"
                     : "text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:bg-white/5 hover:text-foreground"
                 }`}
@@ -352,12 +264,12 @@ function Sidebar({
                 <span>{cat.name}</span>
                 <span
                   className={`text-[10px] rounded-full px-2 py-0.5 font-mono ${
-                    activeCategory === cat.name
+                    activeCategoryId === cat.id
                       ? "bg-white/20 text-foreground"
                       : "bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-gray-500"
                   }`}
                 >
-                  {cat.count.toLocaleString()}
+                  {getCategoryCount(cat).toLocaleString("vi-VN")}
                 </span>
               </button>
             </li>
@@ -373,7 +285,7 @@ function Sidebar({
         <input
           type="range"
           min={0}
-          max={15000000}
+          max={maxPrice}
           step={500000}
           value={priceRange}
           onChange={(e) => setPriceRange(Number(e.target.value))}
@@ -384,7 +296,7 @@ function Sidebar({
           <span className="text-violet-400 font-semibold">
             Tối đa {formatVnd(priceRange)}
           </span>
-          <span>{formatVnd(15000000)}+</span>
+          <span>{formatVnd(maxPrice)}+</span>
         </div>
       </div>
 
@@ -463,61 +375,131 @@ export default function ProductsPage() {
 }
 
 function ProductsPageContent() {
-  const [activeCategory, setActiveCategory] = useState("Tất cả sản phẩm");
-  const [priceRange, setPriceRange] = useState(15000000);
+  const MAX_PRICE = 100000000;
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
+  const [activeCategoryName, setActiveCategoryName] = useState("Tất cả sản phẩm");
+  const [priceRange, setPriceRange] = useState(MAX_PRICE);
   const [minRating, setMinRating] = useState(0);
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [sortBy, setSortBy] = useState("Mới nhất");
   const [sortOpen, setSortOpen] = useState(false);
-  const [wished, setWished] = useState<Set<number>>(new Set());
+  const [wished, setWished] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const searchParams = useSearchParams();
   const defaultSearch = searchParams.get('search') || "";
+  const categorySlug = searchParams.get('category') || "";
   const [search, setSearch] = useState(defaultSearch);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
-  const TOTAL_PAGES = 52;
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
-  // Try to load products from API with fallback to mock data
+  const sortParamMap: Record<string, string> = {
+    "Mới nhất": "newest",
+    "Giá: Thấp đến Cao": "price_asc",
+    "Giá: Cao đến Thấp": "price_desc",
+    "Bán chạy nhất": "best_selling",
+    "Đánh giá tốt nhất": "best_selling",
+  };
+
+  const mapApiProduct = (p: ApiProduct, index: number): Product => {
+    const EMOJI_MAP = ['📦', '💻', '📱', '🎧', '⌚', '🎮', '📷', '🔌'];
+    const BG_MAP = [
+      { from: '#1a1a2e', to: '#16213e' },
+      { from: '#2d1b0e', to: '#4a2c0a' },
+      { from: '#f8f8f5', to: '#e8e8e0' },
+      { from: '#1a1a1a', to: '#2d2d2d' },
+      { from: '#f5f0e8', to: '#e8dcc8' },
+      { from: '#0d1b2a', to: '#1b2838' },
+    ];
+    const salesCount = Number(p.sales_count || 0);
+
+    return {
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      brand: p.shop?.name || 'ProjectIII',
+      location: p.category?.name || 'Việt Nam',
+      categoryId: p.category_id,
+      categorySlug: p.category?.slug,
+      price: Number(p.price),
+      rating: 4 + Math.min(1, salesCount / 500),
+      sold: salesCount,
+      bgFrom: BG_MAP[index % BG_MAP.length].from,
+      bgTo: BG_MAP[index % BG_MAP.length].to,
+      emoji: EMOJI_MAP[index % EMOJI_MAP.length],
+      imageUrl: p.images?.[0] ? getPublicImageUrl(p.images[0]) : undefined,
+    };
+  };
+
+  useEffect(() => {
+    let isActive = true;
+
+    categoriesService
+      .getAll()
+      .then((data) => {
+        if (!isActive) return;
+        setCategories(data || []);
+        if (categorySlug) {
+          const allCategories = (data || []).flatMap((cat) => [cat, ...(cat.children || [])]);
+          const selected = allCategories.find((cat) => cat.slug === categorySlug);
+          if (selected) {
+            setActiveCategoryId(selected.id);
+            setActiveCategoryName(selected.name);
+          }
+        }
+      })
+      .catch(() => {
+        if (isActive) setCategories([]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [categorySlug]);
+
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const { productsService } = await import('@/services/products.service');
-        const queryParams: any = { page: 1, limit: 20 };
-        if (defaultSearch) queryParams.search = defaultSearch;
+        setLoadingProducts(true);
+        const queryParams: any = {
+          page: currentPage,
+          limit: 12,
+          sort_by: sortParamMap[sortBy] || "newest",
+        };
+        if (search.trim()) queryParams.search = search.trim();
+        if (activeCategoryId) queryParams.category_id = activeCategoryId;
         const result = await productsService.getAll(queryParams);
-        if (result?.data?.length) {
-          const EMOJI_MAP = ['🎧', '🎵', '🔊', '🎤', '📻', '🔆', '🎶', '⚡', '💿', '👜'];
-          const BG_MAP = [
-            { from: '#1a1a2e', to: '#16213e' }, { from: '#2d1b0e', to: '#4a2c0a' },
-            { from: '#f8f8f5', to: '#e8e8e0' }, { from: '#1a1a1a', to: '#2d2d2d' },
-            { from: '#f5f0e8', to: '#e8dcc8' }, { from: '#1c1209', to: '#2d1a08' },
-            { from: '#0d1b2a', to: '#1b2838' }, { from: '#120824', to: '#1e0f3c' },
-            { from: '#1a0e06', to: '#2d1a0a' }, { from: '#1a1a2e', to: '#16213e' },
-          ];
-          const mapped: Product[] = result.data.map((p: any, i: number) => ({
-            id: i + 100,
-            name: p.name,
-            brand: p.shop?.name || 'LuxeMarket',
-            location: 'Global',
-            price: p.price,
-            rating: 4.5 + Math.random() * 0.5,
-            sold: p.sales_count || Math.floor(Math.random() * 500),
-            bgFrom: BG_MAP[i % BG_MAP.length].from,
-            bgTo: BG_MAP[i % BG_MAP.length].to,
-            emoji: EMOJI_MAP[i % EMOJI_MAP.length],
-          }));
-          setApiProducts(mapped);
-        }
+        setApiProducts((result?.data || []).map(mapApiProduct));
+        setTotalCount(result?.meta?.total || 0);
+        setTotalPages(Math.max(1, result?.meta?.totalPages || 1));
       } catch {
-        // Fallback to mock data silently
+        setApiProducts([]);
+        setTotalCount(0);
+        setTotalPages(1);
+      } finally {
+        setLoadingProducts(false);
       }
     };
     loadProducts();
-  }, [defaultSearch]);
+  }, [activeCategoryId, currentPage, search, sortBy]);
 
-  const toggleWish = (id: number) => {
+  const handleCategoryChange = (categoryId: number | null) => {
+    setActiveCategoryId(categoryId);
+    setCurrentPage(1);
+    if (categoryId === null) {
+      setActiveCategoryName("Tất cả sản phẩm");
+      return;
+    }
+    const allCategories = categories.flatMap((cat) => [cat, ...(cat.children || [])]);
+    const selected = allCategories.find((cat) => cat.id === categoryId);
+    setActiveCategoryName(selected?.name || "Danh mục sản phẩm");
+  };
+
+  const toggleWish = (id: string) => {
     setWished((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -529,10 +511,7 @@ function ProductsPageContent() {
     });
   };
 
-  // Use API products if available, otherwise fallback to mock
-  const sourceProducts = apiProducts.length > 0 ? apiProducts : ALL_PRODUCTS;
-
-  const filteredProducts = sourceProducts.filter(
+  const filteredProducts = apiProducts.filter(
     (p) =>
       p.price <= priceRange &&
       (minRating === 0 || p.rating >= minRating) &&
@@ -540,6 +519,7 @@ function ProductsPageContent() {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.brand.toLowerCase().includes(search.toLowerCase()))
   );
+  const visiblePages = Array.from({ length: Math.min(3, totalPages) }, (_, index) => index + 1);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -553,12 +533,12 @@ function ProductsPageContent() {
             <span>/</span>
             <span className="text-slate-600 dark:text-gray-300">Cửa hàng</span>
             <span>/</span>
-            <span className="text-violet-400">{activeCategory}</span>
+            <span className="text-violet-400">{activeCategoryName}</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-foreground">{activeCategory}</h1>
+          <h1 className="text-3xl font-extrabold text-foreground">{activeCategoryName}</h1>
           <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
             Hiển thị 1–{filteredProducts.length} trong số{" "}
-            <span className="text-foreground font-medium">1,246</span> kết quả
+            <span className="text-foreground font-medium">{totalCount.toLocaleString("vi-VN")}</span> kết quả
           </p>
         </div>
 
@@ -566,10 +546,13 @@ function ProductsPageContent() {
           {/* ─── Desktop Sidebar ─── */}
           <div className="hidden lg:block">
             <Sidebar
-              activeCategory={activeCategory}
-              setActiveCategory={setActiveCategory}
+              categories={categories}
+              activeCategoryId={activeCategoryId}
+              totalCount={totalCount}
+              onCategoryChange={handleCategoryChange}
               priceRange={priceRange}
               setPriceRange={setPriceRange}
+              maxPrice={MAX_PRICE}
               minRating={minRating}
               setMinRating={setMinRating}
               verifiedOnly={verifiedOnly}
@@ -673,10 +656,13 @@ function ProductsPageContent() {
             {showMobileSidebar && (
               <div className="lg:hidden mb-6">
                 <Sidebar
-                  activeCategory={activeCategory}
-                  setActiveCategory={setActiveCategory}
+                  categories={categories}
+                  activeCategoryId={activeCategoryId}
+                  totalCount={totalCount}
+                  onCategoryChange={handleCategoryChange}
                   priceRange={priceRange}
                   setPriceRange={setPriceRange}
+                  maxPrice={MAX_PRICE}
                   minRating={minRating}
                   setMinRating={setMinRating}
                   verifiedOnly={verifiedOnly}
@@ -686,7 +672,7 @@ function ProductsPageContent() {
             )}
 
             {/* Active filters chips */}
-            {(minRating > 0 || priceRange < 15000000 || search) && (
+            {(minRating > 0 || priceRange < MAX_PRICE || search) && (
               <div className="flex flex-wrap gap-2 mb-5">
                 {minRating > 0 && (
                   <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs px-3 py-1">
@@ -696,10 +682,10 @@ function ProductsPageContent() {
                     </button>
                   </span>
                 )}
-                {priceRange < 15000000 && (
+                {priceRange < MAX_PRICE && (
                   <span className="flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs px-3 py-1">
                     💰 Tối đa {formatVnd(priceRange)}
-                    <button onClick={() => setPriceRange(15000000)}>
+                    <button onClick={() => setPriceRange(MAX_PRICE)}>
                       <X size={11} />
                     </button>
                   </span>
@@ -716,7 +702,11 @@ function ProductsPageContent() {
             )}
 
             {/* Product Grid */}
-            {filteredProducts.length === 0 ? (
+            {loadingProducts ? (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <span className="text-sm font-semibold text-violet-400">Đang tải sản phẩm...</span>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <span className="text-5xl mb-4">🔍</span>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -749,12 +739,16 @@ function ProductsPageContent() {
                       className="group flex gap-4 rounded-2xl bg-card border border-card-border hover:border-violet-500/30 transition-all overflow-hidden p-4"
                     >
                       <div
-                        className="w-28 h-28 rounded-xl shrink-0 flex items-center justify-center text-4xl"
+                        className="w-28 h-28 rounded-xl shrink-0 flex items-center justify-center text-4xl overflow-hidden"
                         style={{
                           background: `linear-gradient(135deg, ${product.bgFrom}, ${product.bgTo})`,
                         }}
                       >
-                        {product.emoji}
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                        ) : (
+                          product.emoji
+                        )}
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
@@ -800,7 +794,7 @@ function ProductsPageContent() {
                             </button>
                             {product.viewOnly ? (
                               <Link
-                                href={`/products/${product.id}`}
+                                href={`/products/${product.slug}`}
                                 className="text-xs rounded-lg bg-slate-100 dark:bg-white/5 border border-border dark:border-white/10 px-3 py-1.5 font-semibold hover:bg-white/10 transition-colors"
                               >
                                 Xem chi tiết
@@ -829,7 +823,7 @@ function ProductsPageContent() {
                 <ChevronLeft size={16} />
               </button>
 
-              {[1, 2, 3].map((p) => (
+              {visiblePages.map((p) => (
                 <button
                   key={p}
                   onClick={() => setCurrentPage(p)}
@@ -843,22 +837,25 @@ function ProductsPageContent() {
                 </button>
               ))}
 
-              <span className="text-slate-400 dark:text-gray-600 px-1">...</span>
+              {totalPages > 3 && (
+                <>
+                  <span className="text-slate-400 dark:text-gray-600 px-1">...</span>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
+                      currentPage === totalPages
+                        ? "bg-violet-600 text-white"
+                        : "border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground"
+                    }`}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
 
               <button
-                onClick={() => setCurrentPage(TOTAL_PAGES)}
-                className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
-                  currentPage === TOTAL_PAGES
-                    ? "bg-violet-600 text-white"
-                    : "border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground"
-                }`}
-              >
-                {TOTAL_PAGES}
-              </button>
-
-              <button
-                onClick={() => setCurrentPage(Math.min(TOTAL_PAGES, currentPage + 1))}
-                disabled={currentPage === TOTAL_PAGES}
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
                 className="h-9 w-9 rounded-lg flex items-center justify-center border border-border dark:border-white/10 text-slate-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
                 <ChevronRight size={16} />

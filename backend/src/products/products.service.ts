@@ -27,7 +27,14 @@ export class ProductsService {
     }
 
     if (query.category_id) {
-      where.category_id = query.category_id;
+      const category = await this.prisma.category.findUnique({
+        where: { id: query.category_id },
+        select: { id: true, children: { select: { id: true } } },
+      });
+      const categoryIds = category
+        ? [category.id, ...category.children.map((child) => child.id)]
+        : [query.category_id];
+      where.category_id = { in: categoryIds };
     }
 
     if (query.shop_id) {
