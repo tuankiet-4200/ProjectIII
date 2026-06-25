@@ -33,27 +33,23 @@ import {
 type DetailTab = "details" | "specifications" | "reviews" | "shipping";
 
 interface RelatedProduct {
-  id: number;
+  id: string;
+  slug: string;
   name: string;
   category: string;
+  shopName: string;
   price: number;
-  emoji: string;
-  bgFrom: string;
-  bgTo: string;
+  imageUrl?: string;
   rating: number;
 }
 
-interface Review {
-  id: number;
-  name: string;
-  avatar: string;
-  avatarBg: string;
+type ReviewPreview = {
+  id: string;
+  user: { full_name: string };
   rating: number;
-  date: string;
-  comment: string;
-  helpful: number;
-  verified: boolean;
-}
+  comment?: string;
+  created_at: string;
+};
 
 // ─── Mock Product ─────────────────────────────────────────────────────────────
 
@@ -113,88 +109,6 @@ const PRODUCT = {
   ],
 };
 
-const RELATED: RelatedProduct[] = [
-  {
-    id: 10,
-    name: "Aura Minimalist Buds",
-    category: "Audio Tech",
-    price: 180,
-    emoji: "🎵",
-    bgFrom: "#e8e8e8",
-    bgTo: "#d0d0d0",
-    rating: 4.7,
-  },
-  {
-    id: 11,
-    name: "Retro Vinyl Player",
-    category: "Heritage HiFi",
-    price: 435,
-    emoji: "💽",
-    bgFrom: "#2d1b0e",
-    bgTo: "#4a2c0a",
-    rating: 4.9,
-  },
-  {
-    id: 12,
-    name: "Titan Port Speaker",
-    category: "Vibe Store",
-    price: 120,
-    emoji: "🔊",
-    bgFrom: "#f0f0f0",
-    bgTo: "#e0e0e0",
-    rating: 4.6,
-  },
-  {
-    id: 13,
-    name: "Glaze Pro In-Ear",
-    category: "AcousticLab",
-    price: 255,
-    emoji: "🎶",
-    bgFrom: "#0d1b2a",
-    bgTo: "#1b2838",
-    rating: 4.8,
-  },
-];
-
-const REVIEWS: Review[] = [
-  {
-    id: 1,
-    name: "James Wilson",
-    avatar: "JW",
-    avatarBg: "from-violet-600 to-violet-800",
-    rating: 5,
-    date: "March 14, 2026",
-    comment:
-      "The sound stage on these is absolutely incredible. I've used Bose and Sony for years, but the clarity in the mids here is on another level. Battery life actually exceeded the 60h claim in my tests.",
-    helpful: 124,
-    verified: true,
-  },
-  {
-    id: 2,
-    name: "Sarah Chen",
-    avatar: "SC",
-    avatarBg: "from-rose-500 to-pink-700",
-    rating: 4,
-    date: "March 8, 2026",
-    comment:
-      "Beautiful design and very premium feel. The noise cancellation is just as solid as ANE. MXE 5 is very effective for airplane engine noise, though a bit heavy to wear for more than 2 hours straight.",
-    helpful: 89,
-    verified: true,
-  },
-  {
-    id: 3,
-    name: "Luca Ferrari",
-    avatar: "LF",
-    avatarBg: "from-amber-500 to-orange-700",
-    rating: 5,
-    date: "February 28, 2026",
-    comment:
-      "Worth every penny. The LDAC support makes a real difference when listening to hi-res files. I've been using these daily for studio monitoring and they're endlessly comfortable.",
-    helpful: 67,
-    verified: false,
-  },
-];
-
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 
 function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
@@ -220,20 +134,25 @@ function StarRating({ rating, size = 12 }: { rating: number; size?: number }) {
 function RelatedCard({ product }: { product: RelatedProduct }) {
   return (
     <Link
-      href={`/products/${product.id}`}
+      href={`/products/${product.slug}`}
       className="group rounded-2xl bg-card border border-card-border overflow-hidden hover:border-violet-500/30 hover:shadow-[0_0_20px_rgba(139,92,246,0.08)] transition-all"
     >
-      <div
-        className="aspect-[4/3] flex items-center justify-center text-4xl"
-        style={{ background: `linear-gradient(135deg, ${product.bgFrom}, ${product.bgTo})` }}
-      >
-        <span className="group-hover:scale-110 transition-transform duration-300">
-          {product.emoji}
-        </span>
+      <div className="aspect-[4/3] flex items-center justify-center overflow-hidden bg-gradient-to-br from-violet-500/10 to-cyan-500/10">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <span className="text-3xl font-black text-slate-300 dark:text-gray-600 group-hover:scale-110 transition-transform duration-300">
+            P3
+          </span>
+        )}
       </div>
       <div className="p-3">
         <div className="text-[9px] text-violet-400 font-bold uppercase tracking-widest mb-1">
-          {product.category}
+          {product.shopName}
         </div>
         <div className="text-xs font-semibold text-foreground line-clamp-2 leading-snug group-hover:text-violet-100 mb-2">
           {product.name}
@@ -497,8 +416,13 @@ export default function ProductDetailPage() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [productRealId, setProductRealId] = useState<string>('');
   const [reviewStats, setReviewStats] = useState<{ total: number; avgRating: number }>({ total: 0, avgRating: 0 });
+  const [relatedProducts, setRelatedProducts] = useState<RelatedProduct[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [reviewPreview, setReviewPreview] = useState<ReviewPreview[]>([]);
   const [productData, setProductData] = useState({
     ...PRODUCT,
+    categoryId: 0,
+    categorySlug: '' as string,
     parentCategory: '' as string,
     shopSlug: '' as string,
     shop: { ...PRODUCT.shop, id: '' as string },
@@ -523,6 +447,8 @@ export default function ProductDetailPage() {
             stockCount: p.stock_quantity,
             brand: p.shop?.name || PRODUCT.brand,
             category: p.category?.name || PRODUCT.category,
+            categoryId: p.category_id,
+            categorySlug: p.category?.slug || '',
             parentCategory: p.category?.parent?.name || '',
             shopSlug: p.shop?.id || '',
             images: p.images || [],
@@ -592,10 +518,47 @@ export default function ProductDetailPage() {
         const { reviewsService } = await import('@/services/reviews.service');
         const reviewData = await reviewsService.getProductReviews(productRealId);
         setReviewStats({ total: reviewData.total, avgRating: reviewData.avgRating });
+        setReviewPreview(reviewData.reviews.slice(0, 2));
       } catch { /* ignore */ }
     };
     preloadStats();
   }, [productRealId]);
+
+  useEffect(() => {
+    if (!productRealId || !productData.categoryId) return;
+
+    const loadRelatedProducts = async () => {
+      try {
+        setLoadingRelated(true);
+        const { productsService } = await import('@/services/products.service');
+        const result = await productsService.getAll({
+          category_id: productData.categoryId,
+          limit: 8,
+          sort_by: 'best_selling',
+        });
+        const mapped = (result.data || [])
+          .filter((item) => item.id !== productRealId)
+          .slice(0, 4)
+          .map((item) => ({
+            id: item.id,
+            slug: item.slug,
+            name: item.name,
+            category: item.category?.name || productData.category,
+            shopName: item.shop?.name || 'ProjectIII',
+            price: Number(item.price),
+            imageUrl: item.images?.[0] ? getPublicImageUrl(item.images[0]) : undefined,
+            rating: 5,
+          }));
+        setRelatedProducts(mapped);
+      } catch {
+        setRelatedProducts([]);
+      } finally {
+        setLoadingRelated(false);
+      }
+    };
+
+    loadRelatedProducts();
+  }, [productRealId, productData.categoryId, productData.category]);
 
   const handleToggleWishlist = async () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -915,60 +878,76 @@ export default function ProductDetailPage() {
         {/* ─── You might also like ─── */}
         <section className="mb-14">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-foreground">You might also like</h2>
+            <h2 className="text-lg font-bold text-foreground">Có thể bạn cũng thích</h2>
             <Link
-              href="/products"
+              href={productData.categorySlug ? `/products?category=${productData.categorySlug}` : "/products"}
               className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors"
             >
-              View All <ChevronRight size={13} />
+              Xem tất cả <ChevronRight size={13} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {RELATED.map((p) => (
-              <RelatedCard key={p.id} product={p} />
-            ))}
-          </div>
+          {loadingRelated ? (
+            <div className="rounded-2xl border border-card-border bg-card p-8 text-center text-sm text-slate-500">
+              Đang tải sản phẩm liên quan...
+            </div>
+          ) : relatedProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map((p) => (
+                <RelatedCard key={p.id} product={p} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-card-border bg-card p-8 text-center text-sm text-slate-500">
+              Chưa có sản phẩm liên quan trong danh mục này.
+            </div>
+          )}
         </section>
 
         {/* ─── Customer Reviews preview ─── */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-foreground">Customer Reviews</h2>
+            <h2 className="text-lg font-bold text-foreground">Đánh giá của khách hàng</h2>
             <button
               onClick={() => setTab("reviews")}
               className="flex items-center gap-1.5 rounded-xl bg-violet-600/20 border border-violet-500/30 text-violet-300 hover:bg-violet-600/30 px-4 py-2 text-xs font-semibold transition-all"
             >
-              <MessageSquare size={12} /> Write a Review
+              <MessageSquare size={12} /> Viết đánh giá
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {REVIEWS.slice(0, 2).map((review) => (
+          {reviewPreview.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {reviewPreview.map((review) => (
               <div key={review.id} className="rounded-2xl bg-card border border-card-border p-5">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${review.avatarBg} flex items-center justify-center text-xs font-bold text-foreground shrink-0`}>
-                    {review.avatar}
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                    {review.user.full_name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">{review.name}</span>
-                      {review.verified && (
-                        <BadgeCheck size={12} className="text-emerald-400" />
-                      )}
+                      <span className="text-sm font-semibold text-foreground">{review.user.full_name}</span>
+                      <BadgeCheck size={12} className="text-emerald-400" />
                     </div>
                     <StarRating rating={review.rating} />
                   </div>
-                  <span className="text-[10px] text-slate-400 dark:text-gray-500 shrink-0">{review.date}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-gray-500 shrink-0">
+                    {new Date(review.created_at).toLocaleDateString('vi-VN')}
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-gray-300 leading-relaxed line-clamp-3">{review.comment}</p>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-card-border bg-card p-8 text-center text-sm text-slate-500">
+              Chưa có đánh giá nào cho sản phẩm này.
+            </div>
+          )}
           <div className="text-center mt-4">
             <button
               onClick={() => { setTab("reviews"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               className="text-xs text-violet-400 hover:text-violet-300 font-medium transition-colors"
             >
-              View all {reviewStats.total > 0 ? reviewStats.total.toLocaleString() : ''} reviews →
+              Xem tất cả {reviewStats.total > 0 ? reviewStats.total.toLocaleString() : ''} đánh giá →
             </button>
           </div>
         </section>
