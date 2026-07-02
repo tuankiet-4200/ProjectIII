@@ -8,26 +8,69 @@ Hệ thống AI gồm 2 tính năng độc lập:
 
 | Tính năng | File | Công nghệ |
 |-----------|------|-----------|
-| **AI Chatbot** | `chat.service.ts` + `ai-service/routers/chat.py` | DeepSeek LLM + RAG |
-| **Product Recommendation** | `recommendations.service.ts` | Collaborative Filtering đơn giản |
+| **AI Chatbot** | `chat.service.ts` + `ai-service/routers/chat.py` | DeepSeek LLM + **Keyword SQL Search + Prompt Injection** |
+| **Product Recommendation** | `recommendations.service.ts` | Interaction-based scoring (heuristic) |
 
 ---
 
-## 2. Kiến trúc AI Chatbot (RAG Pattern)
+## ⚠️ Làm rõ: Hệ thống KHÔNG dùng RAG thực sự
 
-**RAG = Retrieval-Augmented Generation**:
-Thay vì để AI trả lời từ kiến thức chung → Lấy dữ liệu **thực tế từ DB** → Nhúng vào prompt → AI trả lời dựa trên dữ liệu thực
+**RAG thực sự (Real RAG)** đòi hỏi 3 thành phần:
 
 ```
-Không có RAG:
-User: "Shop có iPhone 15 không?"
-AI: "Có, iPhone 15 giá khoảng 25 triệu" ← Bịa đặt
+1. EMBEDDING MODEL: Chuyển text → vector số học (text-embedding-ada, sentence-transformers...)
+2. VECTOR DATABASE: Lưu & tìm kiếm theo semantic similarity (pgvector, Pinecone, Weaviate)
+3. GENERATION: Nhúng top-k kết quả vào prompt cho LLM
+```
 
-Với RAG:
-User: "Shop có iPhone 15 không?"
-→ Backend query DB: lấy sản phẩm của shop match keyword "iPhone 15"
-→ Nhúng vào prompt: "Danh sách sản phẩm: [iPhone 15 Pro, giá: 28,990,000, tồn kho: 5]"
-AI: "Shop có iPhone 15 Pro giá 28,990,000 VNĐ, còn 5 cái ạ" ← Chính xác
+**Hệ thống này thực tế dùng: Keyword-based SQL Search + Prompt Injection**
+
+```
+1. KEYWORD EXTRACTION: Tách từ khóa từ tin nhắn, lọc stop words tiếng Việt
+2. SQL LIKE SEARCH: Query PostgreSQL với WHERE name LIKE '%keyword%'
+3. PROMPT INJECTION: Nhúng danh sách sản phẩm tìm được vào system prompt
+4. LLM CALL: Gọi DeepSeek API → AI trả lời dựa trên dữ liệu thực
+```
+
+| Tiêu chí | RAG thực sự | Hệ thống này |
+|---|---|---|
+| Retrieval | Vector similarity (cosine) | SQL LIKE keyword |
+| Index | Vector database | PostgreSQL B-tree |
+| Hiểu ngữ nghĩa | Có ("điện thoại" ≈ "phone") | Không (phải đúng từ khóa) |
+| Độ phức tạp | Cao | Thấp, đơn giản |
+| Phù hợp | Corpus văn bản lớn | Catalog sản phẩm có cấu trúc |
+
+**Kỹ thuật này vẫn hiệu quả** vì dữ liệu sản phẩm có cấu trúc rõ ràng (tên, giá, tồn kho), không cần semantic search phức tạp.
+
+---
+
+## 2. Kiến trúc AI Chatbot thực tế
+
+```
+User gõ: "Shop có bán áo thun không?"
+↓
+[Backend - chat.service.ts]
+extractProductKeywords("Shop có bán áo thun không?")
+→ stop words lọc bỏ: ["shop", "có", "bán", "không"]
+→ keywords giữ lại: ["áo", "thun"]
+↓
+SQL: SELECT * FROM products WHERE shop_id = X
+     AND (name LIKE '%áo%' OR name LIKE '%thun%'
+         OR description LIKE '%áo%' OR ...)
+     ORDER BY sales_count DESC LIMIT 8
+↓
+[Gửi sang AI Service FastAPI]
+products_context = [{ name: "Áo thun cotton", price: 150000, stock: 20 }, ...]
+↓
+[Python - routers/chat.py]
+System prompt = "Bạn là CSKH của {shop_name}...
+                Danh sách sản phẩm liên quan: [Áo thun cotton, 150,000đ, còn 20]
+                Không bịa đặt giá, tồn kho..."
+↓
+DeepSeek API call: messages = [system_prompt, history..., user_message]
+↓
+AI trả lời dựa trên sản phẩm trong prompt:
+"Shop có Áo thun cotton giá 150,000đ, còn 20 cái ạ 😊"
 ```
 
 ---
@@ -90,7 +133,7 @@ AI xử lý ngầm → kết quả đến qua WebSocket
 
 ---
 
-## 4. Keyword Extraction & RAG Context
+## 4. Keyword Extraction & SQL Context (chi tiết)
 
 ```typescript
 // Tập từ dừng tiếng Việt (stop words)
@@ -244,14 +287,17 @@ categoryScores:
 
 ## 7. Câu hỏi bảo vệ
 
-### Q1: RAG là gì và tại sao cần?
-**A:** RAG (Retrieval-Augmented Generation) = Tăng cường AI bằng dữ liệu thực tế. Vấn đề với LLM thuần: hallucination (bịa đặt). RAG giải quyết bằng cách lấy dữ liệu từ DB → nhúng vào prompt → AI trả lời dựa trên thực tế. Kết quả: AI biết đúng tên, giá, tồn kho của từng shop.
+### Q1: Hệ thống có dùng RAG không?
+**A:** **Không dùng RAG thực sự.** Hệ thống dùng **Keyword-based Context Injection**: tách từ khóa từ tin nhắn → query SQL LIKE → nhúng kết quả sản phẩm vào system prompt của LLM. RAG thực sự đòi hỏi embedding model + vector database + semantic similarity search — hệ thống này không có các thành phần đó. Kỹ thuật được dùng vẫn hiệu quả cho catalog sản phẩm có cấu trúc, và đơn giản hơn RAG nhiều.
+
+### Q1b: Nếu muốn nâng cấp lên RAG thật thì cần gì?
+**A:** Cần thêm: (1) Embedding model (ví dụ `text-embedding-ada-002` của OpenAI, hoặc `sentence-transformers` open-source) để chuyển mô tả sản phẩm thành vector. (2) Vector store (pgvector extension trong PostgreSQL, hoặc Pinecone/Weaviate) để lưu và tìm kiếm vector. (3) Khi user hỏi → embed câu hỏi → tìm top-k sản phẩm gần nhất theo cosine similarity → inject vào prompt. Lợi ích: hiểu ngữ nghĩa ("điện thoại" match "smartphone"), không cần đúng từ khóa.
 
 ### Q2: Tại sao AI chạy async (IIFE) thay vì sync?
 **A:** DeepSeek API mất 2-5 giây để trả lời. Nếu chờ → user phải đợi 5 giây mới thấy response "Tin nhắn đã gửi". Với IIFE async: response trả về ngay lập tức → AI trả lời đến sau qua WebSocket → UX mượt mà.
 
 ### Q3: Recommendation engine dùng thuật toán gì?
-**A:** Đây là **Content-based + Collaborative filtering đơn giản** (không dùng ML model). Dựa trên **hành vi tương tác** (view/cart/purchase) → tính điểm cho category và shop → gợi ý sản phẩm cùng category/shop chưa xem. Đơn giản nhưng hiệu quả cho MVP. Nâng cấp: Matrix Factorization, Neural CF.
+**A:** Đây là **Interaction-based scoring** đơn giản, không dùng ML model. Dựa trên **hành vi tương tác** (view/cart/purchase) với các trọng số khác nhau (VIEW=1, ADD_TO_CART=5, PURCHASE=8), kết hợp **recency decay** (tương tác gần đây trọng số cao hơn) → tính điểm tích lũy cho từng category và shop → gợi ý sản phẩm cùng category/shop yêu thích chưa xem. Đây không phải Collaborative Filtering chuẩn (CF cần ma trận user-item). Nâng cấp thật sự: Matrix Factorization, Neural CF.
 
 ### Q4: Stop words tiếng Việt - tại sao cần?
 **A:** Khi user hỏi "Shop có bán sản phẩm gì không?", nếu không có stop words → keyword = ["shop", "bán", "sản", "phẩm", "không"] → query DB với keywords vô nghĩa → kết quả ngẫu nhiên. Stop words lọc ra từ không mang ý nghĩa → chỉ giữ ["áo", "thun", "iPhone"...].
@@ -273,4 +319,14 @@ categoryScores:
 2. **Async AI**: IIFE async không block HTTP response → UX mượt, AI reply qua WebSocket
 3. **Stop words + keyword extraction**: Normalize tiếng Việt, lọc từ vô nghĩa trước khi query sản phẩm
 4. **Recommendation scoring**: Kết hợp interaction_type weight × recency weight → rank category/shop
-5. **Dual mode chatbot**: Shop-specific (biết tên shop + sản phẩm) hoặc Platform-wide tùy context
+5. **Dual mode chatbot**: Shop-specific (biết tên shop + sản phẩm của shop đó) hoặc Platform-wide tùy `session.shop_id`
+
+---
+
+## ⚠️ Lưu ý quan trọng khi bảo vệ
+
+**Không nên nói "hệ thống dùng RAG"** vì:
+- Hội đồng có thể hỏi ngay: "Vector database của bạn là gì?", "Embedding model nào?", "Cosine similarity threshold bao nhiêu?"
+- Nếu không trả lời được → mất điểm
+
+**Nên nói chính xác**: *"Hệ thống dùng Keyword-based Context Injection: trích xuất từ khóa từ câu hỏi, query SQL tìm sản phẩm liên quan, nhúng kết quả vào system prompt của LLM để AI trả lời chính xác theo dữ liệu thực tế thay vì hallucinate. Đây là phương pháp đơn giản hơn RAG nhưng phù hợp với dữ liệu sản phẩm có cấu trúc."*
